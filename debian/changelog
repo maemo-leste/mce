@@ -1,0 +1,7 @@
+mce (1.8.126+0m5) unstable; urgency=low
+
+  * Initial release of Fremantle MCE reverse engineering work
+  * Some code taken from various tree versions under https://gitorious.org/meego-middleware/mce/
+
+ -- Jonathan Wilson <jfwfreo@tpgi.com.au>  Thu, 26 Sep 2013 10:52:00 +0800
+

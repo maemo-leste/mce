@@ -1,0 +1,45 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:		zzinitend
+# Required-Start:	$all
+# Required-Stop:
+# Default-Start:	2 3 4 5
+# Default-Stop:		0 1 2 3 4 5 6
+# Short-Description:	Mode Control Entity.
+# Description:		This init script sends a D-Bus signal that informs
+#			that the last init-script has been run.
+### END INIT INFO
+#
+# Init startup kludge to notify, via D-Bus,
+# that a runlevel has run all the init-scripts
+#
+# Copyright © 2007 Nokia Corporation.  All rights reserved.
+#
+# @author David Weinehall <david.weinehall@nokia.com>
+
+DBUS_SEND_FLAGS='--system --type=signal'
+DBUS_SEND=dbus-send
+DBUS_PATH=/com/nokia/startup/signal
+DBUS_INTERFACE=com.nokia.startup.signal
+INITFILE=/etc/init.d/zzinitdone
+
+case "$1" in
+start|restart|force-reload)
+	printf "Sending init notification signal"
+	$DBUS_SEND $DBUS_SEND_FLAGS $DBUS_PATH $DBUS_INTERFACE.init_done
+	printf ".\n"
+	;;
+
+stop)
+	;;
+
+status)
+	;;
+
+*)
+	printf "Usage: $INITFILE {start|stop|restart|force-reload}\n" >&2
+	exit 1
+	;;
+esac
+
+exit 0

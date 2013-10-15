@@ -1,0 +1,24 @@
+How to compile MCE:
+Install libdevlock1 into the SDK.
+Create a link from /usr/lib/libdevlock.so.1.0.9 to 
+/usr/lib/libdevlock.so
+
+Download https://gitorious.org/community-ssu/osso-systemui-dev
+compile it and install osso-systemui-dev
+Download https://gitorious.org/community-ssu/osso-systemui-powerkeymenu 
+compile it and install osso-systemui-powerkeymenu-dev
+Download https://gitorious.org/community-ssu/osso-systemui-tklock
+compile it and install osso-systemui-tklock-dev
+Download https://gitorious.org/community-ssu/osso-systemui-devlock-dev
+compile it and install osso-systemui-devlock-dev
+Download https://gitorious.org/community-ssu/osso-systemui-splashscreen-dev
+compile it and install osso-systemui-splashscreen-dev
+Download https://gitorious.org/community-ssu/osso-systemui-modechange-dev
+compile it and install osso-systemui-modechange-dev
+Download https://gitorious.org/rx51-bme-replacement/hald-addon-bme
+compile it and install hald-addon-bme-dev
+
+Compile this MCE source code
+
+Any missing packages it asks about when building (other than those 
+mentioned above) can be found in the SDK repositories

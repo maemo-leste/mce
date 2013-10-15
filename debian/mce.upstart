@@ -1,0 +1,26 @@
+description "This init script starts the mode control software used on the Maemo platform for Internet Tablets."
+author "Philippe De Swert"
+
+start on started dbus
+start on started dbus-actdead
+stop on stopping dbus
+stop on stopping dbus-actdead
+
+console output
+
+pre-start script
+	RUNDIR=/var/run/mce
+	test -d $RUNDIR || (rm -f $RUNDIR; mkdir $RUNDIR)
+	/usr/sbin/waitdbus system
+	/usr/sbin/dsmetool -n -1 -t "/sbin/mce --force-syslog"
+end script
+
+pre-stop script
+	echo "Stopping mce"
+end script
+
+post-stop script
+	/usr/sbin/dsmetool -k "/sbin/mce --force-syslog"
+end script
+
+respawn

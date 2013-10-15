@@ -1,0 +1,114 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:		mce
+# Required-Start:	$remote_fs $syslog dbus
+# Required-Stop:	$remote_fs $syslog dbus
+# Default-Start:	2 3 4 5
+# Default-Stop:		0 1 6
+# Short-Description:	Mode Control Entity.
+# Description:		This init script starts the mode control software
+#			used on the maemo platform for Internet Tablets.
+### END INIT INFO
+#
+# Startup script for the Mode Control Entity
+#
+# Copyright © 2004-2008 Nokia Corporation.  All rights reserved.
+#
+# @author David Weinehall <david.weinehall@nokia.com>
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/sbin/mce
+NAME=mce
+DESC="Mode Controller Entity"
+DAEMON_OPTS="--daemon"
+DAEMON_DSMETOOL_OPTS="--force-syslog"
+NORMAL_OPTS=""
+DSMETOOL=/usr/sbin/dsmetool
+RUNDIR=/var/run/mce
+PIDFILE=/var/run/$NAME.pid
+INITFILE=/etc/init.d/$NAME
+WAITDBUS=/usr/bin/waitdbus
+WAITDBUS_ALT=/usr/sbin/waitdbus
+
+# abort if no executable exists
+test -x $DAEMON || exit 0
+
+# only use dsmetool if it exists
+test -x $DSMETOOL || USE_DSMETOOL=no
+
+set -e
+
+# create /var/run/mce unless it already exists and is a directory
+test -d $RUNDIR || (rm -f $RUNDIR; mkdir $RUNDIR)
+
+start_mce()
+{
+if [ -x $WAITDBUS ]; then
+	$WAITDBUS system
+elif [ -x $WAITDBUS_ALT ]; then
+	$WAITDBUS_ALT system
+fi
+
+if [ x"$USE_DSMETOOL" = x"no" ]; then
+	start-stop-daemon --start --quiet --pidfile $PIDFILE \
+		--exec $DAEMON -- $DAEMON_OPTS $NORMAL_OPTS
+else
+	$DSMETOOL -n -1 -t "$DAEMON $DAEMON_DSMETOOL_OPTS $NORMAL_OPTS"
+fi
+}
+
+stop_mce()
+{
+if [ x"$USE_DSMETOOL" = x"no" ]; then
+	start-stop-daemon --stop --oknodo --quiet --pidfile $PIDFILE \
+		--exec $DAEMON
+else
+	$DSMETOOL -n -1 -k "$DAEMON $DAEMON_DSMETOOL_OPTS $NORMAL_OPTS"
+fi
+}
+
+case "$1" in
+start)
+	printf "Starting $DESC: $NAME"
+	start_mce
+	printf ".\n"
+	;;
+
+stop)
+	printf "Stopping: $DESC: $NAME"
+	stop_mce
+	printf ".\n"
+	;;
+
+restart|force-reload)
+	printf "Restarting $DESC: $NAME"
+	stop_mce
+	sleep 2
+	start_mce
+	printf ".\n"
+	;;
+
+status)
+	if [ -z "$(pidof $DAEMON)" ]; then
+		printf "$DESC: $NAME is NOT running.\n"
+
+		# Program not running, but pidfile exists
+		if [ -e $PIDFILE ]; then
+			exit 1
+		fi
+
+		# Program not running
+		exit 3
+	else
+		printf "$DESC: $NAME is running.\n"
+		exit 0
+	fi
+	;;
+
+*)
+	printf "Usage: $INITFILE {start|stop|restart|force-reload}\n" >&2
+	exit 1
+	;;
+esac
+
+exit 0

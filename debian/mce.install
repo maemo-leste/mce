@@ -1,0 +1,5 @@
+debian/tmp/etc
+debian/tmp/var
+debian/tmp/sbin/mce
+debian/tmp/sbin/devlock-blocker
+debian/tmp/usr/lib/mce
