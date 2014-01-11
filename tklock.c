@@ -2415,6 +2415,10 @@ gboolean mce_tklock_init(void)
 		mce_touchscreen_sysfs_disable_path =
 			MCE_TOUCHSCREEN_SYSFS_DISABLE_PATH;
 	}
+	else if (g_access(MCE_TOUCHSCREEN_SYSFS_DISABLE_PATH_3x, W_OK) == 0) {
+		mce_touchscreen_sysfs_disable_path =
+			MCE_TOUCHSCREEN_SYSFS_DISABLE_PATH_3x;
+	}
 
 	/* Close the touchscreen/keypad lock and event eater UI,
 	 * to make sure MCE doesn't end up in a confused state
