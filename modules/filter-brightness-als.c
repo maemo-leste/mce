@@ -173,11 +173,19 @@ static als_type_t get_als_type(void)
 		display_als_profiles = display_als_profiles_rx51;
 		led_als_profiles = led_als_profiles_rx51;
 		kbd_als_profiles = kbd_als_profiles_rx51;
+	} else if (g_access(ALS_LUX_PATH_RX51_3x, W_OK) == 0) {
+		als_type = ALS_TYPE_RX51;
+
+		als_lux_path = ALS_LUX_PATH_RX51_3x;
+		als_calib0_path = ALS_CALIB0_PATH_RX51_3x;
+		als_calib1_path = ALS_CALIB1_PATH_RX51_3x;
+		display_als_profiles = display_als_profiles_rx51;
+		led_als_profiles = led_als_profiles_rx51;
+		kbd_als_profiles = kbd_als_profiles_rx51;
 	} else {
 		als_type = ALS_TYPE_NONE;
 		als_lux_path = NULL;
 	}
-
 	mce_log(LL_DEBUG, "ALS-type: %d", als_type);
 
 EXIT:

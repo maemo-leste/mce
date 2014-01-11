@@ -36,6 +36,11 @@
 #define ALS_CALIB0_PATH_RX51		ALS_PATH_RX51 "/calib0"
 #define ALS_CALIB1_PATH_RX51		ALS_PATH_RX51 "/calib1"
 
+#define ALS_PATH_RX51_3x	"/sys/class/i2c-adapter/i2c-2/2-0029/iio:device0"
+#define ALS_LUX_PATH_RX51_3x		ALS_PATH_RX51_3x "/in_illuminance0_input"
+#define ALS_CALIB0_PATH_RX51_3x		ALS_PATH_RX51_3x "/in_intensity_both_calibscale"
+#define ALS_CALIB1_PATH_RX51_3x		ALS_PATH_RX51_3x "/in_intensity_ir_calibscale"
+
 /** Path to the GConf settings for the display */
 #ifndef MCE_GCONF_DISPLAY_PATH
 #define MCE_GCONF_DISPLAY_PATH			"/system/osso/dsm/display"
