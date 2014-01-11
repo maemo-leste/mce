@@ -75,6 +75,7 @@ static const gchar *const keyboard_event_drivers[] = {
 
 	/** Input layer name for the Triton 2 power button */
 	"triton2-pwrbutton",
+	"twl4030_pwrbutton",
 
 	/** Input layer name for the Retu powerbutton */
 	"retu-pwrbutton",
