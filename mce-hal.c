@@ -41,7 +41,8 @@ product_id_t get_product_id(void)
 		goto EXIT;
 
 	if (mce_read_string_from_file(COMPONENT_VERSION_PATH, &tmp) == FALSE) {
-		goto EXIT;
+		if (mce_read_string_from_file(CPUINFO_PATH, &tmp) == FALSE)
+			goto EXIT;
 	}
 
 	if (strstr(tmp, PRODUCT_SU18_STR) != NULL) {

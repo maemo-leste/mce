@@ -25,6 +25,7 @@
 #include <glib.h>
 
 #define COMPONENT_VERSION_PATH		"/proc/component_version"
+#define CPUINFO_PATH				"/proc/cpuinfo"
 
 #define PRODUCT_SU18_STR		"SU-18"	/**< 770 */
 #define PRODUCT_RX34_STR		"RX-34"	/**< N800 */
