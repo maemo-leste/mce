@@ -1,3 +1,10 @@
+mce (1.8.127+0m5) unstable; urgency=low
+
+  * 3.x kernel compatibility fixes
+  * fix for problem reported at http://talk.maemo.org/showpost.php?p=1387420&postcount=34
+
+ -- Ivaylo Dimitrov <freemangordon@abv.bg>  Mon, 24 Jan 2014 18:04:33 +0200
+
 mce (1.8.126+0m5) unstable; urgency=low
 
   * Initial release of Fremantle MCE reverse engineering work
