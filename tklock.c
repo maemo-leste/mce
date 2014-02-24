@@ -1815,7 +1815,13 @@ static void keypress_trigger(gconstpointer const data)
 	    (tklock_proximity == FALSE) &&
 	    ((ev != NULL) &&
 	     (ev->code == power_keycode) && (ev->value == 1))) {
-		trigger_visual_tklock();
+		if(!is_eveater_enabled())
+			trigger_visual_tklock();
+	}
+	if(is_eveater_enabled()) {
+		mce_log(LL_DEBUG, "disable eveater (TRUE) - power key");
+		disable_eveater(TRUE);
+		synthesise_activity();
 	}
 
 EXIT:
