@@ -40,26 +40,41 @@ product_id_t get_product_id(void)
 	if (product_id != PRODUCT_UNSET)
 		goto EXIT;
 
-	if (mce_read_string_from_file(COMPONENT_VERSION_PATH, &tmp) == FALSE) {
-		if (mce_read_string_from_file(CPUINFO_PATH, &tmp) == FALSE)
-			goto EXIT;
+	if (mce_read_string_from_file(COMPONENT_VERSION_PATH, &tmp)) {
+		if (strstr(tmp, PRODUCT_SU18_STR) != NULL) {
+			product_id = PRODUCT_SU18;
+		} else if (strstr(tmp, PRODUCT_RX34_STR) != NULL) {
+			product_id = PRODUCT_RX34;
+		} else if (strstr(tmp, PRODUCT_RX44_STR) != NULL) {
+			product_id = PRODUCT_RX44;
+		} else if (strstr(tmp, PRODUCT_RX48_STR) != NULL) {
+			product_id = PRODUCT_RX48;
+		} else if (strstr(tmp, PRODUCT_RX51_STR) != NULL) {
+			product_id = PRODUCT_RX51;
+		} else {
+			product_id = PRODUCT_UNKNOWN;
+		}
+		g_free(tmp);
+		goto EXIT;
 	}
 
-	if (strstr(tmp, PRODUCT_SU18_STR) != NULL) {
-		product_id = PRODUCT_SU18;
-	} else if (strstr(tmp, PRODUCT_RX34_STR) != NULL) {
-		product_id = PRODUCT_RX34;
-	} else if (strstr(tmp, PRODUCT_RX44_STR) != NULL) {
-		product_id = PRODUCT_RX44;
-	} else if (strstr(tmp, PRODUCT_RX48_STR) != NULL) {
-		product_id = PRODUCT_RX48;
-	} else if (strstr(tmp, PRODUCT_RX51_STR) != NULL) {
-		product_id = PRODUCT_RX51;
-	} else {
-		product_id = PRODUCT_UNKNOWN;
+	if (mce_read_string_from_file(CPUINFO_PATH, &tmp)) {
+		if (strstr(tmp, "Nokia 770") != NULL) {
+			product_id = PRODUCT_SU18;
+		} else if (strstr(tmp, "Nokia N800") != NULL) {
+			product_id = PRODUCT_RX34;
+		} else if (strstr(tmp, "Nokia N810 WiMAX") != NULL) {
+			product_id = PRODUCT_RX48;
+		} else if (strstr(tmp, "Nokia N810") != NULL) { /* NOTE: "Nokia N810" is substring of "Nokia N810 WiMAX" so must be checked after */
+			product_id = PRODUCT_RX44;
+		} else if (strstr(tmp, "Nokia RX-51 board") != NULL) {
+			product_id = PRODUCT_RX51;
+		} else {
+			product_id = PRODUCT_UNKNOWN;
+		}
+		g_free(tmp);
+		goto EXIT;
 	}
-
-	g_free(tmp);
 
 EXIT:
 	return product_id;
