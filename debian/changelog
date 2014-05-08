@@ -1,3 +1,9 @@
+mce (1.8.127-1) unstable; urgency=low
+
+  * Fix function get_product_id() - fix parsing /proc/cpuinfo
+
+ -- Pali Rohár <pali.rohar@gmail.com>  Thu, 08 May 2014 13:00:15 +0200
+
 mce (1.8.127+0m5) unstable; urgency=low
 
   * 3.x kernel compatibility fixes
