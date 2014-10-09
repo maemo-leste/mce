@@ -2235,7 +2235,7 @@ static void call_state_trigger(gconstpointer data)
 		/* Incoming call, update the submode,
 		 * unless there's already a call ongoing
 		 */
-		if (old_call_state != CALL_STATE_ACTIVE) {
+		if (old_call_state == CALL_STATE_ACTIVE) {
 			break;
 		}
 		get_submode();
