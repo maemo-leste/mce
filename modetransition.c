@@ -655,7 +655,7 @@ gboolean mce_mode_init(void)
 
 			(void)mce_write_string_to_file(MCE_DEVLOCK_FILENAME,
 						       ENABLED_STRING);
-			mce_log(LL_DEBUG, "device_lock_inhibit_pipe - > TRUE");
+			mce_log(LL_DEBUG, "device_lock_inhibit_pipe -> TRUE");
 			(void)execute_datapipe(&device_lock_inhibit_pipe,
 					       GINT_TO_POINTER(TRUE),
 					       USE_INDATA, CACHE_INDATA);
