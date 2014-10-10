@@ -1,3 +1,9 @@
+mce (1.8.127.3+0m5) unstable; urgency=low
+
+  * compile with correct splashscreen-dbus-names.h and modechange-dbus-names.h
+
+ -- Ivaylo Dimitrov <freemangordon@abv.bg>  Thu, 10 Oct 2014 12:55:39 +0300
+
 mce (1.8.127.2+0m5) unstable; urgency=low
 
   * fix condition in call_state_trigger
