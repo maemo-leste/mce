@@ -35,6 +35,7 @@
 #include "mce-io.h"
 #include "mce-log.h"
 #include "datapipe.h"
+#include "event-switches.h"
 
 guint16 power_keycode = POWER_BUTTON;
 
@@ -53,6 +54,8 @@ static GSList *touchscreen_dev_list = NULL;
 static GSList *keyboard_dev_list = NULL;
 /** List of misc input devices */
 static GSList *misc_dev_list = NULL;
+/** List of switch input devices */
+static GSList *switch_dev_list = NULL;
 
 /** GFile pointer for the directory we monitor */
 GFile *dev_input_gfp = NULL;
@@ -310,6 +313,59 @@ EXIT:
 }
 
 /**
+ * I/O monitor callback for switch
+ *
+ * @param data The new data
+ * @param bytes_read The number of bytes read
+ */
+static void switch_cb(gpointer data, gsize bytes_read)
+{
+	struct input_event *ev;
+
+	ev = data;
+
+	/* Don't process invalid reads */
+	if (bytes_read != sizeof (struct input_event)) {
+		goto EXIT;
+	}
+
+	if (ev->type == EV_SW) {
+		switch (ev->code) {
+			case SW_KEYPAD_SLIDE: {
+				kbd_slide_cb((gpointer)(ev->value ? MCE_KBD_SLIDE_OPEN : MCE_KBD_SLIDE_CLOSED),
+					     ev->value ? sizeof(MCE_KBD_SLIDE_OPEN) : sizeof(MCE_KBD_SLIDE_CLOSED));
+				goto EXIT;
+			}
+			case SW_FRONT_PROXIMITY: {
+				proximity_sensor_cb((gpointer)(ev->value ? MCE_PROXIMITY_SENSOR_CLOSED : MCE_PROXIMITY_SENSOR_OPEN),
+					     ev->value ? sizeof(MCE_PROXIMITY_SENSOR_CLOSED) : sizeof(MCE_PROXIMITY_SENSOR_OPEN));
+				goto EXIT;
+			}
+			case SW_CAMERA_LENS_COVER: {
+				camera_launch_button_cb((gpointer)(ev->value ? MCE_CAM_LAUNCH_ACTIVE : MCE_CAM_LAUNCH_INACTIVE),
+					     ev->value ? sizeof(MCE_CAM_LAUNCH_ACTIVE) : sizeof(MCE_CAM_LAUNCH_INACTIVE));
+				goto EXIT;
+			}
+			default:
+				break;
+		}
+	} else if (ev->type == EV_KEY) {
+		switch (ev->code) {
+			case KEY_SCREENLOCK: {
+				lockkey_cb((gpointer)(ev->value ? MCE_FLICKER_KEY_ACTIVE :MCE_FLICKER_KEY_INACTIVE),
+					   ev->value ? sizeof(MCE_FLICKER_KEY_ACTIVE) : sizeof(MCE_FLICKER_KEY_INACTIVE));
+			goto EXIT;
+		}
+		default:
+			break;
+		}
+	}
+
+EXIT:
+	return;
+}
+
+/**
  * Timeout callback for misc event monitoring reprogramming
  *
  * @param data Unused
@@ -370,7 +426,6 @@ static void misc_cb(gpointer data, gsize bytes_read)
 	if (bytes_read != sizeof (struct input_event)) {
 		goto EXIT;
 	}
-
 	/* ev->type for the jack sense is EV_SW */
 	mce_log(LL_DEBUG, "ev->type: %d", ev->type);
 
@@ -498,6 +553,22 @@ static void match_and_register_io_monitor(const gchar *filename)
 		} else {
 			keyboard_dev_list = g_slist_prepend(keyboard_dev_list, (gpointer)iomon);
 		}
+	} else if ((fd = match_event_file(filename, switch_event_drivers)) != -1) {
+		gconstpointer iomon = NULL;
+		/* FIXME - a smarter method of identifying the correct devices
+		 * should be implemented here, rather by driver name
+		 */
+		iomon = mce_register_io_monitor_chunk(fd, filename, MCE_IO_ERROR_POLICY_WARN, FALSE, switch_cb, sizeof (struct input_event));
+
+		/* If we fail to register an I/O monitor,
+		 * don't leak the file descriptor,
+		 * and don't add the device to the list
+		 */
+		if (iomon == NULL) {
+			close(fd);
+		} else {
+			switch_dev_list = g_slist_prepend(switch_dev_list, (gpointer)iomon);
+		}
 	} else {
 		gconstpointer iomon = NULL;
 
@@ -512,6 +583,25 @@ static void match_and_register_io_monitor(const gchar *filename)
 	}
 }
 
+static void remove_input_device(GSList *devices, const gchar *device)
+{
+	gconstpointer iomon_id = NULL;
+	GSList *list_entry = NULL;
+
+	/* Try to find a matching device I/O monitor */
+	list_entry = g_slist_find_custom(devices, device,
+					 iomon_name_compare);
+
+	/* If we find one, obtain the iomon ID,
+	 * remove the entry and finally unregister the I/O monitor
+	 */
+	if (list_entry != NULL) {
+		iomon_id = list_entry->data;
+		devices = g_slist_remove(devices, iomon_id);
+		mce_unregister_io_monitor(iomon_id);
+	}
+}
+
 /**
  * Update list of input devices
  * Remove the I/O monitor for the specified device (if existing)
@@ -523,50 +613,17 @@ static void match_and_register_io_monitor(const gchar *filename)
  */
 static void update_inputdevices(const gchar *device, gboolean add)
 {
-	gconstpointer iomon_id = NULL;
-	GSList *list_entry = NULL;
-
 	/* Try to find a matching touchscreen I/O monitor */
-	list_entry = g_slist_find_custom(touchscreen_dev_list, device,
-					 iomon_name_compare);
-
-	/* If we find one, obtain the iomon ID,
-	 * remove the entry and finally unregister the I/O monitor
-	 */
-	if (list_entry != NULL) {
-		iomon_id = list_entry->data;
-		touchscreen_dev_list = g_slist_remove(touchscreen_dev_list,
-						      iomon_id);
-		mce_unregister_io_monitor(iomon_id);
-	}
+	remove_input_device(touchscreen_dev_list, device);
 
 	/* Try to find a matching keyboard I/O monitor */
-	list_entry = g_slist_find_custom(keyboard_dev_list, device,
-					 iomon_name_compare);
+	remove_input_device(keyboard_dev_list, device);
 
-	/* If we find one, obtain the iomon ID,
-	 * remove the entry and finally unregister the I/O monitor
-	 */
-	if (list_entry != NULL) {
-		iomon_id = list_entry->data;
-		keyboard_dev_list = g_slist_remove(keyboard_dev_list,
-						   iomon_id);
-		mce_unregister_io_monitor(iomon_id);
-	}
+	/* Try to find a matching switch I/O monitor */
+	remove_input_device(switch_dev_list, device);
 
-	/* Try to find a matching touchscreen I/O monitor */
-	list_entry = g_slist_find_custom(misc_dev_list, device,
-					 iomon_name_compare);
-
-	/* If we find one, obtain the iomon ID,
-	 * remove the entry and finally unregister the I/O monitor
-	 */
-	if (list_entry != NULL) {
-		iomon_id = list_entry->data;
-		misc_dev_list = g_slist_remove(misc_dev_list,
-					       iomon_id);
-		mce_unregister_io_monitor(iomon_id);
-	}
+	/* Try to find a matching misc I/O monitor */
+	remove_input_device(misc_dev_list, device);
 
 	if (add == TRUE)
 		match_and_register_io_monitor(device);
@@ -638,6 +695,13 @@ static void unregister_inputdevices(void)
 				(GFunc)unregister_io_monitor, NULL);
 		g_slist_free(keyboard_dev_list);
 		keyboard_dev_list = NULL;
+	}
+
+	if (switch_dev_list != NULL) {
+		g_slist_foreach(switch_dev_list,
+				(GFunc)unregister_io_monitor, NULL);
+		g_slist_free(switch_dev_list);
+		switch_dev_list = NULL;
 	}
 
 	if (misc_dev_list != NULL) {

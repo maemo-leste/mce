@@ -126,4 +126,10 @@
 gboolean mce_switches_init(void);
 void mce_switches_exit(void);
 
+void kbd_slide_cb(gpointer data, gsize bytes_read);
+void proximity_sensor_cb(gpointer data, gsize bytes_read);
+void camera_launch_button_cb(gpointer data, gsize bytes_read);
+
+void lockkey_cb(gpointer data, gsize bytes_read);
+
 #endif /* _EVENT_SWITCHES_H_ */

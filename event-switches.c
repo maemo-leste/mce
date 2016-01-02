@@ -92,7 +92,7 @@ static void generic_activity_cb(gpointer data, gsize bytes_read)
  * @param data Unused
  * @param bytes_read Unused
  */
-static void camera_launch_button_cb(gpointer data, gsize bytes_read)
+void camera_launch_button_cb(gpointer data, gsize bytes_read)
 {
 	camera_button_state_t camera_button_state;
 
@@ -121,7 +121,7 @@ static void camera_launch_button_cb(gpointer data, gsize bytes_read)
  * @param data The new data
  * @param bytes_read Unused
  */
-static void lockkey_cb(gpointer data, gsize bytes_read)
+void lockkey_cb(gpointer data, gsize bytes_read)
 {
 	gint lockkey_state;
 
@@ -145,7 +145,7 @@ static void lockkey_cb(gpointer data, gsize bytes_read)
  * @param data The new data
  * @param bytes_read Unused
  */
-static void kbd_slide_cb(gpointer data, gsize bytes_read)
+void kbd_slide_cb(gpointer data, gsize bytes_read)
 {
 	cover_state_t slide_state;
 
@@ -203,7 +203,7 @@ static void lid_cover_cb(gpointer data, gsize bytes_read)
  * @param data The new data
  * @param bytes_read Unused
  */
-static void proximity_sensor_cb(gpointer data, gsize bytes_read)
+void proximity_sensor_cb(gpointer data, gsize bytes_read)
 {
 	cover_state_t proximity_sensor_state;
 

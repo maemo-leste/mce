@@ -85,17 +85,41 @@ static const gchar *const keyboard_event_drivers[] = {
 };
 
 /**
+ * List of drivers that provide switch events
+ */
+static const gchar *const switch_event_drivers[] = {
+	/** gpio-keys driver */
+	"gpio_keys",
+
+	/** No more entries */
+	NULL
+};
+
+/**
  * List of drivers that we should not monitor
  */
 static const gchar *const driver_blacklist[] = {
 	/** Input layer name for the ST LIS302DL accelerometer */
 	"ST LIS302DL Accelerometer",
+	"ST LIS3LV02DL Accelerometer",
 
 	/** No more entries */
 	NULL
 };
 
 #define POWER_BUTTON			KEY_POWER
+
+#ifndef SW_CAMERA_LENS_COVER
+#define SW_CAMERA_LENS_COVER		0x09
+#endif
+
+#ifndef SW_KEYPAD_SLIDE
+#define SW_KEYPAD_SLIDE			0x0a
+#endif
+
+#ifndef SW_FRONT_PROXIMITY
+#define SW_FRONT_PROXIMITY		0x0b
+#endif
 
 #define MONITORING_DELAY		1
 
