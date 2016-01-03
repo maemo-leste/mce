@@ -581,6 +581,28 @@ static gint iomon_name_compare(gconstpointer iomon_id,
 	return strcmp(iomon_name, name);
 }
 
+static void register_io_monitor_chunk(const gint fd, const gchar *const file,
+				 iomon_cb callback, GSList *devices)
+{
+	gconstpointer iomon = NULL;
+
+	iomon = mce_register_io_monitor_chunk(fd, file,
+					      MCE_IO_ERROR_POLICY_WARN, FALSE,
+					      callback,
+					      sizeof (struct input_event));
+
+	/* If we fail to register an I/O monitor,
+	 * don't leak the file descriptor,
+	 * and don't add the device to the list
+	 */
+	if (iomon == NULL) {
+		if (fd != -1)
+			close(fd);
+	} else {
+		devices = g_slist_prepend(devices, (gpointer)iomon);
+	}
+}
+
 /**
  * Match and register I/O monitor
  */
@@ -589,72 +611,32 @@ static void match_and_register_io_monitor(const gchar *filename)
 	int fd;
 	gboolean match = FALSE;
 
-	if ((fd = match_event_file(filename,
-				   driver_blacklist)) != -1) {
+	if ((fd = match_event_file(filename, driver_blacklist)) != -1) {
 		/* If the driver for the event file is blacklisted, skip it */
 		close(fd);
 		goto EXIT;
 	} else if ((fd = match_event_file(filename,
 					  touchscreen_event_drivers)) != -1) {
-		gconstpointer iomon = NULL;
-
-		iomon = mce_register_io_monitor_chunk(fd, filename, MCE_IO_ERROR_POLICY_WARN, FALSE, touchscreen_cb, sizeof (struct input_event));
-
-		/* If we fail to register an I/O monitor,
-		 * don't leak the file descriptor,
-		 * and don't add the device to the list
-		 */
-		if (iomon == NULL) {
-			close(fd);
-		} else {
-			touchscreen_dev_list = g_slist_prepend(touchscreen_dev_list, (gpointer)iomon);
-		}
+		register_io_monitor_chunk(fd, filename, touchscreen_cb,
+					  touchscreen_dev_list);
 		match = TRUE;
-	} else if ((fd = match_event_file(filename, keyboard_event_drivers)) != -1) {
-		gconstpointer iomon = NULL;
-
-		iomon = mce_register_io_monitor_chunk(fd, filename, MCE_IO_ERROR_POLICY_WARN, FALSE, keypress_cb, sizeof (struct input_event));
-
-		/* If we fail to register an I/O monitor,
-		 * don't leak the file descriptor,
-		 * and don't add the device to the list
-		 */
-		if (iomon == NULL) {
-			close(fd);
-		} else {
-			keyboard_dev_list = g_slist_prepend(keyboard_dev_list, (gpointer)iomon);
-		}
+	} else if ((fd = match_event_file(filename,
+					  keyboard_event_drivers)) != -1) {
+		register_io_monitor_chunk(fd, filename, keypress_cb,
+					  keyboard_dev_list);
 		match = TRUE;
 	}
 
-	if ((fd = match_event_file_by_caps(filename, switch_event_types, switch_event_keys)) != -1) {
-		gconstpointer iomon = NULL;
-
-		iomon = mce_register_io_monitor_chunk(fd, filename, MCE_IO_ERROR_POLICY_WARN, FALSE, switch_cb, sizeof (struct input_event));
-
-		/* If we fail to register an I/O monitor,
-		 * don't leak the file descriptor,
-		 * and don't add the device to the list
-		 */
-		if (iomon == NULL) {
-			close(fd);
-		} else {
-			switch_dev_list = g_slist_prepend(switch_dev_list, (gpointer)iomon);
-		}
+	if ((fd = match_event_file_by_caps(filename, switch_event_types,
+					   switch_event_keys)) != -1) {
+		register_io_monitor_chunk(fd, filename, switch_cb,
+					  switch_dev_list);
 		match = TRUE;
 	}
 
 	if (!match) {
-		gconstpointer iomon = NULL;
-
-		iomon = mce_register_io_monitor_chunk(-1, filename, MCE_IO_ERROR_POLICY_WARN, FALSE, misc_cb, sizeof (struct input_event));
-
-		/* If we fail to register an I/O monitor,
-		 * don't add the device to the list
-		 */
-		if (iomon != NULL) {
-			misc_dev_list = g_slist_prepend(misc_dev_list, (gpointer)iomon);
-		}
+		register_io_monitor_chunk(fd, filename, misc_cb,
+					  misc_dev_list);
 	}
 
 EXIT:;
