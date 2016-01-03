@@ -446,6 +446,75 @@ EXIT:
 	return;
 }
 
+static int match_event_file_by_caps(const gchar *const filename,
+				    const int *const ev_types,
+				    const int *const ev_keys[])
+{
+	int ev_type, p, q;
+	int version;
+	unsigned long bit[EV_MAX][NBITS(KEY_MAX)];
+	int fd;
+
+	if ((fd = open(filename, O_NONBLOCK | O_RDONLY)) == -1) {
+		mce_log(LL_DEBUG, "Failed to open `%s', skipping", filename);
+
+		/* Ignore error */
+		errno = 0;
+		return -1;
+	}
+
+	/* We use this ioctl to check if this device supports the input
+	 * ioctl's
+	*/
+	if (ioctl(fd, EVIOCGVERSION, &version) < 0) {
+		mce_log(LL_WARN,
+			"match_event_file_by_caps: can't get version on `%s'",
+			filename);
+		goto EXIT;
+	}
+
+	memset(bit, 0, sizeof(bit));
+	if (ioctl(fd, EVIOCGBIT(0, EV_MAX), bit[0]) < 0) {
+		mce_log(LL_WARN,
+			"match_event_file_by_caps: ioctl(EVIOCGBIT, EV_MAX) failed on `%s'",
+			filename);
+		goto EXIT;
+	}
+
+	for (p = 0; ev_types[p] != -1; p ++) {
+		/* TODO: Could check that ev_types[p] is less than EV_MAX */
+		ev_type = ev_types[p];
+
+		/* event type not supported, try the next one */
+		if (!test_bit(ev_type, bit[0]))
+			continue;
+
+		/* Get bits per event type */
+		if (ioctl(fd, EVIOCGBIT(ev_type, KEY_MAX), bit[ev_type]) < 0) {
+			mce_log(LL_WARN,
+				"match_event_file_by_caps: ioctl(EVIOCGBIT, KEY_MAX) failed on `%s'",
+				filename);
+			goto EXIT;
+		}
+
+		for (q = 0; ev_keys[p][q] != -1; q ++) {
+			/* TODO: Could check that q is less than KEY_MAX */
+
+			/* succeed if at least one match is found */
+			if (test_bit(ev_keys[p][q], bit[ev_type])) {
+				mce_log(LL_DEBUG,
+					"match_event_file_by_caps: match found on `%s'", filename);
+				return fd;
+			}
+		}
+	}
+
+EXIT:
+	close(fd);
+
+	return -1;
+}
+
 /**
  * Try to match /dev/input event file to a specific driver
  *
@@ -518,12 +587,13 @@ static gint iomon_name_compare(gconstpointer iomon_id,
 static void match_and_register_io_monitor(const gchar *filename)
 {
 	int fd;
+	gboolean match = FALSE;
 
 	if ((fd = match_event_file(filename,
 				   driver_blacklist)) != -1) {
 		/* If the driver for the event file is blacklisted, skip it */
 		close(fd);
-		fd = -1;
+		goto EXIT;
 	} else if ((fd = match_event_file(filename,
 					  touchscreen_event_drivers)) != -1) {
 		gconstpointer iomon = NULL;
@@ -539,6 +609,7 @@ static void match_and_register_io_monitor(const gchar *filename)
 		} else {
 			touchscreen_dev_list = g_slist_prepend(touchscreen_dev_list, (gpointer)iomon);
 		}
+		match = TRUE;
 	} else if ((fd = match_event_file(filename, keyboard_event_drivers)) != -1) {
 		gconstpointer iomon = NULL;
 
@@ -553,11 +624,12 @@ static void match_and_register_io_monitor(const gchar *filename)
 		} else {
 			keyboard_dev_list = g_slist_prepend(keyboard_dev_list, (gpointer)iomon);
 		}
-	} else if ((fd = match_event_file(filename, switch_event_drivers)) != -1) {
+		match = TRUE;
+	}
+
+	if ((fd = match_event_file_by_caps(filename, switch_event_types, switch_event_keys)) != -1) {
 		gconstpointer iomon = NULL;
-		/* FIXME - a smarter method of identifying the correct devices
-		 * should be implemented here, rather by driver name
-		 */
+
 		iomon = mce_register_io_monitor_chunk(fd, filename, MCE_IO_ERROR_POLICY_WARN, FALSE, switch_cb, sizeof (struct input_event));
 
 		/* If we fail to register an I/O monitor,
@@ -569,7 +641,10 @@ static void match_and_register_io_monitor(const gchar *filename)
 		} else {
 			switch_dev_list = g_slist_prepend(switch_dev_list, (gpointer)iomon);
 		}
-	} else {
+		match = TRUE;
+	}
+
+	if (!match) {
 		gconstpointer iomon = NULL;
 
 		iomon = mce_register_io_monitor_chunk(-1, filename, MCE_IO_ERROR_POLICY_WARN, FALSE, misc_cb, sizeof (struct input_event));
@@ -581,6 +656,8 @@ static void match_and_register_io_monitor(const gchar *filename)
 			misc_dev_list = g_slist_prepend(misc_dev_list, (gpointer)iomon);
 		}
 	}
+
+EXIT:;
 }
 
 static void remove_input_device(GSList *devices, const gchar *device)

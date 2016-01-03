@@ -84,15 +84,46 @@ static const gchar *const keyboard_event_drivers[] = {
 	NULL
 };
 
-/**
- * List of drivers that provide switch events
- */
-static const gchar *const switch_event_drivers[] = {
-	/** gpio-keys driver */
-	"gpio_keys",
+#ifndef SW_CAMERA_LENS_COVER
+#define SW_CAMERA_LENS_COVER		0x09
+#endif
 
+#ifndef SW_KEYPAD_SLIDE
+#define SW_KEYPAD_SLIDE			0x0a
+#endif
+
+#ifndef SW_FRONT_PROXIMITY
+#define SW_FRONT_PROXIMITY		0x0b
+#endif
+
+/**
+ * List of event types for switch monitor
+ */
+static const int switch_event_types[] = {
+	EV_SW,
+	EV_KEY,
 	/** No more entries */
-	NULL
+	-1
+};
+
+/**
+ * List of key types for switch monitor
+ */
+static const int event_switches[] = {
+	SW_CAMERA_LENS_COVER,
+	SW_KEYPAD_SLIDE,
+	SW_FRONT_PROXIMITY,
+	-1
+};
+
+static const int event_keys[] = {
+	KEY_SCREENLOCK,
+	-1
+};
+
+static const int *const switch_event_keys[]= {
+	event_switches,
+	event_keys
 };
 
 /**
@@ -109,19 +140,14 @@ static const gchar *const driver_blacklist[] = {
 
 #define POWER_BUTTON			KEY_POWER
 
-#ifndef SW_CAMERA_LENS_COVER
-#define SW_CAMERA_LENS_COVER		0x09
-#endif
-
-#ifndef SW_KEYPAD_SLIDE
-#define SW_KEYPAD_SLIDE			0x0a
-#endif
-
-#ifndef SW_FRONT_PROXIMITY
-#define SW_FRONT_PROXIMITY		0x0b
-#endif
-
 #define MONITORING_DELAY		1
+
+#define BITS_PER_LONG			(sizeof(long) * 8)
+#define NBITS(x)			((((x) - 1) / BITS_PER_LONG) + 1)
+#define OFF(x)				((x) % BITS_PER_LONG)
+#define BIT(x)				(1UL << OFF(x))
+#define LONG(x)				((x)/BITS_PER_LONG)
+#define test_bit(bit, array)		((array[LONG(bit)] >> OFF(bit)) & 1)
 
 /* When MCE is made modular, this will be handled differently */
 gboolean mce_input_init(void);
