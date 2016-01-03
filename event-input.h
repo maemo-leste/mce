@@ -96,6 +96,10 @@ static const gchar *const keyboard_event_drivers[] = {
 #define SW_FRONT_PROXIMITY		0x0b
 #endif
 
+#ifndef KEY_CAMERA_FOCUS
+#define KEY_CAMERA_FOCUS		0x210
+#endif
+
 /**
  * List of event types for switch monitor
  */
@@ -118,6 +122,8 @@ static const int event_switches[] = {
 
 static const int event_keys[] = {
 	KEY_SCREENLOCK,
+	KEY_CAMERA,
+	KEY_CAMERA_FOCUS,
 	-1
 };
 

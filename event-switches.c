@@ -76,7 +76,7 @@ gboolean has_flicker_key = FALSE;
  * @param data Unused
  * @param bytes_read Unused
  */
-static void generic_activity_cb(gpointer data, gsize bytes_read)
+void generic_activity_cb(gpointer data, gsize bytes_read)
 {
 	(void)data;
 	(void)bytes_read;
@@ -261,7 +261,7 @@ static void usb_cable_cb(gpointer data, gsize bytes_read)
  * @param data The new data
  * @param bytes_read Unused
  */
-static void lens_cover_cb(gpointer data, gsize bytes_read)
+void lens_cover_cb(gpointer data, gsize bytes_read)
 {
 	cover_state_t lens_cover_state;
 

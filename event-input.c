@@ -312,6 +312,13 @@ EXIT:
 	return;
 }
 
+static void switch_call_cb(struct input_event *ev, iomon_cb callback,
+			   const char *active, const char *inactive)
+{
+	callback((gpointer)(ev->value ? active : inactive),
+		 ev->value ? strlen(active) : strlen(inactive));
+}
+
 /**
  * I/O monitor callback for switch
  *
@@ -332,18 +339,22 @@ static void switch_cb(gpointer data, gsize bytes_read)
 	if (ev->type == EV_SW) {
 		switch (ev->code) {
 			case SW_KEYPAD_SLIDE: {
-				kbd_slide_cb((gpointer)(ev->value ? MCE_KBD_SLIDE_OPEN : MCE_KBD_SLIDE_CLOSED),
-					     ev->value ? sizeof(MCE_KBD_SLIDE_OPEN) : sizeof(MCE_KBD_SLIDE_CLOSED));
+				switch_call_cb(ev, kbd_slide_cb,
+					       MCE_KBD_SLIDE_OPEN,
+					       MCE_KBD_SLIDE_CLOSED);
 				goto EXIT;
 			}
 			case SW_FRONT_PROXIMITY: {
-				proximity_sensor_cb((gpointer)(ev->value ? MCE_PROXIMITY_SENSOR_CLOSED : MCE_PROXIMITY_SENSOR_OPEN),
-					     ev->value ? sizeof(MCE_PROXIMITY_SENSOR_CLOSED) : sizeof(MCE_PROXIMITY_SENSOR_OPEN));
+				switch_call_cb(ev, proximity_sensor_cb,
+					       MCE_PROXIMITY_SENSOR_CLOSED,
+					       MCE_PROXIMITY_SENSOR_OPEN);
 				goto EXIT;
 			}
 			case SW_CAMERA_LENS_COVER: {
-				camera_launch_button_cb((gpointer)(ev->value ? MCE_CAM_LAUNCH_ACTIVE : MCE_CAM_LAUNCH_INACTIVE),
-					     ev->value ? sizeof(MCE_CAM_LAUNCH_ACTIVE) : sizeof(MCE_CAM_LAUNCH_INACTIVE));
+				switch_call_cb(ev, camera_launch_button_cb,
+					       MCE_LENS_COVER_CLOSED,
+					       MCE_LENS_COVER_OPEN);
+
 				goto EXIT;
 			}
 			default:
@@ -352,10 +363,23 @@ static void switch_cb(gpointer data, gsize bytes_read)
 	} else if (ev->type == EV_KEY) {
 		switch (ev->code) {
 			case KEY_SCREENLOCK: {
-				lockkey_cb((gpointer)(ev->value ? MCE_FLICKER_KEY_ACTIVE :MCE_FLICKER_KEY_INACTIVE),
-					   ev->value ? sizeof(MCE_FLICKER_KEY_ACTIVE) : sizeof(MCE_FLICKER_KEY_INACTIVE));
+				switch_call_cb(ev, lockkey_cb,
+					       MCE_FLICKER_KEY_ACTIVE,
+					       MCE_FLICKER_KEY_INACTIVE);
+				goto EXIT;
+			}
+			case KEY_CAMERA: {
+				switch_call_cb(ev, camera_launch_button_cb,
+					       MCE_CAM_LAUNCH_ACTIVE,
+					       MCE_CAM_LAUNCH_INACTIVE);
+				goto EXIT;
+			}
+			case KEY_CAMERA_FOCUS: {
+				switch_call_cb(ev, generic_activity_cb,
+					       MCE_CAM_FOCUS_ACTIVE,
+					       MCE_CAM_FOCUS_INACTIVE);
 			goto EXIT;
-		}
+			}
 		default:
 			break;
 		}
