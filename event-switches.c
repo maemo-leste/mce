@@ -21,6 +21,10 @@
  */
 #include <glib.h>
 #include <string.h>
+#include <unistd.h>
+#include <linux/input.h>
+#include <stdlib.h>
+
 #include "mce.h"
 #include "event-switches.h"
 #include "mce-io.h"
@@ -318,6 +322,97 @@ EXIT:
 	return status;
 }
 
+static void gpio_keys_foreach (gpointer data, gpointer user_data)
+{
+	gchar **s = (gchar **)user_data;
+	gchar *tmp = *s, *key = g_strdup_printf("%d", GPOINTER_TO_INT(data));
+
+	*s = g_strconcat(tmp, ",", key, NULL);
+	g_free(key);
+	g_free(tmp);
+}
+
+static gboolean gpio_keys_enable_switch(int type, gint key, gboolean disable)
+{
+	const gchar *path = ((type == EV_KEY) ?
+				     MCE_GPIO_KEYS_DISABLED_KEYS_PATH :
+				     MCE_GPIO_KEYS_DISABLED_SWITCHES_PATH);
+	gchar *s, **array;
+	GSList *l = NULL;
+	gboolean rv;
+	gpointer tmp;
+
+	if (access(path, F_OK) == -1) {
+		return FALSE;
+	}
+
+	if (!mce_read_string_from_file(path, &s)) {
+		return FALSE;
+	}
+
+	s = g_strstrip(s);
+	array = g_strsplit(s, ",", -1);
+	g_free(s);
+
+	if (array) {
+		gchar **p, *c;
+
+		for (p = array; *p; p ++) {
+			if ((c = g_strrstr(*p, "-"))) {
+				/* we have a range, expand it */
+				int i, j;
+
+				*c = 0;
+				j = atoi(c + 1);
+
+				for (i = atoi(*p); i <= j; i ++) {
+					l = g_slist_append(l, GINT_TO_POINTER(i));
+				}
+			} else {
+				gint t = atoi(*p);
+				l = g_slist_append(l, GINT_TO_POINTER(t));
+			}
+		}
+	}
+
+	g_strfreev(array);
+
+	if (disable) {
+		if (l && g_slist_find(l, GINT_TO_POINTER(key))) {
+			/* Already disabled */
+			g_slist_free(l);
+			return TRUE;
+		}
+
+		l = g_slist_append(l, GINT_TO_POINTER(key));
+	} else {
+		if (!l || !g_slist_find(l, GINT_TO_POINTER(key))) {
+			/* Already enabled */
+			g_slist_free(l);
+			return TRUE;
+		}
+
+		l = g_slist_remove(l, GINT_TO_POINTER(key));
+	}
+
+	if (l) {
+		tmp = g_slist_nth_data(l, 0);
+		s = g_strdup_printf("%d", GPOINTER_TO_INT(tmp));
+		l = g_slist_remove(l, tmp);
+		g_slist_foreach(l, gpio_keys_foreach, &s);
+		g_slist_free(l);
+	} else {
+		s = g_strdup("");
+	}
+
+	g_strlcat(s, "\n", -1);
+	rv = mce_write_string_to_file(path, s);
+
+	g_free(s);
+
+	return rv;
+}
+
 /**
  * Update the proximity monitoring
  */
@@ -329,10 +424,12 @@ static void update_proximity_monitor(void)
 	    (alarm_ui_state == MCE_ALARM_UI_RINGING_INT32)) {
 		mce_write_string_to_file(MCE_PROXIMITY_SENSOR_DISABLE_PATH,
 					 "0");
+		gpio_keys_enable_switch(EV_SW, SW_FRONT_PROXIMITY, FALSE);
 		(void)update_proximity_sensor_state();
 	} else {
 		mce_write_string_to_file(MCE_PROXIMITY_SENSOR_DISABLE_PATH,
 					 "1");
+		gpio_keys_enable_switch(EV_SW, SW_FRONT_PROXIMITY, TRUE);
 	}
 }
 
@@ -374,11 +471,15 @@ static void submode_trigger(gconstpointer data)
 		if ((old_submode & MCE_TKLOCK_SUBMODE) == 0) {
 			mce_write_string_to_file(MCE_CAM_FOCUS_DISABLE_PATH, "1");
 			mce_write_string_to_file(MCE_CAM_LAUNCH_DISABLE_PATH, "1");
+			gpio_keys_enable_switch(EV_KEY, KEY_CAMERA, TRUE);
+			gpio_keys_enable_switch(EV_KEY, KEY_CAMERA_FOCUS, TRUE);
 		}
 	} else {
 		if ((old_submode & MCE_TKLOCK_SUBMODE) != 0) {
 			mce_write_string_to_file(MCE_CAM_LAUNCH_DISABLE_PATH, "0");
 			mce_write_string_to_file(MCE_CAM_FOCUS_DISABLE_PATH, "0");
+			gpio_keys_enable_switch(EV_KEY, KEY_CAMERA, FALSE);
+			gpio_keys_enable_switch(EV_KEY, KEY_CAMERA_FOCUS, FALSE);
 		}
 	}
 

@@ -121,6 +121,11 @@
 /** Value for the battery cover closed state */
 #define MCE_BATTERY_COVER_CLOSED			"closed"
 
+/**
+ * Path to the SysFS interface for the upstream gpio-keys driver
+ */
+#define MCE_GPIO_KEYS_DISABLED_KEYS_PATH		"/sys/devices/platform/gpio_keys/disabled_keys"
+#define MCE_GPIO_KEYS_DISABLED_SWITCHES_PATH		"/sys/devices/platform/gpio_keys/disabled_switches"
 
 /* When MCE is made modular, this will be handled differently */
 gboolean mce_switches_init(void);
@@ -132,5 +137,21 @@ void camera_launch_button_cb(gpointer data, gsize bytes_read);
 void lens_cover_cb(gpointer data, gsize bytes_read);
 void lockkey_cb(gpointer data, gsize bytes_read);
 void generic_activity_cb(gpointer data, gsize bytes_read);
+
+#ifndef SW_CAMERA_LENS_COVER
+#define SW_CAMERA_LENS_COVER		0x09
+#endif
+
+#ifndef SW_KEYPAD_SLIDE
+#define SW_KEYPAD_SLIDE			0x0a
+#endif
+
+#ifndef SW_FRONT_PROXIMITY
+#define SW_FRONT_PROXIMITY		0x0b
+#endif
+
+#ifndef KEY_CAMERA_FOCUS
+#define KEY_CAMERA_FOCUS		0x210
+#endif
 
 #endif /* _EVENT_SWITCHES_H_ */

@@ -26,6 +26,8 @@
 
 #include <linux/input.h>	/* KEY_POWER */
 
+#include "event-switches.h"
+
 /** Path to the input device directory */
 #define DEV_INPUT_PATH			"/dev/input"
 /** Prefix for event files */
@@ -83,22 +85,6 @@ static const gchar *const keyboard_event_drivers[] = {
 	/** No more entries */
 	NULL
 };
-
-#ifndef SW_CAMERA_LENS_COVER
-#define SW_CAMERA_LENS_COVER		0x09
-#endif
-
-#ifndef SW_KEYPAD_SLIDE
-#define SW_KEYPAD_SLIDE			0x0a
-#endif
-
-#ifndef SW_FRONT_PROXIMITY
-#define SW_FRONT_PROXIMITY		0x0b
-#endif
-
-#ifndef KEY_CAMERA_FOCUS
-#define KEY_CAMERA_FOCUS		0x210
-#endif
 
 /**
  * List of event types for switch monitor
