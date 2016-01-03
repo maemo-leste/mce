@@ -378,7 +378,7 @@ static void switch_cb(gpointer data, gsize bytes_read)
 				switch_call_cb(ev, generic_activity_cb,
 					       MCE_CAM_FOCUS_ACTIVE,
 					       MCE_CAM_FOCUS_INACTIVE);
-			goto EXIT;
+				goto EXIT;
 			}
 		default:
 			break;
@@ -606,7 +606,7 @@ static gint iomon_name_compare(gconstpointer iomon_id,
 }
 
 static void register_io_monitor_chunk(const gint fd, const gchar *const file,
-				 iomon_cb callback, GSList *devices)
+				 iomon_cb callback, GSList **devices)
 {
 	gconstpointer iomon = NULL;
 
@@ -623,7 +623,7 @@ static void register_io_monitor_chunk(const gint fd, const gchar *const file,
 		if (fd != -1)
 			close(fd);
 	} else {
-		devices = g_slist_prepend(devices, (gpointer)iomon);
+		*devices = g_slist_prepend(*devices, (gpointer)iomon);
 	}
 }
 
@@ -642,25 +642,25 @@ static void match_and_register_io_monitor(const gchar *filename)
 	} else if ((fd = match_event_file(filename,
 					  touchscreen_event_drivers)) != -1) {
 		register_io_monitor_chunk(fd, filename, touchscreen_cb,
-					  touchscreen_dev_list);
+					  &touchscreen_dev_list);
 		match = TRUE;
 	} else if ((fd = match_event_file(filename,
 					  keyboard_event_drivers)) != -1) {
 		register_io_monitor_chunk(fd, filename, keypress_cb,
-					  keyboard_dev_list);
+					  &keyboard_dev_list);
 		match = TRUE;
 	}
 
 	if ((fd = match_event_file_by_caps(filename, switch_event_types,
 					   switch_event_keys)) != -1) {
 		register_io_monitor_chunk(fd, filename, switch_cb,
-					  switch_dev_list);
+					  &switch_dev_list);
 		match = TRUE;
 	}
 
 	if (!match) {
 		register_io_monitor_chunk(fd, filename, misc_cb,
-					  misc_dev_list);
+					  &misc_dev_list);
 	}
 
 EXIT:;
