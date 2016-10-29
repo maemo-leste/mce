@@ -666,13 +666,13 @@ static void match_and_register_io_monitor(const gchar *filename)
 EXIT:;
 }
 
-static void remove_input_device(GSList *devices, const gchar *device)
+static void remove_input_device(GSList **devices, const gchar *device)
 {
 	gconstpointer iomon_id = NULL;
 	GSList *list_entry = NULL;
 
 	/* Try to find a matching device I/O monitor */
-	list_entry = g_slist_find_custom(devices, device,
+	list_entry = g_slist_find_custom(*devices, device,
 					 iomon_name_compare);
 
 	/* If we find one, obtain the iomon ID,
@@ -680,7 +680,7 @@ static void remove_input_device(GSList *devices, const gchar *device)
 	 */
 	if (list_entry != NULL) {
 		iomon_id = list_entry->data;
-		devices = g_slist_remove(devices, iomon_id);
+		*devices = g_slist_remove(*devices, iomon_id);
 		mce_unregister_io_monitor(iomon_id);
 	}
 }
@@ -697,16 +697,16 @@ static void remove_input_device(GSList *devices, const gchar *device)
 static void update_inputdevices(const gchar *device, gboolean add)
 {
 	/* Try to find a matching touchscreen I/O monitor */
-	remove_input_device(touchscreen_dev_list, device);
+	remove_input_device(&touchscreen_dev_list, device);
 
 	/* Try to find a matching keyboard I/O monitor */
-	remove_input_device(keyboard_dev_list, device);
+	remove_input_device(&keyboard_dev_list, device);
 
 	/* Try to find a matching switch I/O monitor */
-	remove_input_device(switch_dev_list, device);
+	remove_input_device(&switch_dev_list, device);
 
 	/* Try to find a matching misc I/O monitor */
-	remove_input_device(misc_dev_list, device);
+	remove_input_device(&misc_dev_list, device);
 
 	if (add == TRUE)
 		match_and_register_io_monitor(device);
