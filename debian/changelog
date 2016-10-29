@@ -1,3 +1,9 @@
+mce (1.8.127.5+0m5) unstable; urgency=low
+
+  * do not segfault in mce_get_io_monitor_name when input devices get changed.
+
+ -- Ivaylo Dimitrov <freemangordon@abv.bg>  Sat, 29 Oct 2016 19:39:13 +0200
+
 mce (1.8.127.4+0m5) unstable; urgency=low
 
   * Add support of various gpio switches through evdev interface and gpio-keys driver.
