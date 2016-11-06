@@ -771,8 +771,8 @@ EXIT:
 
 void mce_devlock_exit(void)
 {
-	devlock_notify_remove(devlock_autorelock_notify_cb_id, 0);
-	devlock_notify_remove(devlock_timeout_notify_cb_id, 0);
+	devlock_notify_remove(devlock_autorelock_notify_cb_id);
+	devlock_notify_remove(devlock_timeout_notify_cb_id);
 	remove_output_trigger_from_datapipe(&call_state_pipe,
 					    call_state_trigger);
 	remove_output_trigger_from_datapipe(&device_lock_pipe,
