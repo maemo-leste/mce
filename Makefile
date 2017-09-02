@@ -31,6 +31,7 @@ MODULES := \
 	$(MODULE_DIR)/libcamera.so \
 	$(MODULE_DIR)/libalarm.so \
 	$(MODULE_DIR)/libbattery.so \
+	$(MODULE_DIR)/libbattery-upower.so \
 	$(MODULE_DIR)/libdisplay.so \
 	$(MODULE_DIR)/libled.so \
 	$(MODULE_DIR)/libvibrator.so \
