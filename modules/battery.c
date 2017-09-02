@@ -21,7 +21,7 @@
  */
 #include <glib.h>
 #include <gmodule.h>
-#include <bme-dbus-proxy/dbus-names.h>
+#include "bme-dbus-names.h"
 #include "mce.h"
 #include "mce-log.h"
 #include "mce-dbus.h"
