@@ -1011,7 +1011,9 @@ static gboolean disable_tklock(gboolean silent)
 		{
 			goto EXIT;
 		}
-		tklock_disable_timeout_cb_id = g_timeout_add(500,tklock_disable_timeout_cb,(gpointer)silent);
+		tklock_disable_timeout_cb_id =
+		    g_timeout_add(500,tklock_disable_timeout_cb,
+				  GINT_TO_POINTER(silent));
 		goto EXIT;
 	}
 

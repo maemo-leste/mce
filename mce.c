@@ -432,7 +432,9 @@ int main(int argc, char **argv)
 	signal(SIGTERM, signal_handler);
 
 	/* Initialise GType system */
-	g_type_init();
+#if !GLIB_CHECK_VERSION(2,35,0)
+	g_type_init ();
+#endif
 
 	/* Register a mainloop */
 	mainloop = g_main_loop_new(NULL, FALSE);

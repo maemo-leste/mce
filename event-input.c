@@ -836,7 +836,9 @@ gboolean mce_input_init(void)
 	GError *error = NULL;
 	gboolean status = FALSE;
 
-	g_type_init();
+#if !GLIB_CHECK_VERSION(2,35,0)
+	g_type_init ();
+#endif
 
 	/* Retrieve a GFile pointer to the directory to monitor */
 	dev_input_gfp = g_file_new_for_path(DEV_INPUT_PATH);
