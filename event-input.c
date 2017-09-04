@@ -814,11 +814,19 @@ static void dir_changed_cb(GFileMonitor *monitor,
 
 	switch (event_type) {
 	case G_FILE_MONITOR_EVENT_CREATED:
-		update_inputdevices(g_file_get_path(file), TRUE);
+		if (g_file_query_file_type(file,
+					   G_FILE_QUERY_INFO_NONE,
+					   NULL) == G_FILE_TYPE_SPECIAL) {
+			update_inputdevices(g_file_get_path(file), TRUE);
+		}
 		break;
 
 	case G_FILE_MONITOR_EVENT_DELETED:
-		update_inputdevices(g_file_get_path(file), FALSE);
+		if (g_file_query_file_type(file,
+					   G_FILE_QUERY_INFO_NONE,
+					   NULL) == G_FILE_TYPE_SPECIAL) {
+			update_inputdevices(g_file_get_path(file), FALSE);
+		}
 		break;
 
 	default:
