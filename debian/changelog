@@ -1,3 +1,9 @@
+mce (1.8.127.5) unstable; urgency=medium
+
+  * enable git builds
+
+ -- Ivan J. <parazyd@dyne.org>  Thu, 14 Sep 2017 21:04:00 +0200
+
 mce (1.8.127.5+0m5) unstable; urgency=low
 
   * do not segfault in mce_get_io_monitor_name when input devices get changed.
