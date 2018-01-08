@@ -1,3 +1,9 @@
+mce (1.8.127.5-1) unstable; urgency=medium
+
+  * Bump compat to 5
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Mon, 8 Jan 2018 22:10:00 +0200
+
 mce (1.8.127.5) unstable; urgency=medium
 
   * enable git builds
