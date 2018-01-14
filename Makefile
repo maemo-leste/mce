@@ -42,7 +42,7 @@ MODULES := \
 MODEFILE := mode
 CONFFILE := mce.ini
 DBUSCONF := mce.conf
-GCONFSCHEMAS := devicelock.schemas
+GCONFSCHEMAS := devicelock.schemas security.schemas
 
 WARNINGS := -Wextra -Wall -Wpointer-arith -Wundef -Wcast-align -Wshadow
 WARNINGS += -Wbad-function-cast -Wwrite-strings -Wsign-compare

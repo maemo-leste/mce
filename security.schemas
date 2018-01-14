@@ -1,0 +1,41 @@
+<gconfschemafile>
+  <schemalist>
+
+    <schema>
+      <key>/schemas/system/osso/dsm/locks/devicelock_autolock_enabled</key>
+      <applyto>/system/osso/dsm/locks/devicelock_autolock_enabled</applyto>
+      <owner>osso-applet-devicelock</owner>
+      <type>bool</type>
+      <default>false</default>
+      <locale name="C">
+        <short>Should the device be automatically locked after time period.</short>
+        <long>If true, the device will be automatically locked after some time period.</long>
+      </locale>
+    </schema>
+ 
+    <schema>
+      <key>/schemas/system/osso/dsm/locks/devicelock_autolock_timeout</key>
+      <applyto>/system/osso/dsm/locks/devicelock_autolock_timeout</applyto>
+      <owner>osso-applet-devicelock</owner>
+      <type>int</type>
+      <default>1000</default>
+      <locale name="C">
+        <short>Idle period after which the device is locked.</short>
+        <long>If the device is idle for this many secunds, the device should be locked.</long>
+      </locale>
+    </schema>
+ 
+    <schema>
+      <key>/schemas/system/osso/dsm/locks/devicelock_password_changed</key>
+      <applyto>/system/osso/dsm/locks/devicelock_password_changed</applyto>
+      <owner>osso-applet-devicelock</owner>
+      <type>bool</type>
+      <default>false</default>
+      <locale name="C">
+        <short>does cpa devicelock applet changed the devicelock password .</short>
+        <long>If true, the devicelock applet changed the devicelock password.</long>
+      </locale>
+    </schema>
+
+  </schemalist>
+</gconfschemafile>
