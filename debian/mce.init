@@ -1,0 +1,27 @@
+#!/sbin/openrc-run
+
+description="This init script starts the mode control software used on the Maemo platform for Internet Tablets."
+name="Mode Control Entity."
+
+depend() {
+	need dsme af-services
+}
+
+start_pre() {
+	ebegin "Starting mce"
+	RUNDIR=/var/run/mce
+	test -d $RUNDIR || (rm -f $RUNDIR; mkdir $RUNDIR)
+	/usr/sbin/waitdbus system
+	. /tmp/session_bus_address.user
+	/usr/sbin/waitdbus session
+}
+
+start() {
+	/usr/sbin/dsmetool -n -1 -t "/sbin/mce --force-syslog"
+}
+
+stop() {
+	eend "Stopping mce"
+	/usr/sbin/dsmetool -k "/sbin/mce --force-syslog"
+}
+
