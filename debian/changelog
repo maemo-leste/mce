@@ -1,3 +1,10 @@
+mce (1.8.127.6-1) unstable; urgency=medium
+
+  * security.schemas to mce [freemangordon]
+  * port startup scripts to openrc [freemangordon]
+
+ -- Ivan J. <parazyd@dyne.org>  Tue, 16 Jan 2018 20:47:00 +0100
+
 mce (1.8.127.5-1) unstable; urgency=medium
 
   * Bump compat to 5
