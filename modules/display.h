@@ -51,11 +51,11 @@
 #define CABC_MODE_DEFAULT			CABC_MODE_MOVING_IMAGE
 
 /** Path to the SysFS entry for the generic display interface */
-#define DISPLAY_GENERIC_PATH			"/sys/class/graphics/fb0/device/panel"
+#define DISPLAY_GENERIC_PATH			"/sys/class/backlight/"
 /** Generic brightness file */
-#define DISPLAY_GENERIC_BRIGHTNESS_FILE		"/backlight_level"
+#define DISPLAY_GENERIC_BRIGHTNESS_FILE		"/brightness"
 /** Generic maximum brightness file */
-#define DISPLAY_GENERIC_MAX_BRIGHTNESS_FILE	"/backlight_max"
+#define DISPLAY_GENERIC_MAX_BRIGHTNESS_FILE	"/max_brightness"
 
 /** Path to the framebuffer device */
 #define FB_DEVICE				"/dev/fb0"

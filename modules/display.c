@@ -231,14 +231,36 @@ static display_type_t get_display_type(void)
 		max_brightness_file = g_strconcat(DISPLAY_CABC_PATH, DISPLAY_L4F00311, DISPLAY_CABC_MAX_BRIGHTNESS_FILE, NULL);
 		cabc_mode_file = g_strconcat(DISPLAY_CABC_PATH, DISPLAY_L4F00311, DISPLAY_CABC_MODE_FILE, NULL);
 		cabc_available_modes_file = g_strconcat(DISPLAY_CABC_PATH, DISPLAY_L4F00311, DISPLAY_CABC_AVAILABLE_MODES_FILE, NULL);
-	} else if (g_access(DISPLAY_GENERIC_PATH, W_OK) == 0) {
-		display_type = DISPLAY_TYPE_GENERIC;
-
-		brightness_file = g_strconcat(DISPLAY_GENERIC_PATH, DISPLAY_GENERIC_BRIGHTNESS_FILE, NULL);
-		max_brightness_file = g_strconcat(DISPLAY_GENERIC_PATH, DISPLAY_GENERIC_MAX_BRIGHTNESS_FILE, NULL);
 	} else {
-		display_type = DISPLAY_TYPE_NONE;
-	}
+        /* Default to NONE, we might change it later if we can find a generic one */
+        display_type = DISPLAY_TYPE_NONE;
+
+        /* Attempt to find first entry in /backlight */
+        GDir* dir;
+        gchar *path, *bright_file, *max_bright_file = NULL;
+
+        dir = g_dir_open(DISPLAY_GENERIC_PATH, 0, NULL);
+        if (dir) {
+            path = g_dir_read_name(dir);
+            if (path) {
+                bright_file = g_strconcat(DISPLAY_GENERIC_PATH, path, DISPLAY_GENERIC_BRIGHTNESS_FILE, NULL);
+                max_bright_file = g_strconcat(DISPLAY_GENERIC_PATH, path, DISPLAY_GENERIC_MAX_BRIGHTNESS_FILE, NULL);
+
+                if ((g_access(bright_file, W_OK) == 0) && (g_access(max_bright_file, W_OK) == 0)) {
+                    display_type = DISPLAY_TYPE_GENERIC;
+
+                    /* These will be freed later on, during module unload */
+                    brightness_file = bright_file;
+                    max_brightness_file = max_bright_file;
+                } else {
+                    g_free(bright_file);
+                    g_free(max_bright_file);
+                }
+            }
+        }
+
+        g_dir_close(dir);
+    }
 
 	mce_log(LL_DEBUG, "Display type: %d", display_type);
 
