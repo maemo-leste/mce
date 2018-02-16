@@ -1,3 +1,9 @@
+mce (1.8.128.1-1) unstable; urgency=medium
+
+  * Fix makefile version
+
+ -- Merlijn B.W. Wajer <merlijn@wizzup.org>  Fri, 16 Feb 2018 17:05:51 +0200
+
 mce (1.8.128.0-1) unstable; urgency=medium
 
   * Fix generic sysfs backlight backend
