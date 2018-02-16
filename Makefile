@@ -2,7 +2,7 @@
 # Copyright © 2004-2001 Nokia Corporation.
 # Written by David Weinehall
 
-VERSION := 1.8.127
+VERSION := 1.8.128
 
 INSTALL := install -o root -g root --mode=755
 INSTALL_DIR := install -d
