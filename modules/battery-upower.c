@@ -812,25 +812,11 @@ mcebat_update_schedule(void)
  * UPOWER IPC
  * ========================================================================= */
 
-/** Handle reply to async UPower device properties query
- */
-static void xup_properties_get_all_cb(DBusPendingCall *pc, void *aptr)
-{
-    (void)aptr;
-
-    bool          res  = false;
+static bool update_properties_from_msg(DBusMessage *rsp, updev_t *dev, int changed_cb) {
     DBusError     err  = DBUS_ERROR_INIT;
-    DBusMessage  *rsp  = 0;
-    const char   *path = aptr;
-    updev_t      *dev  = devlist_add_dev(path);
     DBusMessageIter body, arr, dic, var;
 
-    mce_log(LL_INFO, "path = %s", path);
-
-    updev_set_invalid_all(dev);
-
-    if( !(rsp = dbus_pending_call_steal_reply(pc)) )
-        goto EXIT;
+    bool res = false;
 
     if( dbus_set_error_from_message(&err, rsp) ) {
         mce_log(LL_ERR, "als lux error reply: %s: %s",
@@ -840,6 +826,17 @@ static void xup_properties_get_all_cb(DBusPendingCall *pc, void *aptr)
 
     if( !dbus_message_iter_init(rsp, &body) )
         goto EXIT;
+
+    if (changed_cb) {
+        /* Skip over first arg (string) this is just the interface */
+        if( dbus_message_iter_get_arg_type(&body) != DBUS_TYPE_STRING ) {
+            mce_log(LL_WARN, "Expect string as first argument");
+            goto EXIT;
+        }
+
+        /* Skip to proper array */
+        dbus_message_iter_next(&body);
+    }
 
     if( dbus_message_iter_get_arg_type(&body) != DBUS_TYPE_ARRAY )
         goto EXIT;
@@ -869,19 +866,52 @@ static void xup_properties_get_all_cb(DBusPendingCall *pc, void *aptr)
         uprop_set_from_iter(prop, &var);
     }
 
+    if (changed_cb) {
+        /* Ignore invalidated properties for now */
+        if( dbus_message_iter_get_arg_type(&body) != DBUS_TYPE_ARRAY) {
+            mce_log(LL_WARN, "Expect array as last argument, got");
+            goto EXIT;
+        }
+    }
+
+    res = true;
+
+EXIT:
+    dbus_error_free(&err);
+
+    return res;
+}
+
+/** Handle reply to async UPower device properties query
+ */
+static void xup_properties_get_all_cb(DBusPendingCall *pc, void *aptr)
+{
+    bool          res  = false;
+    const char   *path = aptr;
+    updev_t      *dev  = devlist_add_dev(path);
+    DBusMessage  *rsp  = 0;
+
+    mce_log(LL_DEBUG, "path = %s", path);
+
+    updev_set_invalid_all(dev);
+
+    if( !(rsp = dbus_pending_call_steal_reply(pc)) )
+        goto EXIT;
+
+    res = update_properties_from_msg(rsp, dev, 0);
+    if (!res)
+        goto EXIT;
+
     mce_log(LL_DEBUG, "%s is %sBATTERY", path,
             updev_is_battery(dev) ? "" : "NOT ");
 
     if( updev_is_battery(dev) )
         mcebat_update_schedule();
 
-    res = true;
-
 EXIT:
     if( !res ) mce_log(LL_WARN, "failed to parse reply");
 
     if( rsp ) dbus_message_unref(rsp);
-    dbus_error_free(&err);
 }
 
 /** Start async UPower device properties query
@@ -1002,29 +1032,32 @@ EXIT:
 
 /** Handle UPowerd device object property changes
  */
-static gboolean xup_device_changed_cb(DBusMessage *const msg)
+static gboolean xup_properties_changed_cb(DBusMessage *const msg)
 {
-    DBusError   err  = DBUS_ERROR_INIT;
-    const char *path = 0;
     updev_t *dev;
+    const char* path = dbus_message_get_path(msg);
 
-    if( !dbus_message_get_args(msg, &err,
-                               DBUS_TYPE_STRING, &path,
-                               DBUS_TYPE_INVALID) ) {
-        mce_log(LL_ERR, "%s: %s", err.name, err.message);
-        goto EXIT;
+    mce_log(LL_DEBUG, "xup_properties_changed_cb: Got path: %s", path);
+
+    if (!path)
+        return TRUE;
+
+
+    dev = devlist_get_dev(path);
+    if (!dev) {
+        mce_log(LL_DEBUG, "Ignoring data from path: %s", path);
+        return TRUE;
+    }
+    if (!updev_is_battery(dev)) {
+        mce_log(LL_DEBUG, "Ignoring data from path: %s", path);
+        return TRUE;
     }
 
-    mce_log(LL_DEBUG, "dev = %s", path);
-    dev = devlist_get_dev(path);
+    update_properties_from_msg(msg, dev, 1);
 
-    /* Get properties if we know that it is battery, or
-     * if we do not know what it is yet */
-    if( !dev || updev_is_battery(dev) )
-        xup_properties_get_all(path);
+    if( updev_is_battery(dev) )
+        mcebat_update_schedule();
 
-EXIT:
-    dbus_error_free(&err);
     return TRUE;
 }
 
@@ -1112,11 +1145,11 @@ static void mce_battery_init_dbus(void)
                               xup_device_added_cb))
           return;
 
-    if (!mce_dbus_handler_add(UPOWER_INTERFACE,
-                              "DeviceChanged",
+    if (!mce_dbus_handler_add("org.freedesktop.DBus.Properties",
+                              "PropertiesChanged",
                               NULL,
                               DBUS_MESSAGE_TYPE_SIGNAL,
-                              xup_device_changed_cb))
+                              xup_properties_changed_cb))
         return;
 
     if (!mce_dbus_handler_add(UPOWER_INTERFACE,
