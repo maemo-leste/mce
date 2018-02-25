@@ -463,15 +463,23 @@ static bool updev_get_string(const updev_t *self, const char *key,
 static bool updev_is_battery(const updev_t *self)
 {
     bool is_battery = false;
-    const char *native_path = 0;
+    int power_type;
+    int power_technology;
 
     if( !self )
         goto EXIT;
 
-    if( !updev_get_string(self, "NativePath", &native_path) )
+    if( !updev_get_int(self, "Type", &power_type) )
         goto EXIT;
 
-    if( !native_path || strcmp(native_path, "battery") )
+    if( !updev_get_int(self, "Technology", &power_technology) )
+        goto EXIT;
+
+
+    if (power_type != UPOWER_TYPE_BATTERY)
+        goto EXIT;
+
+    if (power_technology == UPOWER_TECHNOLOGY_UNKNOWN)
         goto EXIT;
 
     is_battery = true;
