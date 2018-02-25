@@ -1002,12 +1002,13 @@ EXIT:
 
 /** Handle UPowerd device object property changes
  */
-static gboolean xup_device_changed_cb(DBusMessage *const msg)
+static gboolean xup_properties_changed_cb(DBusMessage *const msg)
 {
     DBusError   err  = DBUS_ERROR_INIT;
     const char *path = 0;
     updev_t *dev;
 
+#if 0
     if( !dbus_message_get_args(msg, &err,
                                DBUS_TYPE_STRING, &path,
                                DBUS_TYPE_INVALID) ) {
@@ -1022,6 +1023,8 @@ static gboolean xup_device_changed_cb(DBusMessage *const msg)
      * if we do not know what it is yet */
     if( !dev || updev_is_battery(dev) )
         xup_properties_get_all(path);
+#endif
+        xup_properties_get_all("/org/freedesktop/UPower/devices/battery_bq27200_0");
 
 EXIT:
     dbus_error_free(&err);
@@ -1112,11 +1115,11 @@ static void mce_battery_init_dbus(void)
                               xup_device_added_cb))
           return;
 
-    if (!mce_dbus_handler_add(UPOWER_INTERFACE,
-                              "DeviceChanged",
-                              NULL,
+    if (!mce_dbus_handler_add("org.freedesktop.DBus.Properties",
+                              "PropertiesChanged",
+                              "path=/org/freedesktop/UPower/devices/battery_bq27200_0",
                               DBUS_MESSAGE_TYPE_SIGNAL,
-                              xup_device_changed_cb))
+                              xup_properties_changed_cb))
         return;
 
     if (!mce_dbus_handler_add(UPOWER_INTERFACE,
