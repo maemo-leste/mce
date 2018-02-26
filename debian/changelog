@@ -1,3 +1,10 @@
+mce (1.8.128.2-1) unstable; urgency=medium
+
+  * battery-upower: Actually detect batteries
+  * battery-upower: Handle property changes
+
+ -- Merlijn B.W. Wajer <merlijn@wizzup.org>  Fri, 26 Feb 2018 21:00:00 +0200
+
 mce (1.8.128.1-1) unstable; urgency=medium
 
   * Fix makefile version
