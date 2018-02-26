@@ -1035,22 +1035,25 @@ EXIT:
 static gboolean xup_properties_changed_cb(DBusMessage *const msg)
 {
     updev_t *dev;
-    const char *path = "/org/freedesktop/UPower/devices/battery_bq27200_0";
+    const char* path = dbus_message_get_path(msg);
 
-    /* TODO: Do we have to unref the msg here? */
-    /* TODO: Get dev (per callback, I guess? */
+    mce_log(LL_DEBUG, "xup_properties_changed_cb: Got path: %s", path);
 
-    mce_log(LL_DEBUG, "xup_properties_changed_cb");
+    if (!path)
+        return TRUE;
+
 
     dev = devlist_get_dev(path);
-    update_properties_from_msg(msg, dev, 1);
+    if (!dev) {
+        mce_log(LL_DEBUG, "Ignoring data from path: %s", path);
+        return TRUE;
+    }
+    if (!updev_is_battery(dev)) {
+        mce_log(LL_DEBUG, "Ignoring data from path: %s", path);
+        return TRUE;
+    }
 
-#if 0
-    /* Get properties if we know that it is battery, or
-     * if we do not know what it is yet */
-    if( !dev || updev_is_battery(dev) )
-        xup_properties_get_all(path);
-#endif
+    update_properties_from_msg(msg, dev, 1);
 
     if( updev_is_battery(dev) )
         mcebat_update_schedule();
@@ -1144,7 +1147,7 @@ static void mce_battery_init_dbus(void)
 
     if (!mce_dbus_handler_add("org.freedesktop.DBus.Properties",
                               "PropertiesChanged",
-                              "path=/org/freedesktop/UPower/devices/battery_bq27200_0",
+                              NULL,
                               DBUS_MESSAGE_TYPE_SIGNAL,
                               xup_properties_changed_cb))
         return;
