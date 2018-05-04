@@ -39,6 +39,7 @@
 
 #define MCE_TOUCHSCREEN_SYSFS_DISABLE_PATH		"/sys/devices/platform/omap2_mcspi.1/spi1.0/disable_ts"
 #define MCE_TOUCHSCREEN_SYSFS_DISABLE_PATH_3x	"/sys/devices/platform/omap2_mcspi.1/spi_master/spi1/spi1.0/disable"
+#define MCE_TOUCHSCREEN_SYSFS_DISABLE_PATH_4x	"/sys/bus/spi/drivers/tsc2005/spi0.0/disable"
 
 /** Default fallback setting for the touchscreen/keypad autolock */
 #define DEFAULT_TK_AUTOLOCK		FALSE		/* FALSE / TRUE */
