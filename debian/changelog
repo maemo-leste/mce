@@ -1,3 +1,9 @@
+mce (1.8.128.3-1) unstable; urgency=medium
+
+  * tklock: Add touchscreen disable path
+
+ -- Merlijn B.W. Wajer <merlijn@wizzup.org>  Fri, 04 May 2018 20:44:00 +0200
+
 mce (1.8.128.2-1) unstable; urgency=medium
 
   * battery-upower: Actually detect batteries
