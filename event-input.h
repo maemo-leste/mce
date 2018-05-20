@@ -46,6 +46,9 @@ static const gchar *const touchscreen_event_drivers[] = {
 	/** ADS784x touchscreen */
 	"ADS784x touchscreen",
 
+	/* Motorola Droid 4 touchscreen */
+	"Atmel maXTouch Touchscreen",
+
 	/** No more entries */
 	NULL
 };
@@ -81,6 +84,9 @@ static const gchar *const keyboard_event_drivers[] = {
 
 	/** Input layer name for the Retu powerbutton */
 	"retu-pwrbutton",
+
+	/* Droid4 power button */
+	"cpcap-pwrbutton",
 
 	/** No more entries */
 	NULL
