@@ -1,3 +1,9 @@
+mce (1.8.128.5-1) unstable; urgency=medium
+
+  * Make mce depend on dbus-user instead of af-services
+
+ -- Merlijn B.W. Wajer <merlijn@wizzup.org>  Tue, 04 Sep 2018 21:12:15 +0200
+
 mce (1.8.128.4-1) unstable; urgency=medium
 
   * event-input: Add Motorola Droid4 touchscreen and power button names
