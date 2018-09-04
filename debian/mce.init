@@ -4,7 +4,7 @@ description="This init script starts the mode control software used on the Maemo
 name="Mode Control Entity."
 
 depend() {
-	need dsme af-services
+	need dsme dbus dbus-user
 }
 
 start_pre() {
