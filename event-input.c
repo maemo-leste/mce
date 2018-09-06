@@ -63,6 +63,7 @@ GFile *dev_input_gfp = NULL;
 GFileMonitor *dev_input_gfmp = NULL;
 
 static void update_inputdevices(const gchar *device, gboolean add);
+static void remove_input_device(GSList **devices, const gchar *device);
 
 /**
  * Wrapper function to call mce_suspend_io_monitor() from g_slist_foreach()
@@ -605,6 +606,13 @@ static gint iomon_name_compare(gconstpointer iomon_id,
 	return strcmp(iomon_name, name);
 }
 
+static void handle_device_error_cb(gpointer data, const gchar *device, gconstpointer iomon_id, GError *error) {
+    GSList **devlist = (GSList **) data;
+    (void)iomon_id;
+    (void)error;
+    remove_input_device(devlist, device);
+}
+
 static void register_io_monitor_chunk(const gint fd, const gchar *const file,
 				 iomon_cb callback, GSList **devices)
 {
@@ -613,7 +621,9 @@ static void register_io_monitor_chunk(const gint fd, const gchar *const file,
 	iomon = mce_register_io_monitor_chunk(fd, file,
 					      MCE_IO_ERROR_POLICY_WARN, FALSE,
 					      callback,
-					      sizeof (struct input_event));
+					      sizeof (struct input_event),
+					      handle_device_error_cb,
+					      (gpointer)devices);
 
 	/* If we fail to register an I/O monitor,
 	 * don't leak the file descriptor,

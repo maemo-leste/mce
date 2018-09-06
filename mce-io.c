@@ -42,6 +42,8 @@ typedef struct {
 	gchar *file;				/**< Monitored file */
 	GIOChannel *iochan;			/**< I/O channel */
 	iomon_cb callback;			/**< Callback */
+	iomon_error_cb remdev_callback;		/**< Error callback */
+	gpointer remdev_data;
 	gulong chunk_size;			/**< Read-chunk size */
 	guint data_source_id;			/**< GSource ID for data */
 	guint error_source_id;			/**< GSource ID for errors */
@@ -251,6 +253,11 @@ static gboolean io_string_cb(GIOChannel *source,
 		mce_log(LL_ERR,
 			"Error when reading from %s: %s",
 			iomon->file, error->message);
+
+		iomon->remdev_callback(iomon->remdev_data, iomon->file, iomon, error);
+		g_clear_error(&error);
+		return FALSE;
+
 	} else if ((bytes_read == 0) || (str == NULL) || (strlen(str) == 0)) {
 		mce_log(LL_ERR,
 			"Empty read from %s",
@@ -330,9 +337,15 @@ static gboolean io_chunk_cb(GIOChannel *source,
 		    (errno == ENODEV) &&
 		    ((g_io_channel_get_flags(iomon->iochan) &
 		      G_IO_FLAG_IS_SEEKABLE) == G_IO_FLAG_IS_SEEKABLE)) {
+			GError *error2;
+
 			g_io_channel_seek_position(iomon->iochan, 0,
-						   G_SEEK_END, &error);
+						   G_SEEK_END, &error2);
+			g_clear_error(&error2);
+
+			iomon->remdev_callback(iomon->remdev_data, iomon->file, iomon, error);
 			g_clear_error(&error);
+			return FALSE;
 		}
 
 		/* Reset errno,
@@ -542,7 +555,9 @@ EXIT:
 static iomon_struct *mce_register_io_monitor(const gint fd,
 					     const gchar *const file,
 					     error_policy_t error_policy,
-					     iomon_cb callback)
+					     iomon_cb callback,
+					     iomon_error_cb remdev_callback,
+					     gpointer remdev_data)
 {
 	iomon_struct *iomon = NULL;
 	GIOChannel *iochan = NULL;
@@ -602,6 +617,8 @@ static iomon_struct *mce_register_io_monitor(const gint fd,
 	iomon->file = g_strdup(file);
 	iomon->iochan = iochan;
 	iomon->callback = callback;
+	iomon->remdev_callback = remdev_callback;
+	iomon->remdev_data = remdev_data;
 	iomon->error_policy = error_policy;
 	iomon->rewind = FALSE;
 	iomon->chunk_size = 0;
@@ -634,11 +651,14 @@ gconstpointer mce_register_io_monitor_string(const gint fd,
 					     const gchar *const file,
 					     error_policy_t error_policy,
 					     gboolean rewind_policy,
-					     iomon_cb callback)
+					     iomon_cb callback,
+					     iomon_error_cb remdev_callback,
+					     gpointer remdev_data)
 {
 	iomon_struct *iomon = NULL;
 
-	iomon = mce_register_io_monitor(fd, file, error_policy, callback);
+	iomon = mce_register_io_monitor(fd, file, error_policy, callback,
+			remdev_callback, remdev_data);
 
 	if (iomon == NULL)
 		goto EXIT;
@@ -684,12 +704,15 @@ gconstpointer mce_register_io_monitor_chunk(const gint fd,
 					    error_policy_t error_policy,
 					    gboolean rewind_policy,
 					    iomon_cb callback,
-					    gulong chunk_size)
+					    gulong chunk_size,
+					    iomon_error_cb remdev_callback,
+					    gpointer remdev_data)
 {
 	iomon_struct *iomon = NULL;
 	GError *error = NULL;
 
-	iomon = mce_register_io_monitor(fd, file, error_policy, callback);
+	iomon = mce_register_io_monitor(fd, file, error_policy, callback,
+			remdev_callback, remdev_data);
 
 	if (iomon == NULL)
 		goto EXIT;

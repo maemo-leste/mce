@@ -486,6 +486,14 @@ static void submode_trigger(gconstpointer data)
 	old_submode = submode;
 }
 
+static void handle_device_error_cb(gpointer data, const gchar *device, gconstpointer iomon_id, GError *error) {
+    (void)data;
+    (void)device;
+    (void)error;
+
+    mce_unregister_io_monitor(iomon_id);
+}
+
 /**
  * Init function for the switches component
  *
@@ -514,63 +522,63 @@ gboolean mce_switches_init(void)
 		mce_register_io_monitor_string(-1,
 					       MCE_FLICKER_KEY_STATE_PATH,
 					       MCE_IO_ERROR_POLICY_IGNORE,
-					       TRUE, lockkey_cb);
+					       TRUE, lockkey_cb, handle_device_error_cb, NULL);
 	kbd_slide_iomon_id =
 		mce_register_io_monitor_string(-1,
 					       MCE_KBD_SLIDE_STATE_PATH,
 					       MCE_IO_ERROR_POLICY_IGNORE,
-					       TRUE, kbd_slide_cb);
+					       TRUE, kbd_slide_cb, handle_device_error_cb, NULL);
 	cam_focus_iomon_id =
 		mce_register_io_monitor_string(-1,
 					       MCE_CAM_FOCUS_STATE_PATH,
 					       MCE_IO_ERROR_POLICY_IGNORE,
-					       TRUE, generic_activity_cb);
+					       TRUE, generic_activity_cb, handle_device_error_cb, NULL);
 	cam_launch_iomon_id =
 		mce_register_io_monitor_string(-1,
 					       MCE_CAM_LAUNCH_STATE_PATH,
 					       MCE_IO_ERROR_POLICY_IGNORE,
-					       TRUE, camera_launch_button_cb);
+					       TRUE, camera_launch_button_cb, handle_device_error_cb, NULL);
 	lid_cover_iomon_id =
 		mce_register_io_monitor_string(-1,
 					       MCE_LID_COVER_STATE_PATH,
 					       MCE_IO_ERROR_POLICY_IGNORE,
-					       TRUE, lid_cover_cb);
+					       TRUE, lid_cover_cb, handle_device_error_cb, NULL);
 	proximity_sensor_iomon_id =
 		mce_register_io_monitor_string(-1,
 					       MCE_PROXIMITY_SENSOR_STATE_PATH,
 					       MCE_IO_ERROR_POLICY_IGNORE,
-					       TRUE, proximity_sensor_cb);
+					       TRUE, proximity_sensor_cb, handle_device_error_cb, NULL);
 	musb_omap3_usb_cable_iomon_id =
 		mce_register_io_monitor_string(-1,
 					       MCE_MUSB_OMAP3_USB_CABLE_STATE_PATH,
 					       MCE_IO_ERROR_POLICY_IGNORE,
-					       TRUE, usb_cable_cb);
+					       TRUE, usb_cable_cb, handle_device_error_cb, NULL);
 
 	tahvo_usb_cable_iomon_id =
 		mce_register_io_monitor_string(-1,
 					       MCE_TAHVO_USB_CABLE_STATE_PATH,
 					       MCE_IO_ERROR_POLICY_IGNORE,
-					       TRUE, usb_cable_cb);
+					       TRUE, usb_cable_cb, handle_device_error_cb, NULL);
 	lens_cover_iomon_id =
 		mce_register_io_monitor_string(-1,
 					       MCE_LENS_COVER_STATE_PATH,
 					       MCE_IO_ERROR_POLICY_IGNORE,
-					       TRUE, lens_cover_cb);
+					       TRUE, lens_cover_cb, handle_device_error_cb, NULL);
 	mmc0_cover_iomon_id =
 		mce_register_io_monitor_string(-1,
 					       MCE_MMC0_COVER_STATE_PATH,
 					       MCE_IO_ERROR_POLICY_IGNORE,
-					       TRUE, generic_activity_cb);
+					       TRUE, generic_activity_cb, handle_device_error_cb, NULL);
 	mmc_cover_iomon_id =
 		mce_register_io_monitor_string(-1,
 					       MCE_MMC_COVER_STATE_PATH,
 					       MCE_IO_ERROR_POLICY_IGNORE,
-					       TRUE, generic_activity_cb);
+					       TRUE, generic_activity_cb, handle_device_error_cb, NULL);
 	bat_cover_iomon_id =
 		mce_register_io_monitor_string(-1,
 					       MCE_BATTERY_COVER_STATE_PATH,
 					       MCE_IO_ERROR_POLICY_IGNORE,
-					       TRUE, generic_activity_cb);
+					       TRUE, generic_activity_cb, handle_device_error_cb, NULL);
 
 	update_proximity_monitor();
 
