@@ -1,3 +1,9 @@
+mce (1.8.128.7-1) unstable; urgency=medium
+
+  * Update camera module to new io monitor API
+
+ -- Merlijn B.W. Wajer <merlijn@wizzup.org>  Sat, 08 Sep 2018 13:29:31 +0200
+
 mce (1.8.128.6-1) unstable; urgency=medium
 
   * Do not loop-log-spam when input devices disappear, instead just remove the
