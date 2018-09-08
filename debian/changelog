@@ -1,3 +1,12 @@
+mce (1.8.128.6-1) unstable; urgency=medium
+
+  * Do not loop-log-spam when input devices disappear, instead just remove the
+    io monitor.
+
+    Fixes maemo-leste #127
+
+ -- Merlijn B.W. Wajer <merlijn@wizzup.org>  Sat, 08 Sep 2018 10:48:31 +0200
+
 mce (1.8.128.5-1) unstable; urgency=medium
 
   * Make mce depend on dbus-user instead of af-services
