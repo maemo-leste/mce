@@ -114,6 +114,14 @@ EXIT:
 	return;
 }
 
+static void handle_device_error_cb(gpointer data, const gchar *device, gconstpointer iomon_id, GError *error) {
+    (void)data;
+    (void)device;
+    (void)error;
+
+    mce_unregister_io_monitor(iomon_id);
+}
+
 /**
  * Init function for the camera module
  *
@@ -138,12 +146,14 @@ const gchar *g_module_check_init(GModule *module)
 	camera_active_state_iomon_id =
 		mce_register_io_monitor_string(-1, CAMERA_ACTIVE_STATE_PATH,
 					       MCE_IO_ERROR_POLICY_IGNORE,
-					       TRUE, camera_active_state_cb);
+					       TRUE, camera_active_state_cb,
+					       handle_device_error_cb, NULL);
 
 	camera_popout_state_iomon_id =
 		mce_register_io_monitor_string(-1, CAMERA_POPOUT_STATE_PATH,
 					       MCE_IO_ERROR_POLICY_IGNORE,
-					       TRUE, camera_popout_state_cb);
+					       TRUE, camera_popout_state_cb,
+					       handle_device_error_cb, NULL);
 
 //EXIT:
 	return NULL;
