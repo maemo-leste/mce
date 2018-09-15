@@ -659,8 +659,12 @@ static void match_and_register_io_monitor(const gchar *filename)
 		register_io_monitor_chunk(fd, filename, keypress_cb,
 					  &keyboard_dev_list);
 		match = TRUE;
+	} else if ((fd = match_event_file_by_caps(filename, power_event_types,
+					   power_event_keys)) != -1) {
+		register_io_monitor_chunk(fd, filename, keypress_cb,
+					  &keyboard_dev_list);
+		match = TRUE;
 	}
-
 	if ((fd = match_event_file_by_caps(filename, switch_event_types,
 					   switch_event_keys)) != -1) {
 		register_io_monitor_chunk(fd, filename, switch_cb,

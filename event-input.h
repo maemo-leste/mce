@@ -124,6 +124,29 @@ static const int *const switch_event_keys[]= {
 	event_keys
 };
 
+
+/**
+ * List of event types for power keys
+ */
+static const int power_event_types[] = {
+	EV_KEY,
+	/** No more entries */
+	-1
+};
+
+/**
+ * List of key types for power monitor
+ */
+static const int power_switches[] = {
+	KEY_POWER,
+	-1
+};
+
+static const int *const power_event_keys[]= {
+	power_switches,
+};
+
+
 /**
  * List of drivers that we should not monitor
  */
