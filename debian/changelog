@@ -1,3 +1,9 @@
+mce (1.8.128.8-1) unstable; urgency=medium
+
+  * Add dynamic KEY_POWER matching
+
+ -- Merlijn B.W. Wajer <merlijn@wizzup.org>  Sat, 15 Sep 2018 12:37:57 +0200
+
 mce (1.8.128.7-1) unstable; urgency=medium
 
   * Update camera module to new io monitor API
