@@ -654,6 +654,11 @@ static void match_and_register_io_monitor(const gchar *filename)
 		register_io_monitor_chunk(fd, filename, touchscreen_cb,
 					  &touchscreen_dev_list);
 		match = TRUE;
+	} else if ((fd = match_event_file_by_caps(filename,
+					  touch_event_types, touch_event_keys)) != -1) {
+		register_io_monitor_chunk(fd, filename, touchscreen_cb,
+					  &touchscreen_dev_list);
+		match = TRUE;
 	} else if ((fd = match_event_file(filename,
 					  keyboard_event_drivers)) != -1) {
 		register_io_monitor_chunk(fd, filename, keypress_cb,

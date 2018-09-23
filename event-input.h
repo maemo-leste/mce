@@ -146,6 +146,26 @@ static const int *const power_event_keys[]= {
 	power_switches,
 };
 
+/**
+ * List of event types for touchscreen keys
+ */
+static const int touch_event_types[] = {
+	EV_KEY,
+	/** No more entries */
+	-1
+};
+
+/**
+ * List of key types for touchscreen monitor
+ */
+static const int touch_keys[] = {
+	BTN_TOUCH,
+	-1
+};
+
+static const int *const touch_event_keys[]= {
+	touch_keys,
+};
 
 /**
  * List of drivers that we should not monitor
