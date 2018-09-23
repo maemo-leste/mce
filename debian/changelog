@@ -1,3 +1,9 @@
+mce (1.8.128.9-1) unstable; urgency=medium
+
+  * Add dynamic BTN_TOUCH matching for touchscreens
+
+ -- Merlijn B.W. Wajer <merlijn@wizzup.org>  Sun, 23 Sep 2018 13:04:34 +0200
+
 mce (1.8.128.8-1) unstable; urgency=medium
 
   * Add dynamic KEY_POWER matching
