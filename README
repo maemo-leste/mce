@@ -1,0 +1,21 @@
+Mode Control Entity (MCE)
+=========================
+MCE is responsible of handling display control (active/dim/blank),
+activity monitoring (keys, buttons), keyboard backlight, ambient light
+sensor (ALS), LEDs and device mode control. In addition, MCE is
+responsible for providing interface to proximity, accelometer and vibra
+devices.
+
+Purpose
+=======
+Provides device mode logic and services for DSM interface.
+
+Description
+===========
+* Provides means for device mode control (Eg: flight mode)
+* Provides DSM gconf API for controlling display and security.
+* Manages DSM API for applications.
+
+Links
+=====
+http://talk.maemo.org/showthread.php?t=91606
