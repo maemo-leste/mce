@@ -79,8 +79,8 @@ HEADERS := devlock.h tklock.h modetransition.h powerkey.h connectivity.h mce.h m
 MODULE_CFLAGS := $(COMMON_CFLAGS)
 MODULE_CFLAGS += -fPIC -shared
 MODULE_CFLAGS += -I.
-MODULE_CFLAGS += $$(pkg-config glib-2.0 gmodule-2.0 dbus-1 dbus-glib-1 gconf-2.0 --cflags)
-MODULE_LDFLAGS := $$(pkg-config glib-2.0 gmodule-2.0 dbus-1 dbus-glib-1 gconf-2.0 libcal --libs)
+MODULE_CFLAGS += $$(pkg-config glib-2.0 gmodule-2.0 dbus-1 dbus-glib-1 gconf-2.0 upower-glib --cflags)
+MODULE_LDFLAGS := $$(pkg-config glib-2.0 gmodule-2.0 dbus-1 dbus-glib-1 gconf-2.0 upower-glib libcal --libs)
 MODULE_LIBS := datapipe.c mce-hal.c mce-log.c mce-dbus.c mce-conf.c mce-gconf.c median_filter.c mce-lib.c
 MODULE_HEADERS := datapipe.h mce-hal.h mce-log.h mce-dbus.h mce-conf.h mce-gconf.h mce.h median_filter.h mce-lib.h
 
