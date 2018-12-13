@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <upower.h>
 
 #include <gmodule.h>
 
@@ -82,44 +83,6 @@ typedef union
 /* ========================================================================= *
  * struct MceBattery holds battery data available via UPower
  * ========================================================================= */
-
-/** Values for upower device State property */
-enum
-{
-    UPOWER_STATE_UNKNOWN           = 0,
-    UPOWER_STATE_CHARGING          = 1,
-    UPOWER_STATE_DISCHARGING       = 2,
-    UPOWER_STATE_EMPTY             = 3,
-    UPOWER_STATE_FULLY_CHARGED     = 4,
-    UPOWER_STATE_PENDING_CHARGE    = 5,
-    UPOWER_STATE_PENDING_DISCHARGE = 6,
-};
-
-/** Values for upower device Type property */
-enum
-{
-    UPOWER_TYPE_UNKNOWN    = 0,
-    UPOWER_TYPE_LINE_POWER = 1,
-    UPOWER_TYPE_BATTERY    = 2,
-    UPOWER_TYPE_UPS        = 3,
-    UPOWER_TYPE_MONITOR    = 4,
-    UPOWER_TYPE_MOUSE      = 5,
-    UPOWER_TYPE_KEYBOARD   = 6,
-    UPOWER_TYPE_PDA        = 7,
-    UPOWER_TYPE_PHONE      = 8,
-};
-
-/** Values for upower device Technology property */
-enum
-{
-    UPOWER_TECHNOLOGY_UNKNOWN                = 0,
-    UPOWER_TECHNOLOGY_LITHIUM_ION            = 1,
-    UPOWER_TECHNOLOGY_LITHIUM_POLYMER        = 2,
-    UPOWER_TECHNOLOGY_LITHIUM_IRON_PHOSPHATE = 3,
-    UPOWER_TECHNOLOGY_LEAD_ACID              = 4,
-    UPOWER_TECHNOLOGY_NICKEL_CADMIUM         = 5,
-    UPOWER_TECHNOLOGY_NICKEL_METAL_HYDRIDE   = 6,
-};
 
 /** Battery properties available via upower */
 typedef struct
@@ -476,10 +439,10 @@ static bool updev_is_battery(const updev_t *self)
         goto EXIT;
 
 
-    if (power_type != UPOWER_TYPE_BATTERY)
+    if (power_type != UP_DEVICE_KIND_BATTERY)
         goto EXIT;
 
-    if (power_technology == UPOWER_TECHNOLOGY_UNKNOWN)
+    if (power_technology == UP_DEVICE_TECHNOLOGY_UNKNOWN)
         goto EXIT;
 
     is_battery = true;
@@ -592,7 +555,7 @@ upowbat_init(void)
 {
     memset(&upowbat, 0, sizeof upowbat);
     upowbat.Percentage = 50;
-    upowbat.State = UPOWER_STATE_UNKNOWN;
+    upowbat.State = UP_DEVICE_STATE_UNKNOWN;
 }
 
 /** Update UPower battery state data
@@ -648,31 +611,31 @@ mcebat_update_from_upowbat(void)
         mcebat.status = BATTERY_STATUS_LOW;
 
     switch( upowbat.State ) {
-    case UPOWER_STATE_UNKNOWN:
+    case UP_DEVICE_STATE_UNKNOWN:
         mcebat.charger = FALSE;
         break;
 
-    case UPOWER_STATE_CHARGING:
+    case UP_DEVICE_STATE_CHARGING:
         mcebat.charger = TRUE;
         break;
 
-    case UPOWER_STATE_DISCHARGING:
+    case UP_DEVICE_STATE_DISCHARGING:
         break;
 
-    case UPOWER_STATE_EMPTY:
+    case UP_DEVICE_STATE_EMPTY:
         mcebat.status = BATTERY_STATUS_EMPTY;
         break;
 
-    case UPOWER_STATE_FULLY_CHARGED:
+    case UP_DEVICE_STATE_FULLY_CHARGED:
         mcebat.status  = BATTERY_STATUS_FULL;
         mcebat.charger = TRUE;
         break;
 
-    case UPOWER_STATE_PENDING_CHARGE:
+    case UP_DEVICE_STATE_PENDING_CHARGE:
         mcebat.charger = TRUE;
         break;
 
-    case UPOWER_STATE_PENDING_DISCHARGE:
+    case UP_DEVICE_STATE_PENDING_DISCHARGE:
         break;
 
     default:
