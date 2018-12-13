@@ -667,7 +667,6 @@ mcebat_update_cb(gpointer user_data)
 {
     /* Get a copy of current status */
     MceBattery prev = mcebat;
-    (void)user_data;
 
     if( !mcebat_update_id )
         return FALSE;
@@ -921,8 +920,6 @@ EXIT:
  */
 static void xup_enumerate_devices_cb(DBusPendingCall *pc, void *aptr)
 {
-    (void)aptr;
-
     bool          res = false;
     DBusError     err = DBUS_ERROR_INIT;
     DBusMessage  *rsp = 0;
@@ -1147,8 +1144,6 @@ static void mce_battery_quit_dbus(void)
 G_MODULE_EXPORT const gchar *g_module_check_init(GModule *module);
 const gchar *g_module_check_init(GModule *module)
 {
-    (void)module;
-
     /* reset data used by the state machine */
     mcebat_init();
     upowbat_init();
@@ -1172,8 +1167,6 @@ const gchar *g_module_check_init(GModule *module)
 G_MODULE_EXPORT void g_module_unload(GModule *module);
 void g_module_unload(GModule *module)
 {
-    (void)module;
-
     /* Remove dbus handlers */
     mce_battery_quit_dbus();
 
