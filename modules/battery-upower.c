@@ -179,7 +179,7 @@ static bool uprop_set_from_iter(uprop_t *self, DBusMessageIter *iter)
 
     uprop_set_invalid(self);
 
-    if( dbus_type_is_basic(type) ) {
+    if (dbus_type_is_basic(type)) {
         dbus_message_iter_get_basic(iter, &self->p_val);
         switch( dbus_message_iter_get_arg_type(iter) ) {
         case DBUS_TYPE_STRING:
@@ -267,7 +267,7 @@ static uprop_t * uprop_create(const char *key)
  */
 static void uprop_delete(uprop_t *self)
 {
-    if( self != 0 ) {
+    if (self != 0) {
         uprop_set_invalid(self);
         free(self->p_key);
         free(self);
@@ -316,7 +316,7 @@ static updev_t *updev_create(const char *path)
  */
 static void updev_delete(updev_t *self)
 {
-    if( self != 0 ) {
+    if (self != 0) {
         g_list_free_full(self->d_prop, uprop_delete_cb);
         free(self->d_path);
         free(self);
@@ -357,7 +357,7 @@ static uprop_t *updev_get_prop(const updev_t *self, const char *key)
     GList *now;
     for( now = self->d_prop; now; now = g_list_next(now) ) {
         uprop_t *prop = now->data;
-        if( strcmp(prop->p_key, key) )
+        if (strcmp(prop->p_key, key))
             continue;
         res = prop;
         break;
@@ -375,7 +375,7 @@ static uprop_t *updev_get_prop(const updev_t *self, const char *key)
 static uprop_t *updev_add_prop(updev_t *self, const char *key)
 {
     uprop_t *res = updev_get_prop(self, key);
-    if( !res ) {
+    if (!res) {
         res = uprop_create(key);
         self->d_prop = g_list_append(self->d_prop, res);
     }
@@ -394,7 +394,7 @@ static bool updev_get_int(const updev_t *self, const char *key, int *val)
 {
     bool res = false;
     uprop_t *prop = updev_get_prop(self, key);
-    if( prop )
+    if (prop)
         res = uprop_get_int(prop, val);
     return res;
 }
@@ -412,7 +412,7 @@ static bool updev_get_string(const updev_t *self, const char *key,
 {
     bool res = false;
     uprop_t *prop = updev_get_prop(self, key);
-    if( prop )
+    if (prop)
         res = uprop_get_string(prop, val);
     return res;
 }
@@ -429,13 +429,13 @@ static bool updev_is_battery(const updev_t *self)
     int power_type;
     int power_technology;
 
-    if( !self )
+    if (!self)
         goto EXIT;
 
-    if( !updev_get_int(self, "Type", &power_type) )
+    if (!updev_get_int(self, "Type", &power_type))
         goto EXIT;
 
-    if( !updev_get_int(self, "Technology", &power_technology) )
+    if (!updev_get_int(self, "Technology", &power_technology))
         goto EXIT;
 
 
@@ -470,7 +470,7 @@ static updev_t *devlist_get_dev(const char *path)
     GList *now;
     for( now = devlist; now; now = g_list_next(now) ) {
         updev_t *dev = now->data;
-        if( strcmp(dev->d_path, path) )
+        if (strcmp(dev->d_path, path))
             continue;
         res = dev;
         break;
@@ -488,7 +488,7 @@ static updev_t *devlist_get_dev_battery(void)
     GList *now;
     for( now = devlist; now; now = g_list_next(now) ) {
         updev_t *dev = now->data;
-        if( !updev_is_battery(dev) )
+        if (!updev_is_battery(dev))
             continue;
         res = dev;
         break;
@@ -505,7 +505,7 @@ static updev_t *devlist_get_dev_battery(void)
 static updev_t *devlist_add_dev(const char *path)
 {
     updev_t *res = devlist_get_dev(path);
-    if( !res ) {
+    if (!res) {
         res = updev_create(path);
         devlist = g_list_append(devlist, res);
     }
@@ -521,10 +521,10 @@ static void devlist_rem_dev(const char *path)
     GList *now;
     for( now = devlist; now; now = g_list_next(now) ) {
         updev_t *dev = now->data;
-        if( strcmp(dev->d_path, path) )
+        if (strcmp(dev->d_path, path))
             continue;
 
-        if( updev_is_battery(dev) )
+        if (updev_is_battery(dev))
             mcebat_update_schedule();
 
         devlist = g_list_remove_link(devlist, now);
@@ -564,13 +564,13 @@ static void
 upowbat_update(void)
 {
     updev_t *dev = devlist_get_dev_battery();
-    if( dev ) {
+    if (dev) {
         int val = 0;
-        if( updev_get_int(dev, "Percentage", &val) && upowbat.Percentage != val ) {
+        if (updev_get_int(dev, "Percentage", &val) && upowbat.Percentage != val) {
             mce_log(LL_DEBUG, "Percentage: %d -> %d", upowbat.Percentage, val);
             upowbat.Percentage = val;
         }
-        if( updev_get_int(dev, "State", &val) && upowbat.State != val ) {
+        if (updev_get_int(dev, "State", &val) && upowbat.State != val) {
             mce_log(LL_DEBUG, "State: %d -> %d", upowbat.State, val);
             upowbat.State = val;
         }
@@ -607,7 +607,7 @@ mcebat_update_from_upowbat(void)
     mcebat.charger = FALSE;
 
     // FIXME: hardcoded 5% as low battery limit
-    if( mcebat.level < 5 )
+    if (mcebat.level < 5)
         mcebat.status = BATTERY_STATUS_LOW;
 
     switch( upowbat.State ) {
@@ -668,7 +668,7 @@ mcebat_update_cb(gpointer user_data)
     /* Get a copy of current status */
     MceBattery prev = mcebat;
 
-    if( !mcebat_update_id )
+    if (!mcebat_update_id)
         return FALSE;
 
     mce_log(LL_INFO, "----( state machine )----");
@@ -678,7 +678,7 @@ mcebat_update_cb(gpointer user_data)
     mcebat_update_from_upowbat();
 
     /* Process changes */
-    if( mcebat.charger != prev.charger ) {
+    if (mcebat.charger != prev.charger) {
         mce_log(LL_INFO, "charger: %s -> %s",
                 charger_state_repr(prev.charger),
                 charger_state_repr(mcebat.charger));
@@ -688,7 +688,7 @@ mcebat_update_cb(gpointer user_data)
                          USE_INDATA, CACHE_INDATA);
 
         /* Charging led pattern */
-        if( mcebat.charger) {
+        if (mcebat.charge) {
             execute_datapipe_output_triggers(&led_pattern_activate_pipe,
                                              MCE_LED_PATTERN_BATTERY_CHARGING,
                                              USE_INDATA);
@@ -704,11 +704,11 @@ mcebat_update_cb(gpointer user_data)
                          USE_INDATA, CACHE_INDATA);
     }
 
-    if( mcebat.status != prev.status ) {
+    if (mcebat.status != prev.status) {
         mce_log(LL_INFO, "status: %d -> %d", prev.status, mcebat.status);
 
         /* Battery full led pattern */
-        if( mcebat.status == BATTERY_STATUS_FULL ) {
+        if (mcebat.status == BATTERY_STATUS_FULL) {
             execute_datapipe_output_triggers(&led_pattern_activate_pipe,
                                              MCE_LED_PATTERN_BATTERY_FULL,
                                              USE_INDATA);
@@ -720,8 +720,8 @@ mcebat_update_cb(gpointer user_data)
         }
 
         /* Battery low led pattern */
-        if( mcebat.status == BATTERY_STATUS_LOW ||
-            mcebat.status == BATTERY_STATUS_EMPTY ) {
+        if (mcebat.status == BATTERY_STATUS_LOW ||
+            mcebat.status == BATTERY_STATUS_EMPTY) {
             execute_datapipe_output_triggers(&led_pattern_activate_pipe,
                                              MCE_LED_PATTERN_BATTERY_LOW,
                                              USE_INDATA);
@@ -739,7 +739,7 @@ mcebat_update_cb(gpointer user_data)
 
     }
 #if 0 /* we don;t have battery level pipe */
-    if( mcebat.level != prev.level ) {
+    if (mcebat.level != prev.level) {
         mce_log(LL_INFO, "level: %d -> %d", prev.level, mcebat.level);
 
         /* Battery charge percentage */
@@ -757,7 +757,7 @@ mcebat_update_cb(gpointer user_data)
 static void
 mcebat_update_cancel(void)
 {
-    if( mcebat_update_id )
+    if (mcebat_update_id)
         g_source_remove(mcebat_update_id), mcebat_update_id = 0;
 }
 
@@ -766,7 +766,7 @@ mcebat_update_cancel(void)
 static void
 mcebat_update_schedule(void)
 {
-    if( !mcebat_update_id )
+    if (!mcebat_update_id)
         mcebat_update_id = g_timeout_add(UPDATE_DELAY, mcebat_update_cb, 0);
 }
 
@@ -780,18 +780,18 @@ static bool update_properties_from_msg(DBusMessage *rsp, updev_t *dev, int chang
 
     bool res = false;
 
-    if( dbus_set_error_from_message(&err, rsp) ) {
+    if (dbus_set_error_from_message(&err, rsp)) {
         mce_log(LL_ERR, "als lux error reply: %s: %s",
                 err.name, err.message);
         goto EXIT;
     }
 
-    if( !dbus_message_iter_init(rsp, &body) )
+    if (!dbus_message_iter_init(rsp, &body))
         goto EXIT;
 
     if (changed_cb) {
         /* Skip over first arg (string) this is just the interface */
-        if( dbus_message_iter_get_arg_type(&body) != DBUS_TYPE_STRING ) {
+        if (dbus_message_iter_get_arg_type(&body) != DBUS_TYPE_STRING) {
             mce_log(LL_WARN, "Expect string as first argument");
             goto EXIT;
         }
@@ -800,7 +800,7 @@ static bool update_properties_from_msg(DBusMessage *rsp, updev_t *dev, int chang
         dbus_message_iter_next(&body);
     }
 
-    if( dbus_message_iter_get_arg_type(&body) != DBUS_TYPE_ARRAY )
+    if (dbus_message_iter_get_arg_type(&body) != DBUS_TYPE_ARRAY)
         goto EXIT;
     dbus_message_iter_recurse(&body, &arr);
     dbus_message_iter_next(&body);
@@ -812,14 +812,14 @@ static bool update_properties_from_msg(DBusMessage *rsp, updev_t *dev, int chang
         dbus_message_iter_recurse(&arr, &dic);
         dbus_message_iter_next(&arr);
 
-        if( dbus_message_iter_get_arg_type(&dic) != DBUS_TYPE_STRING )
+        if (dbus_message_iter_get_arg_type(&dic) != DBUS_TYPE_STRING)
             goto EXIT;
         dbus_message_iter_get_basic(&dic, &key);
         dbus_message_iter_next(&dic);
-        if( !key )
+        if (!key)
             goto EXIT;
 
-        if( dbus_message_iter_get_arg_type(&dic) != DBUS_TYPE_VARIANT )
+        if (dbus_message_iter_get_arg_type(&dic) != DBUS_TYPE_VARIANT)
             goto EXIT;
         dbus_message_iter_recurse(&dic, &var);
         dbus_message_iter_next(&dic);
@@ -830,7 +830,7 @@ static bool update_properties_from_msg(DBusMessage *rsp, updev_t *dev, int chang
 
     if (changed_cb) {
         /* Ignore invalidated properties for now */
-        if( dbus_message_iter_get_arg_type(&body) != DBUS_TYPE_ARRAY) {
+        if (dbus_message_iter_get_arg_type(&body) != DBUS_TYPE_ARRA) {
             mce_log(LL_WARN, "Expect array as last argument, got");
             goto EXIT;
         }
@@ -857,7 +857,7 @@ static void xup_properties_get_all_cb(DBusPendingCall *pc, void *aptr)
 
     updev_set_invalid_all(dev);
 
-    if( !(rsp = dbus_pending_call_steal_reply(pc)) )
+    if (!(rsp = dbus_pending_call_steal_reply(pc)))
         goto EXIT;
 
     res = update_properties_from_msg(rsp, dev, 0);
@@ -867,13 +867,13 @@ static void xup_properties_get_all_cb(DBusPendingCall *pc, void *aptr)
     mce_log(LL_DEBUG, "%s is %sBATTERY", path,
             updev_is_battery(dev) ? "" : "NOT ");
 
-    if( updev_is_battery(dev) )
+    if (updev_is_battery(dev))
         mcebat_update_schedule();
 
 EXIT:
-    if( !res ) mce_log(LL_WARN, "failed to parse reply");
+    if (!res) mce_log(LL_WARN, "failed to parse reply");
 
-    if( rsp ) dbus_message_unref(rsp);
+    if (rsp) dbus_message_unref(rsp);
 }
 
 /** Start async UPower device properties query
@@ -885,35 +885,35 @@ static void xup_properties_get_all(const char *path)
     DBusPendingCall *pc  = 0;
     const char      *arg = UPOWER_INTERFACE_DEVICE;
 
-    if( !(bus = dbus_connection_get()) )
+    if (!(bus = dbus_connection_get()))
         goto EXIT;
 
     req = dbus_message_new_method_call(UPOWER_SERVICE,
                                        path,
                                        DBUS_INTERFACE_PROPERTIES,
                                        "GetAll");
-    if( !req )
+    if (!req)
         goto EXIT;
 
-    if( !dbus_message_append_args(req,
+    if (!dbus_message_append_args(req,
                                   DBUS_TYPE_STRING, &arg,
-                                  DBUS_TYPE_INVALID) )
+                                  DBUS_TYPE_INVALID))
         goto EXIT;
 
-    if( !dbus_connection_send_with_reply(bus, req, &pc, -1) )
+    if (!dbus_connection_send_with_reply(bus, req, &pc, -1))
         goto EXIT;
 
-    if( !pc )
+    if (!pc)
         goto EXIT;
 
-    if( !dbus_pending_call_set_notify(pc, xup_properties_get_all_cb,
-                                      strdup(path), free) )
+    if (!dbus_pending_call_set_notify(pc, xup_properties_get_all_cb,
+                                      strdup(path), free))
         goto EXIT;
 
 EXIT:
-    if( pc )  dbus_pending_call_unref(pc);
-    if( req ) dbus_message_unref(req);
-    if( bus ) dbus_connection_unref(bus);
+    if (pc)  dbus_pending_call_unref(pc);
+    if (req) dbus_message_unref(req);
+    if (bus) dbus_connection_unref(bus);
 }
 
 /** Handle reply to async UPower device enumeration query
@@ -928,18 +928,18 @@ static void xup_enumerate_devices_cb(DBusPendingCall *pc, void *aptr)
     int    cnt = 0;
     int    i;
 
-    if( !(rsp = dbus_pending_call_steal_reply(pc)) )
+    if (!(rsp = dbus_pending_call_steal_reply(pc)))
         goto EXIT;
 
-    if( dbus_set_error_from_message(&err, rsp) ) {
+    if (dbus_set_error_from_message(&err, rsp)) {
         mce_log(LL_ERR, "%s: %s", err.name, err.message);
         goto EXIT;
     }
 
-    if( !dbus_message_get_args(rsp, &err,
+    if (!dbus_message_get_args(rsp, &err,
                                DBUS_TYPE_ARRAY,
                                DBUS_TYPE_OBJECT_PATH, &vec, &cnt,
-                               DBUS_TYPE_INVALID) ) {
+                               DBUS_TYPE_INVALID)) {
         mce_log(LL_ERR, "%s: %s", err.name, err.message);
         goto EXIT;
     }
@@ -952,10 +952,10 @@ static void xup_enumerate_devices_cb(DBusPendingCall *pc, void *aptr)
     res = true;
 
 EXIT:
-    if( !res ) mce_log(LL_WARN, "failed to parse reply");
+    if (!res) mce_log(LL_WARN, "failed to parse reply");
 
     dbus_free_string_array(vec);
-    if( rsp ) dbus_message_unref(rsp);
+    if (rsp) dbus_message_unref(rsp);
     dbus_error_free(&err);
 }
 
@@ -975,9 +975,9 @@ static gboolean xup_device_added_cb(DBusMessage *const msg)
     DBusError   err  = DBUS_ERROR_INIT;
     const char *path = 0;
 
-    if( !dbus_message_get_args(msg, &err,
+    if (!dbus_message_get_args(msg, &err,
                                DBUS_TYPE_STRING, &path,
-                               DBUS_TYPE_INVALID) ) {
+                               DBUS_TYPE_INVALID)) {
         mce_log(LL_ERR, "%s: %s", err.name, err.message);
         goto EXIT;
     }
@@ -1015,7 +1015,7 @@ static gboolean xup_properties_changed_cb(DBusMessage *const msg)
 
     update_properties_from_msg(msg, dev, 1);
 
-    if( updev_is_battery(dev) )
+    if (updev_is_battery(dev))
         mcebat_update_schedule();
 
     return TRUE;
@@ -1028,9 +1028,9 @@ static gboolean xup_device_removed_cb(DBusMessage *const msg)
     DBusError   err  = DBUS_ERROR_INIT;
     const char *path = 0;
 
-    if( !dbus_message_get_args(msg, &err,
+    if (!dbus_message_get_args(msg, &err,
                                DBUS_TYPE_STRING, &path,
-                               DBUS_TYPE_INVALID) ) {
+                               DBUS_TYPE_INVALID)) {
         mce_log(LL_ERR, "%s: %s", err.name, err.message);
         goto EXIT;
     }
@@ -1053,11 +1053,11 @@ static gboolean xup_name_owner_cb(DBusMessage *const msg)
     const char *old_owner = 0;
     const char *new_owner = 0;
 
-    if( !dbus_message_get_args(msg, &err,
+    if (!dbus_message_get_args(msg, &err,
                                DBUS_TYPE_STRING, &service,
                                DBUS_TYPE_STRING, &old_owner,
                                DBUS_TYPE_STRING, &new_owner,
-                               DBUS_TYPE_INVALID) ) {
+                               DBUS_TYPE_INVALID)) {
         mce_log(LL_ERR, "%s: %s", err.name, err.message);
         goto EXIT;
     }
@@ -1069,7 +1069,7 @@ static gboolean xup_name_owner_cb(DBusMessage *const msg)
     devlist_rem_dev_all();
 
     /* If upowerd started up, get fresh list of device paths */
-    if( *new_owner )
+    if (*new_owner)
         xup_enumerate_devices();
 
 EXIT:
