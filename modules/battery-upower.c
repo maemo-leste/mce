@@ -135,7 +135,7 @@ typedef struct
  */
 static void uprop_set_invalid(uprop_t *self)
 {
-    switch( self->p_type ) {
+    switch (self->p_type) {
     case DBUS_TYPE_INVALID:
         break;
 
@@ -181,7 +181,7 @@ static bool uprop_set_from_iter(uprop_t *self, DBusMessageIter *iter)
 
     if (dbus_type_is_basic(type)) {
         dbus_message_iter_get_basic(iter, &self->p_val);
-        switch( dbus_message_iter_get_arg_type(iter) ) {
+        switch (dbus_message_iter_get_arg_type(iter)) {
         case DBUS_TYPE_STRING:
         case DBUS_TYPE_OBJECT_PATH:
         case DBUS_TYPE_SIGNATURE:
@@ -205,7 +205,7 @@ static bool uprop_set_from_iter(uprop_t *self, DBusMessageIter *iter)
 static bool uprop_get_int(const uprop_t *self, int *val)
 {
     bool res = true;
-    switch( self->p_type ) {
+    switch (self->p_type) {
     case DBUS_TYPE_BYTE:    *val = (int)self->p_val.o;         break;
     case DBUS_TYPE_BOOLEAN: *val = (int)self->p_val.b;         break;
     case DBUS_TYPE_INT16:   *val = (int)self->p_val.i16;       break;
@@ -232,7 +232,7 @@ static bool uprop_get_int(const uprop_t *self, int *val)
 static bool uprop_get_string(const uprop_t *self, const char **val)
 {
     bool res = true;
-    switch( self->p_type ) {
+    switch (self->p_type) {
     case DBUS_TYPE_STRING:
     case DBUS_TYPE_OBJECT_PATH:
     case DBUS_TYPE_SIGNATURE:
@@ -340,7 +340,7 @@ static void updev_set_invalid_all(updev_t *self)
 {
     GList *now;
 
-    for (now = self->d_prop; now; now = g_list_next(now) )
+    for (now = self->d_prop; now; now = g_list_next(now))
         uprop_set_invalid(now->data);
 }
 
@@ -355,7 +355,7 @@ static uprop_t *updev_get_prop(const updev_t *self, const char *key)
 {
     uprop_t *res = 0;
     GList *now;
-    for( now = self->d_prop; now; now = g_list_next(now) ) {
+    for (now = self->d_prop; now; now = g_list_next(now)) {
         uprop_t *prop = now->data;
         if (strcmp(prop->p_key, key))
             continue;
@@ -468,7 +468,7 @@ static updev_t *devlist_get_dev(const char *path)
 {
     updev_t *res = 0;
     GList *now;
-    for( now = devlist; now; now = g_list_next(now) ) {
+    for (now = devlist; now; now = g_list_next(now)) {
         updev_t *dev = now->data;
         if (strcmp(dev->d_path, path))
             continue;
@@ -486,7 +486,7 @@ static updev_t *devlist_get_dev_battery(void)
 {
     updev_t *res = 0;
     GList *now;
-    for( now = devlist; now; now = g_list_next(now) ) {
+    for (now = devlist; now; now = g_list_next(now)) {
         updev_t *dev = now->data;
         if (!updev_is_battery(dev))
             continue;
@@ -519,7 +519,7 @@ static updev_t *devlist_add_dev(const char *path)
 static void devlist_rem_dev(const char *path)
 {
     GList *now;
-    for( now = devlist; now; now = g_list_next(now) ) {
+    for (now = devlist; now; now = g_list_next(now)) {
         updev_t *dev = now->data;
         if (strcmp(dev->d_path, path))
             continue;
@@ -610,7 +610,7 @@ mcebat_update_from_upowbat(void)
     if (mcebat.level < 5)
         mcebat.status = BATTERY_STATUS_LOW;
 
-    switch( upowbat.State ) {
+    switch (upowbat.State) {
     case UP_DEVICE_STATE_UNKNOWN:
         mcebat.charger = FALSE;
         break;
@@ -647,7 +647,7 @@ const char *charger_state_repr(gboolean state)
 {
     const char *res = "unknown";
 
-    switch( state ) {
+    switch (state) {
       case FALSE:   res = "off";       break;
       case TRUE:    res = "on";        break;
       default: break;
@@ -805,7 +805,7 @@ static bool update_properties_from_msg(DBusMessage *rsp, updev_t *dev, int chang
     dbus_message_iter_recurse(&body, &arr);
     dbus_message_iter_next(&body);
 
-    while( dbus_message_iter_get_arg_type(&arr) == DBUS_TYPE_DICT_ENTRY ) {
+    while (dbus_message_iter_get_arg_type(&arr) == DBUS_TYPE_DICT_ENTRY) {
         const char *key = 0;
         uprop_t *prop;
 
@@ -944,7 +944,7 @@ static void xup_enumerate_devices_cb(DBusPendingCall *pc, void *aptr)
         goto EXIT;
     }
 
-    for( i = 0; i < cnt; ++i ) {
+    for (i = 0; i < cnt; ++i) {
         mce_log(LL_DEBUG, "[%d] '%s'", i, vec[i]);
         xup_properties_get_all(vec[i]);
     }
