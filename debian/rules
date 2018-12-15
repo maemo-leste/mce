@@ -73,7 +73,7 @@ binary-arch: build install
 	dh_testdir
 	dh_testroot
 	dh_installchangelogs
-	dh_install -s
+	dh_install -a
 	dh_installinit
 	dh_installinit -r --no-start --name=zzinitdone -- start 99 2 3 4 5 . stop 00 0 1 2 3 4 5 6 .
 	dh_installxsession -u 'pre 04' --name=devlock-blocker
