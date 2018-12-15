@@ -226,8 +226,9 @@ typedef enum {
 typedef enum {
 	BATTERY_STATUS_UNDEF = -1,	/**< Battery status not known */
 	BATTERY_STATUS_FULL = 0,	/**< Battery full */
-	BATTERY_STATUS_LOW = 1,		/**< Battery low */
-	BATTERY_STATUS_EMPTY = 2,	/**< Battery empty */
+	BATTERY_STATUS_OK = 1,		/**< Battery ok */
+	BATTERY_STATUS_LOW = 2,		/**< Battery low */
+	BATTERY_STATUS_EMPTY = 3,	/**< Battery empty */
 } battery_status_t;
 
 /** Camera button state */
