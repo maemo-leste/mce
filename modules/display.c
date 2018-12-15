@@ -210,6 +210,9 @@ cabc_mode_mapping_t cabc_mode_mapping[] = {
 static display_type_t get_display_type(void)
 {
 	static display_type_t display_type = DISPLAY_TYPE_UNSET;
+        gchar *bright_file, *max_bright_file = NULL;
+        const char *path;
+        GDir* dir;
 
 	/* If we have the display type already, return it */
 	if (display_type != DISPLAY_TYPE_UNSET)
@@ -236,9 +239,6 @@ static display_type_t get_display_type(void)
         display_type = DISPLAY_TYPE_NONE;
 
         /* Attempt to find first entry in /backlight */
-        GDir* dir;
-        gchar *path, *bright_file, *max_bright_file = NULL;
-
         dir = g_dir_open(DISPLAY_GENERIC_PATH, 0, NULL);
         if (dir) {
             path = g_dir_read_name(dir);

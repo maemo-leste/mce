@@ -115,7 +115,7 @@ typedef enum {
  * @return TRUE on success, FALSE on failure
  */
 static gboolean action_parser(DBusMessageIter *actit, struct argdsc *descs,
-			      void *args, gint len)
+			      void *args, guint len)
 {
 	gboolean status = FALSE;
 	DBusMessageIter cmdit;
@@ -150,7 +150,7 @@ static gboolean action_parser(DBusMessageIter *actit, struct argdsc *descs,
 
 		for (desc = descs; desc->name != NULL; desc++) {
 			if (!strcmp(argname, desc->name)) {
-				if (desc->offs + (gint)sizeof (gchar *) > len) {
+				if (desc->offs + sizeof (gchar *) > len) {
 					mce_log(LL_ERR,
 						"%s desc offset %d is "
 						"out of range %d",
