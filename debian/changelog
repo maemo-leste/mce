@@ -1,3 +1,13 @@
+mce (1.8.128.10-1) unstable; urgency=medium
+
+  * Rewrite battery_upower module
+  * Don't install battery module (it depends on BME)
+  * Move debugging symbols to separate package
+  * Disable bq24150a stat pin
+  * Fix some warnings
+
+ -- Arthur Demchenkov <spinal.by@gmail.com>  Mon, 17 Dec 2018 18:25:58 +0300
+
 mce (1.8.128.9-1) unstable; urgency=medium
 
   * Add dynamic BTN_TOUCH matching for touchscreens
@@ -91,7 +101,7 @@ mce (1.8.127.4+0m5) unstable; urgency=low
 
   * Add support of various gpio switches through evdev interface and gpio-keys driver.
   * Implement smart match of input devices providing switch caps
-  * *upport disabling the keys and switches provided by gpio-keys driver
+  * Support disabling the keys and switches provided by gpio-keys driver
 
  -- Ivaylo Dimitrov <freemangordon@abv.bg>  Mon, 4 Jan 2016 15:33:34 +0200
 
