@@ -1421,6 +1421,10 @@ const gchar *g_module_check_init(GModule *module)
 
 	(void)module;
 
+	/* Disable Nokia N900 bq24150a stat pin messing with LED */
+	if (access(BQ24150A_STAT_PIN_SYS_PATH, W_OK) != -1)
+		mce_write_string_to_file(BQ24150A_STAT_PIN_SYS_PATH, "0");
+
 	/* Append triggers/filters to datapipes */
 	append_output_trigger_to_datapipe(&system_state_pipe,
 					  system_state_trigger);

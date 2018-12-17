@@ -132,4 +132,6 @@
 #define BRIGHTNESS_LEVEL_14			"168"	/**< level 14 */
 #define BRIGHTNESS_LEVEL_15			"180"	/**< brightest */
 
+#define BQ24150A_STAT_PIN_SYS_PATH "/sys/class/power_supply/bq24150a-0/stat_pin_enable"
+
 #endif /* _LED_H_ */
