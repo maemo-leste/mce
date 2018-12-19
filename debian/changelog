@@ -1,3 +1,10 @@
+mce (1.8.128.11-1) unstable; urgency=medium
+
+  * Add initial connection to upowerd error handling
+  * Add device hotplugging support to battery_upower module
+
+ -- Arthur Demchenkov <spinal.by@gmail.com>  Thu, 20 Dec 2018 01:18:24 +0300
+
 mce (1.8.128.10-1) unstable; urgency=medium
 
   * Rewrite battery_upower module
