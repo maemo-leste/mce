@@ -472,6 +472,9 @@ const gchar *g_module_check_init(GModule *module)
     UNUSED(module);
     private.client = up_client_new();
 
+    if (private.client == NULL)
+        return NULL;
+
     /* Reset data used by the state machine */
     mcebat_init();
     upowbat_init();
@@ -493,7 +496,10 @@ G_MODULE_EXPORT void g_module_unload(GModule *module);
 void g_module_unload(GModule *module)
 {
     UNUSED(module);
-    if (private.client)
-        g_object_unref(private.client);
+
+    if (private.client == NULL)
+        return;
+
+    g_object_unref(private.client);
     mcebat_update_cancel();
 }
