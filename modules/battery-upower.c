@@ -525,6 +525,7 @@ xup_device_removed_cb(UpClient *client,
 
     if (private.battery && !g_strcmp0(up_device_get_object_path(private.battery), object_path))
     {
+        mce_log(LL_DEBUG, "Battery device removed: %s", object_path);
         xup_battery_remove_dev();
         xup_charger_disconnect_handlers();
         mcebat_update_schedule();
@@ -533,6 +534,7 @@ xup_device_removed_cb(UpClient *client,
 
     if (private.charger && !g_strcmp0(up_device_get_object_path(private.charger), object_path))
     {
+        mce_log(LL_DEBUG, "Charger device removed: %s", object_path);
         xup_charger_remove_dev();
         mcebat_update_schedule();
     }
@@ -560,6 +562,7 @@ xup_device_added_cb(UpClient *client,
     /* Battery device was added */
     if (!had_battery && private.battery)
     {
+        mce_log(LL_DEBUG, "Battery device added: %s", up_device_get_object_path(device));
         xup_properties_get_all();
         xup_battery_connect_handlers();
         if (had_charger)
@@ -570,6 +573,7 @@ xup_device_added_cb(UpClient *client,
     /* Charger device was added */
     if (!had_charger && private.charger && had_battery)
     {
+        mce_log(LL_DEBUG, "Charger device added: %s", up_device_get_object_path(device));
         xup_properties_get_all();
         xup_charger_connect_handlers();
     }
