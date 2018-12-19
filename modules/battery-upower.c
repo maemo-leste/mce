@@ -358,7 +358,7 @@ static void xup_check_device(UpDevice *dev)
         if (private.battery == NULL &&
             technology != UP_DEVICE_TECHNOLOGY_UNKNOWN)
         {
-            private.battery = dev;
+            private.battery = g_object_ref(dev);
         }
         return;
     }
@@ -366,7 +366,7 @@ static void xup_check_device(UpDevice *dev)
     if (kind == UP_DEVICE_KIND_LINE_POWER &&
         private.charger == NULL)
     {
-        private.charger = dev;
+        private.charger = g_object_ref(dev);
     }
 }
 
@@ -435,14 +435,22 @@ xup_charger_state_changed_cb(UpDevice *charger,
 }
 
 /**
- * Add UPower handlers
+ * Connect signal handlers to charger device
  */
 static void
-xup_set_callbacks(void)
+xup_charger_connect_handlers(void)
 {
-    if (private.battery == NULL)
-        return;
+    g_signal_connect(private.charger, "notify::online",
+                     G_CALLBACK(xup_charger_state_changed_cb),
+                     NULL);
+}
 
+/**
+ * Connect signal handlers to battery device
+ */
+static void
+xup_battery_connect_handlers(void)
+{
     g_signal_connect(private.battery, "notify::percentage",
                      G_CALLBACK(xup_battery_properties_changed_cb),
                      NULL);
@@ -450,12 +458,138 @@ xup_set_callbacks(void)
     g_signal_connect(private.battery, "notify::state",
                      G_CALLBACK(xup_battery_properties_changed_cb),
                      NULL);
+}
 
-    if (private.charger)
+/**
+ * Disconnect signal handlers from charger device
+ */
+static void
+xup_charger_disconnect_handlers(void)
+{
+    g_signal_handlers_disconnect_by_func(
+         private.charger, xup_charger_state_changed_cb, NULL);
+}
+
+/**
+ * Disconnect signal handlers from battery device
+ */
+static void
+xup_battery_disconnect_handlers(void)
+{
+    g_signal_handlers_disconnect_by_func(
+         private.battery, xup_battery_properties_changed_cb, NULL);
+}
+
+/**
+ * Remove charger device
+ */
+static void
+xup_charger_remove_dev(void)
+{
+    if (private.charger == NULL)
+        return;
+
+    xup_charger_disconnect_handlers();
+    g_object_unref(private.charger);
+    private.charger = NULL;
+    upowbat.charger_online = FALSE;
+    mcebat.charger_connected = FALSE;
+}
+
+/**
+ * Remove battery device
+ */
+static void
+xup_battery_remove_dev(void)
+{
+    if (private.battery == NULL)
+        return;
+
+    xup_battery_disconnect_handlers();
+    g_object_unref(private.battery);
+    private.battery = NULL;
+    upowbat_init();
+    mcebat_init();
+}
+
+/**
+ * Handle "device-removed" event
+ */
+static void
+xup_device_removed_cb(UpClient *client,
+                      const char *object_path,
+                      gpointer user_data)
+{
+    UNUSED(client);
+    UNUSED(user_data);
+
+    if (private.battery && !g_strcmp0(up_device_get_object_path(private.battery), object_path))
     {
-        g_signal_connect(private.charger, "notify::online",
-                         G_CALLBACK(xup_charger_state_changed_cb),
-                         NULL);
+        xup_battery_remove_dev();
+        xup_charger_disconnect_handlers();
+        mcebat_update_schedule();
+        return;
+    }
+
+    if (private.charger && !g_strcmp0(up_device_get_object_path(private.charger), object_path))
+    {
+        xup_charger_remove_dev();
+        mcebat_update_schedule();
+    }
+}
+
+/**
+ * Handle "device-added" event
+ */
+static void
+xup_device_added_cb(UpClient *client,
+                    UpDevice *device,
+                    gpointer user_data)
+{
+    gboolean had_battery = private.battery != NULL;
+    gboolean had_charger = private.charger != NULL;
+
+    UNUSED(user_data);
+    UNUSED(client);
+
+    if (had_battery && had_charger)
+        return;
+
+    xup_check_device(device);
+
+    /* Battery device was added */
+    if (!had_battery && private.battery)
+    {
+        xup_properties_get_all();
+        xup_battery_connect_handlers();
+        if (had_charger)
+            xup_charger_connect_handlers();
+        return;
+    }
+
+    /* Charger device was added */
+    if (!had_charger && private.charger && had_battery)
+    {
+        xup_properties_get_all();
+        xup_charger_connect_handlers();
+    }
+}
+
+/**
+ * Add UPower handlers
+ */
+static void
+xup_set_callbacks(void)
+{
+    g_signal_connect(private.client, "device-added", G_CALLBACK (xup_device_added_cb), NULL);
+    g_signal_connect(private.client, "device-removed", G_CALLBACK (xup_device_removed_cb), NULL);
+
+    if (private.battery)
+    {
+        xup_battery_connect_handlers();
+
+        if (private.charger)
+            xup_charger_connect_handlers();
     }
 }
 
@@ -500,6 +634,8 @@ void g_module_unload(GModule *module)
     if (private.client == NULL)
         return;
 
+    xup_battery_remove_dev();
+    xup_charger_remove_dev();
     g_object_unref(private.client);
     mcebat_update_cancel();
 }
