@@ -327,7 +327,7 @@ EXIT:
  */
 static gboolean backlight_ioctl(int value)
 {
-	static int old_value = VESA_NO_BLANKING;
+	static int old_value = FB_BLANK_UNBLANK;
 	static int fd = -1;
 	gboolean status = FALSE;
 
@@ -379,7 +379,7 @@ static gboolean brightness_fade_timeout_cb(gpointer data)
 	(void)data;
 
 	if ((cached_brightness <= 0) && (target_brightness != 0)) {
-		backlight_ioctl(VESA_NO_BLANKING);
+		backlight_ioctl(FB_BLANK_UNBLANK);
 	}
 
 	if ((cached_brightness == -1) ||
@@ -397,7 +397,7 @@ static gboolean brightness_fade_timeout_cb(gpointer data)
 					cached_brightness);
 
 	if (cached_brightness == 0) {
-		backlight_ioctl(VESA_POWERDOWN);
+		backlight_ioctl(FB_BLANK_POWERDOWN);
 	}
 
 	if (retval == FALSE)
@@ -447,7 +447,7 @@ static void update_brightness_fade(gint new_brightness)
 		cancel_brightness_fade_timeout();
 		cached_brightness = new_brightness;
 		target_brightness = new_brightness;
-		backlight_ioctl(VESA_NO_BLANKING);
+		backlight_ioctl(FB_BLANK_UNBLANK);
 		mce_write_number_string_to_file(brightness_file,
 						new_brightness);
 		goto EXIT;
@@ -478,7 +478,7 @@ static void display_blank(void)
 	cached_brightness = 0;
 	target_brightness = 0;
 	mce_write_number_string_to_file(brightness_file, 0);
-	backlight_ioctl(VESA_POWERDOWN);
+	backlight_ioctl(FB_BLANK_POWERDOWN);
 }
 
 /**
@@ -487,7 +487,7 @@ static void display_blank(void)
 static void display_dim(void)
 {
 	if (cached_brightness == 0) {
-		backlight_ioctl(VESA_NO_BLANKING);
+		backlight_ioctl(FB_BLANK_UNBLANK);
 	}
 
 	update_brightness_fade((maximum_display_brightness *
@@ -503,7 +503,7 @@ static void display_unblank(void)
 	if (cached_brightness == 0) {
 		cached_brightness = set_brightness;
 		target_brightness = set_brightness;
-		backlight_ioctl(VESA_NO_BLANKING);
+		backlight_ioctl(FB_BLANK_UNBLANK);
 		mce_write_number_string_to_file(brightness_file,
 						set_brightness);
 	} else {
