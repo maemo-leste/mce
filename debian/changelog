@@ -1,3 +1,9 @@
+mce (1.8.128.12) unstable; urgency=medium
+
+  * Update ioctl commands for framebuffer
+
+ -- Arthur Demchenkov <spinal.by@gmail.com>  Sun, 14 Apr 2019 10:27:32 +0300
+
 mce (1.8.128.11-1) unstable; urgency=medium
 
   * Add initial connection to upowerd error handling
