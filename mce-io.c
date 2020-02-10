@@ -337,7 +337,7 @@ static gboolean io_chunk_cb(GIOChannel *source,
 		    (errno == ENODEV) &&
 		    ((g_io_channel_get_flags(iomon->iochan) &
 		      G_IO_FLAG_IS_SEEKABLE) == G_IO_FLAG_IS_SEEKABLE)) {
-			GError *error2;
+			GError *error2 = NULL;
 
 			g_io_channel_seek_position(iomon->iochan, 0,
 						   G_SEEK_END, &error2);
