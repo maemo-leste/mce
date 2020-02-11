@@ -1,3 +1,10 @@
+mce (1.8.128.13) unstable; urgency=medium
+
+  * Fix segmentation fault on input device removal
+  * Actually close file descriptors of input devices that get removed
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Tue, 11 Feb 2020 15:11:31 +0100
+
 mce (1.8.128.12) unstable; urgency=medium
 
   * Update ioctl commands for framebuffer
