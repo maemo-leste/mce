@@ -810,6 +810,8 @@ void mce_unregister_io_monitor(gconstpointer io_monitor)
 	}
 
 	g_io_channel_unref(iomon->iochan);
+	if (iomon->fd != -1)
+		close(iomon->fd);
 	g_free(iomon->file);
 	g_slice_free(iomon_struct, iomon);
 
