@@ -1,3 +1,10 @@
+mce (1.8.128.14) unstable; urgency=medium
+
+  * Add systemd support
+  * Fix build time warnings
+
+ -- Arthur Demchenkov <spinal.by@gmail.com>  Sat, 21 Mar 2020 15:20:04 +0300
+
 mce (1.8.128.13) unstable; urgency=medium
 
   * Fix segmentation fault on input device removal
