@@ -363,9 +363,9 @@ static gboolean gpio_keys_enable_switch(int type, gint key, gboolean disable)
 				gint i, j;
 
 				*c = 0;
-				j = atoi(c + 1);
+				j = atoi(c + 1) + 1;
 
-				for (i = atoi(*p); i <= j; i++) {
+				for (i = atoi(*p); i < j; i++) {
 					l = g_slist_append(l, GINT_TO_POINTER(i));
 				}
 			} else {
