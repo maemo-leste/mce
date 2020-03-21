@@ -173,7 +173,7 @@ const gchar *g_module_check_init(GModule *module)
 	(void)module;
 
 	if (get_product_id() == PRODUCT_RX51)
-		goto EXIT;
+		return NULL;;
 
 	append_input_trigger_to_datapipe(&keypress_pipe,
 					 homekey_trigger);
@@ -198,7 +198,6 @@ const gchar *g_module_check_init(GModule *module)
 	(void)parse_action(tmp, &longpressaction);
 	g_free(tmp);
 
-EXIT:
 	return NULL;
 }
 

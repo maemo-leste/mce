@@ -359,13 +359,13 @@ static gboolean gpio_keys_enable_switch(int type, gint key, gboolean disable)
 
 		for (p = array; *p; p ++) {
 			if ((c = g_strrstr(*p, "-"))) {
-				/* we have a range, expand it */
-				int i, j;
+				/* We have a range, expand it */
+				gint i, j;
 
 				*c = 0;
 				j = atoi(c + 1);
 
-				for (i = atoi(*p); i <= j; i ++) {
+				for (i = atoi(*p); i <= j; i++) {
 					l = g_slist_append(l, GINT_TO_POINTER(i));
 				}
 			} else {
