@@ -1,0 +1,15 @@
+[Unit]
+Description=Mode Control Entity
+DefaultDependencies=no
+Requires=dbus.socket dbus-user.socket dsme.service
+After=dbus.socket dbus-user.socket dsme.service
+Conflicts=shutdown.target
+
+[Service]
+ExecStart=/sbin/mce --systemd
+RuntimeDirectory=mce
+Restart=always
+Type=notify
+
+[Install]
+WantedBy=multi-user.target

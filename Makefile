@@ -87,6 +87,11 @@ BLOCKER_CFLAGS := $(COMMON_CFLAGS)
 BLOCKER_CFLAGS += $$(pkg-config glib-2.0 dbus-1 dbus-glib-1 --cflags)
 BLOCKER_LDFLAGS := $$(pkg-config glib-2.0 dbus-1 dbus-glib-1 --libs)
 
+ifeq (,$(wildcard /etc/devuan_version))
+	MCE_CFLAGS += -DENABLE_SYSTEMD_SUPPORT
+	MCE_LDFLAGS += $$(pkg-config libsystemd --libs)
+endif
+
 .PHONY: all
 all: $(TARGETS) $(MODULES) devlock-blocker
 
