@@ -41,8 +41,12 @@ typedef void (*iomon_error_cb)(gpointer data, const gchar* device, gconstpointer
 gboolean mce_read_string_from_file(const gchar *const file, gchar **string);
 gboolean mce_read_number_string_from_file(const gchar *const file,
 					  gulong *number);
+gboolean mce_write_string_to_glob(const gchar *const pattern,
+				  const gchar *const string);
 gboolean mce_write_string_to_file(const gchar *const file,
 				  const gchar *const string);
+gboolean mce_write_number_string_to_glob(const gchar *const pattern,
+					 const gulong number);
 gboolean mce_write_number_string_to_file(const gchar *const file,
 					 const gulong number);
 void mce_suspend_io_monitor(gconstpointer io_monitor);

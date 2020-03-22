@@ -19,6 +19,7 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with mce.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <glob.h>
 #include <glib.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -123,6 +124,34 @@ gboolean mce_read_number_string_from_file(const gchar *const file,
 }
 
 /**
+ * Write a string to a file matching glob pattern
+ *
+ * @param file Glob pattern that should resolve to the file, if multiple files
+ * are matches, writes to all.
+ * @param string The string to write
+ * @return TRUE iff all writes succeed, FALSE on failure
+ */
+gboolean mce_write_string_to_glob(const gchar *const pattern,
+				  const gchar *const string)
+{
+
+    glob_t glob_result;
+    gboolean all_writes_ok = TRUE;
+
+    if (glob(pattern, GLOB_NOMATCH, NULL, &glob_result)) {
+        return FALSE;
+    }
+
+    for (size_t i = 0; i < glob_result.gl_pathc; i++) {
+        all_writes_ok &= mce_write_string_to_file(glob_result.gl_pathv[i], string);
+    }
+
+    globfree(&glob_result);
+
+    return all_writes_ok;
+}
+
+/**
  * Write a string to a file
  *
  * @param file Path to the file
@@ -185,6 +214,25 @@ gboolean mce_write_string_to_file(const gchar *const file,
 
 EXIT:
 	g_clear_error(&error);
+
+	return status;
+}
+
+/**
+ * Write a string representation of a number to files matting the glob pattern.
+ *
+ * @param number The number to write
+ * @return TRUE iff all writes succeed, FALSE on failure
+ */
+gboolean mce_write_number_string_to_glob(const gchar *const pattern,
+					 const gulong number)
+{
+	gchar *string;
+	gboolean status;
+
+	string = g_strdup_printf("%lu", number);
+	status = mce_write_string_to_glob(pattern, string);
+	g_free(string);
 
 	return status;
 }
