@@ -1,3 +1,9 @@
+mce (1.8.128.15) unstable; urgency=medium
+
+  * Add cross-compiling support
+
+ -- Arthur Demchenkov <spinal.by@gmail.com>  Mon, 23 Mar 2020 20:47:31 +0300
+
 mce (1.8.128.14) unstable; urgency=medium
 
   * Add systemd support
