@@ -169,6 +169,12 @@ static void set_n810_backlight_brightness(guint fadetime, guint brightness)
 	(void)mce_write_number_string_to_file(MCE_KEYBOARD_BACKLIGHT_BRIGHTNESS_SYS_PATH, brightness);
 }
 
+static void set_generic_backlight_brightness(guint fadetime, guint brightness)
+{
+	(void)fadetime;
+	(void)mce_write_number_string_to_glob(MCE_KEYBOARD_GENERIC_BACKLIGHT_SYS_PATH, brightness);
+}
+
 static void set_backlight_brightness(gconstpointer data)
 {
 	static gint cached_brightness = -1;
@@ -193,6 +199,7 @@ static void set_backlight_brightness(gconstpointer data)
 		break;
 
 	default:
+		set_generic_backlight_brightness(key_backlight_fadetime, new_brightness);
 		break;
 	}
 
