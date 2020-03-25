@@ -13,7 +13,16 @@ pkgdir = $(CURDIR)/debian/tmp
 makefileversion := $$(grep -m1 '^VERSION' Makefile | sed -e 's/VERSION *:= *//')
 changelogversion := $$(grep -m1 'mce (' debian/changelog | sed -e 's/mce (\(.*\)).*/\1/;s/\(^'$(makefileversion)'\).*/\1/')
 
-CC = gcc
+# Cross-compiling support
+DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+ifneq ($(DEB_HOST_GNU_TYPE), $(DEB_BUILD_GNU_TYPE))
+	export PKG_CONFIG_PATH = /usr/lib/$(DEB_HOST_GNU_TYPE)/pkgconfig
+	CC = $(DEB_HOST_GNU_TYPE)-gcc
+else
+	CC = gcc
+endif
+
 CFLAGS = -Wall -g
 
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
