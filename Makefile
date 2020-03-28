@@ -70,8 +70,8 @@ COMMON_CFLAGS += -DPRG_VERSION=$(VERSION)
 
 MCE_CFLAGS := $(COMMON_CFLAGS)
 MCE_CFLAGS += -DMCE_CONF_FILE=$(CONFDIR)/$(CONFFILE)
-MCE_CFLAGS += $$(pkg-config glib-2.0 gio-2.0 gmodule-2.0 dbus-1 dbus-glib-1 gconf-2.0 osso-systemui-dbus conic --cflags)
-MCE_LDFLAGS := $$(pkg-config glib-2.0 gio-2.0 gmodule-2.0 dbus-1 dbus-glib-1 gconf-2.0 dsme osso-systemui-dbus conic libdevlock1 --libs)
+MCE_CFLAGS += $$(pkg-config glib-2.0 gio-2.0 gmodule-2.0 dbus-1 dbus-glib-1 gconf-2.0 osso-systemui-dbus conic x11 xi --cflags)
+MCE_LDFLAGS := $$(pkg-config glib-2.0 gio-2.0 gmodule-2.0 dbus-1 dbus-glib-1 gconf-2.0 dsme osso-systemui-dbus conic libdevlock1 x11 xi --libs)
 LIBS := devlock.c tklock.c modetransition.c powerkey.c connectivity.c mce-dbus.c mce-dsme.c mce-gconf.c event-input.c event-switches.c mce-hal.c mce-log.c mce-conf.c datapipe.c mce-modules.c mce-io.c mce-lib.c
 HEADERS := devlock.h tklock.h modetransition.h powerkey.h connectivity.h mce.h mce-dbus.h mce-dsme.h mce-gconf.h event-input.h event-switches.h mce-hal.h mce-log.h mce-conf.h datapipe.h mce-modules.h mce-io.h mce-lib.h
 
