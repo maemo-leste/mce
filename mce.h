@@ -280,6 +280,8 @@ datapipe_struct key_backlight_pipe;
 datapipe_struct keypress_pipe;
 /** Touchscreen activity took place */
 datapipe_struct touchscreen_pipe;
+/** Touchscreen suspended or not */
+datapipe_struct touchscreen_suspend_pipe;
 /** The lock-key has been pressed; read only */
 datapipe_struct lockkey_pipe;
 /** Keyboard open/closed; read only */
