@@ -98,7 +98,8 @@ typedef enum {
 	ALS_TYPE_UNSET = -1,
 	ALS_TYPE_NONE = 0,
 	ALS_TYPE_RX44 = 1,
-	ALS_TYPE_RX51 = 2
+	ALS_TYPE_RX51 = 2,
+	ALS_TYPE_DROID4 = 3
 } als_type_t;
 
 static void cancel_als_poll_timer(void);
@@ -182,6 +183,15 @@ static als_type_t get_als_type(void)
 		display_als_profiles = display_als_profiles_rx51;
 		led_als_profiles = led_als_profiles_rx51;
 		kbd_als_profiles = kbd_als_profiles_rx51;
+	} else if (g_access(ALS_LUX_PATH_DROID4, W_OK) == 0) {
+		als_type = ALS_TYPE_DROID4;
+
+		als_lux_path = ALS_LUX_PATH_DROID4;
+		als_calib0_path = NULL;
+		als_calib1_path = NULL;
+		display_als_profiles = display_als_profiles_droid4;
+		led_als_profiles = led_als_profiles_droid4;
+		kbd_als_profiles = kbd_als_profiles_droid4;
 	} else {
 		als_type = ALS_TYPE_NONE;
 		als_lux_path = NULL;
