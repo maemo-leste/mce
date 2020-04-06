@@ -25,6 +25,8 @@ Build-Depends:
  libdevlock-dev,
  libupower-glib-dev (>=1:0.99.7.5),
  libsystemd-dev,
+ libx11-dev,
+ libxi-dev,
 Standards-Version: 3.7.3
 
 Package: mce
