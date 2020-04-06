@@ -41,6 +41,9 @@
 #define ALS_CALIB0_PATH_RX51_3x		ALS_PATH_RX51_3x "/in_intensity_both_calibscale"
 #define ALS_CALIB1_PATH_RX51_3x		ALS_PATH_RX51_3x "/in_intensity_ir_calibscale"
 
+#define ALS_PATH_DROID4		"/sys/class/i2c-adapter/i2c-1/1-0044/iio:device0"
+#define ALS_LUX_PATH_DROID4		ALS_PATH_DROID4 "/in_illuminance_input"
+
 /** Path to the GConf settings for the display */
 #ifndef MCE_GCONF_DISPLAY_PATH
 #define MCE_GCONF_DISPLAY_PATH			"/system/osso/dsm/display"
@@ -78,6 +81,77 @@ typedef struct {
 	gint range[5][2];
 	gint value[6];					/* brightness in % */
 } als_profile_struct;
+
+/* 5 entries, one for each ALS_PROFILE_* level (MINIMUM, ECONOMY, etc)
+ * Each entry contains the range of luminance/lux values, and what brightness
+ * percentage of the full LED brightness it should map to.
+ *
+ * A lux 'level' will be calculated according to the ranges in the structure.
+ * This lux 'level' will then be used to pick a percentage in brighness of the
+ * 'max_brightness' value of the device, and set the 'brightness' of the device
+ * to max_brightness * percentage.
+ *
+ * For example, for the Droid 4, with the lowest (ALS_PROFILE_MINIMUM)
+ * brightness profile, and a lux value of 900 (quite bright!), the lux level
+ * would be 3 (min is 0, max is 4), and the brightness owuld be set to 80%.
+ * In fact, any lux level above 3 would result in 80% brightness, per the
+ * current (in this example, MINIMUM) profile.
+ */
+
+als_profile_struct display_als_profiles_droid4[] = {
+    /*
+     *
+     * Observed lux values in Amsterdam, (max is 2000):
+     *
+     * - Dark room, at night = 0
+     * - Normal day without much (direct) sunlight, inside, phone facing up 10
+     * - Normal day without much (direct) sunlight, inside, phone facing outside 100
+     * - Sitting in direct sunlight, Droid4 not facing the sun = ~ 400-600
+     * - Sitting in direct sunlight, Droid4 facing sun = ~1200-2000
+     *
+     */
+	{
+		{
+			{ 10, 50 },
+			{ 150, 200 },
+			{ 300, 400 },
+			{ 800, 1200 },
+			{ 1300, 2000 },
+		}, {20, 30, 50, 80, 80, 80}
+	}, {
+		{
+			{ 10, 50 },
+			{ 150, 200 },
+			{ 300, 600 },
+			{ 800, 1200 },
+			{ 1300, 2000 },
+		}, {30, 50, 70, 80, 100, 100}
+	}, {
+		{
+			{ 10, 50 },
+			{ 150, 200 },
+			{ 300, 600 },
+			{ 800, 1200 },
+			{ 1300, 2000 },
+		}, {50, 60, 80, 100, 100, 100}
+	}, {
+		{
+			{ 10, 50 },
+			{ 150, 200 },
+			{ 300, 600 },
+			{ 800, 1200 },
+			{ 1300, 2000 },
+		}, { 60, 70, 100, 100, 100, 100}
+	}, {
+		{
+			{ 32, 64 },
+			{ 160, 320},
+			{ -1, -1 },
+			{ -1, -1 },
+			{ -1, -1 },
+		}, { 100, 100, 100, 0, 0, 0 }
+	}
+};
 
 als_profile_struct display_als_profiles_rx51[] = {
 	{
@@ -167,6 +241,31 @@ als_profile_struct display_als_profiles_rx44[] = {
 	}
 };
 
+als_profile_struct led_als_profiles_droid4[] = {
+	{
+		{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
+		{ 0, 0, 0, 0, 0, 0 }
+	}, {
+		{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
+		{ 0, 0, 0, 0, 0, 0 }
+	}, {
+		{
+			{ 32, 64 },
+			{ 100, 1000 },
+			{ -1, -1 },
+			{ -1, -1 },
+			{ -1, -1 },
+		}, { 5, 5, 5, 0, 0, 0 }
+	}, {
+		{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
+		{ 0, 0, 0, 0, 0, 0 }
+	}, {
+		{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
+		{ 0, 0, 0, 0, 0, 0 }
+	}
+};
+
+
 als_profile_struct led_als_profiles_rx51[] = {
 	{
 		{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
@@ -222,6 +321,30 @@ als_profile_struct led_als_profiles_rx44[] = {
 			{ -1, -1 },
 			{ -1, -1 },
 		}, { 50, 100, 0, 0, 0, 0 }
+	}
+};
+
+als_profile_struct kbd_als_profiles_droid4[] = {
+	{
+		{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
+		{ 0, 0, 0, 0, 0, 0 }
+	}, {
+		{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
+		{ 0, 0, 0, 0, 0, 0 }
+	}, {
+		{
+			{ 0, 5},
+			{ 10, 2000 },
+			{ -1, -1 },
+			{ -1, -1 },
+			{ -1, -1 },
+		}, { 25, 0, 0, 0, 0, 0 }
+	}, {
+		{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
+		{ 0, 0, 0, 0, 0, 0 }
+	}, {
+		{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
+		{ 0, 0, 0, 0, 0, 0 }
 	}
 };
 
