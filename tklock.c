@@ -41,6 +41,7 @@
 #include "mce-conf.h"
 #include "mce-dbus.h"
 #include "mce-gconf.h"
+#include "event-input.h"
 
 /**
  * TRUE if the touchscreen/keypad autolock is enabled,
@@ -426,6 +427,9 @@ EXIT:
  */
 static gboolean ts_event_control(gboolean enable)
 {
+	execute_datapipe(&touchscreen_suspend_pipe, GINT_TO_POINTER(!enable),
+			USE_INDATA, CACHE_INDATA);
+
 	if (generic_x11_event_control(enable))
 		return TRUE;
 

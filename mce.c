@@ -498,6 +498,8 @@ int main(int argc, char **argv)
 		       sizeof (struct input_event), NULL);
 	setup_datapipe(&touchscreen_pipe, READ_ONLY, DONT_FREE_CACHE,
 		       0, GINT_TO_POINTER(0));
+	setup_datapipe(&touchscreen_suspend_pipe, READ_ONLY, DONT_FREE_CACHE,
+		       0, GINT_TO_POINTER(0));
 	setup_datapipe(&device_inactive_pipe, READ_WRITE, DONT_FREE_CACHE,
 		       0, GINT_TO_POINTER(FALSE));
 	setup_datapipe(&lockkey_pipe, READ_ONLY, DONT_FREE_CACHE,
@@ -633,6 +635,7 @@ EXIT:
 	free_datapipe(&keyboard_slide_pipe);
 	free_datapipe(&lockkey_pipe);
 	free_datapipe(&device_inactive_pipe);
+	free_datapipe(&touchscreen_suspend_pipe);
 	free_datapipe(&touchscreen_pipe);
 	free_datapipe(&keypress_pipe);
 	free_datapipe(&key_backlight_pipe);

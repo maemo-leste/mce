@@ -65,6 +65,8 @@ GFileMonitor *dev_input_gfmp = NULL;
 static void update_inputdevices(const gchar *device, gboolean add);
 static void remove_input_device(GSList **devices, const gchar *device);
 
+typedef void (*input_match_callback) (const char* filename);
+
 /**
  * Wrapper function to call mce_suspend_io_monitor() from g_slist_foreach()
  *
@@ -735,7 +737,7 @@ static void update_inputdevices(const gchar *device, gboolean add)
  * Scan /dev/input for input event devices
  * @return TRUE on success, FALSE on failure
  */
-static gboolean scan_inputdevices(void)
+static gboolean scan_inputdevices(input_match_callback match_callback)
 {
 	DIR *dir = NULL;
 	struct dirent *direntry = NULL;
@@ -763,7 +765,7 @@ static gboolean scan_inputdevices(void)
 
 		filename = g_strconcat(DEV_INPUT_PATH, "/",
 				       direntry->d_name, NULL);
-		match_and_register_io_monitor(filename);
+		match_callback(filename);
 		g_free(filename);
 	}
 
@@ -853,6 +855,61 @@ static void dir_changed_cb(GFileMonitor *monitor,
 	}
 }
 
+static void match_ts_only(const gchar* filename) {
+	int fd;
+
+	if ((fd = match_event_file(filename, driver_blacklist)) != -1) {
+		/* If the driver for the event file is blacklisted, skip it */
+		close(fd);
+		return;
+	}
+
+	if ((fd = match_event_file(filename,
+					  touchscreen_event_drivers)) != -1) {
+		register_io_monitor_chunk(fd, filename, touchscreen_cb,
+					  &touchscreen_dev_list);
+		return;
+	}
+	if ((fd = match_event_file_by_caps(filename,
+					  touch_event_types, touch_event_keys)) != -1) {
+		register_io_monitor_chunk(fd, filename, touchscreen_cb,
+					  &touchscreen_dev_list);
+		return;
+	}
+
+	close(fd);
+}
+
+static void touchscreen_control_trigger(gconstpointer data) {
+	gboolean enable = !GPOINTER_TO_INT(data);
+	if (enable)
+		mce_reopen_touchscreen_devices();
+	else
+		mce_clear_touchscreen_devices();
+}
+
+void mce_clear_touchscreen_devices(void) {
+	GSList *iter = touchscreen_dev_list;
+
+	if (touchscreen_dev_list == NULL)
+		return;
+
+	while ((iter) && (iter->data)) {
+		gconstpointer iomon_id = iter->data;
+		mce_unregister_io_monitor(iomon_id);
+
+		iter = iter->next;
+	}
+
+	g_slist_free(touchscreen_dev_list);
+	touchscreen_dev_list = NULL;
+}
+
+void mce_reopen_touchscreen_devices(void) {
+	if (touchscreen_dev_list == NULL)
+		scan_inputdevices(match_ts_only);
+}
+
 /**
  * Init function for the /dev/input event component
  *
@@ -886,7 +943,7 @@ gboolean mce_input_init(void)
 	 *      and any workarounds are likely to be cumbersome
 	 */
 	/* Find the initial set of input devices */
-	if ((status = scan_inputdevices()) == FALSE) {
+	if ((status = scan_inputdevices(match_and_register_io_monitor)) == FALSE) {
 		g_file_monitor_cancel(dev_input_gfmp);
 		dev_input_gfmp = NULL;
 		goto EXIT;
@@ -895,6 +952,9 @@ gboolean mce_input_init(void)
 	/* Connect "changed" signal for the directory monitor */
 	g_signal_connect(G_OBJECT(dev_input_gfmp), "changed",
 			 G_CALLBACK(dir_changed_cb), NULL);
+
+	append_output_trigger_to_datapipe(&touchscreen_suspend_pipe,
+					touchscreen_control_trigger);
 
 EXIT:
 	g_clear_error(&error);
@@ -909,6 +969,9 @@ void mce_input_exit(void)
 {
 	if (dev_input_gfmp != NULL)
 		g_file_monitor_cancel(dev_input_gfmp);
+
+	remove_output_trigger_from_datapipe(&touchscreen_suspend_pipe,
+					touchscreen_control_trigger);
 
 	unregister_inputdevices();
 
