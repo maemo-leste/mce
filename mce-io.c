@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "mce.h"
 #include "mce-io.h"
 #include "mce-log.h"

@@ -45,6 +45,10 @@
 #include "devlock.h"
 #include "powerkey.h"
 
+#ifdef ENABLE_SYSTEMD_SUPPORT
+#include <systemd/sd-daemon.h>
+#endif
+
 /** Path to the lockfile */
 #define MCE_LOCKFILE			"/var/run/mce.pid"
 /** Name shown by --help etc. */
@@ -65,6 +69,9 @@ static void usage(void)
 		  "Mode Control Entity\n"
 		  "\n"
 		  "  -d, --daemonflag    run MCE as a daemon\n"
+#ifdef ENABLE_SYSTEMD_SUPPORT
+		  "  -n, --systemd       notify systemd when started up\n"
+#endif
 		  "      --force-syslog  log to syslog even when not "
 		  "daemonized\n"
 		  "      --force-stderr  log to stderr even when daemonized\n"
@@ -322,11 +329,17 @@ int main(int argc, char **argv)
 	gboolean daemonflag = FALSE;
 	gboolean systembus = TRUE;
 	gboolean debugmode = FALSE;
+#ifdef ENABLE_SYSTEMD_SUPPORT
+	gboolean systemd_notify = FALSE;
+#endif
 
 	const char optline[] = "dS";
 
 	struct option const options[] = {
 		{ "daemonflag", no_argument, 0, 'd' },
+#ifdef ENABLE_SYSTEMD_SUPPORT
+		{ "systemd", no_argument, 0, 'n' },
+#endif
 		{ "force-syslog", no_argument, 0, 's' },
 		{ "force-stderr", no_argument, 0, 'T' },
 		{ "session", no_argument, 0, 'S' },
@@ -352,6 +365,12 @@ int main(int argc, char **argv)
 		case 'd':
 			daemonflag = TRUE;
 			break;
+
+#ifdef ENABLE_SYSTEMD_SUPPORT
+		case 'n':
+			systemd_notify = TRUE;
+			break;
+#endif
 
 		case 's':
 			if (logtype != -1) {
@@ -598,6 +617,14 @@ int main(int argc, char **argv)
 	}
 
 	mce_startup_ui();
+
+#ifdef ENABLE_SYSTEMD_SUPPORT
+	/* Tell systemd that we have started up */
+	if (systemd_notify) {
+		mce_log(LL_INFO, "notifying systemd");
+		sd_notify(0, "READY=1");
+	}
+#endif
 
 	/* Run the main loop */
 	g_main_loop_run(mainloop);

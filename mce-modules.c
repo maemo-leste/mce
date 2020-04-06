@@ -64,7 +64,6 @@ gboolean mce_modules_init(void)
 				modlist[i], path);
 
 			if ((module = g_module_open(tmp, 0)) != NULL) {
-				module_info_struct *module_info = NULL;
 				gpointer mip = NULL;
 
 				if (g_module_symbol(module,
@@ -74,9 +73,6 @@ gboolean mce_modules_init(void)
 						"Failed to retrieve module "
 						"information for: %s",
 						modlist[i]);
-					module_info = NULL;
-				} else {
-					module_info = (module_info_struct *)mip;
 				}
 
 				/* XXX: check dependencies, conflicts, et al */
