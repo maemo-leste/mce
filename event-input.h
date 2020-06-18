@@ -28,11 +28,6 @@
 
 #include "event-switches.h"
 
-/** Path to the input device directory */
-#define DEV_INPUT_PATH			"/dev/input"
-/** Prefix for event files */
-#define EVENT_FILE_PREFIX		"event"
-
 /**
  * List of drivers that provide touchscreen events
  */
@@ -183,12 +178,6 @@ static const gchar *const driver_blacklist[] = {
 
 #define MONITORING_DELAY		1
 
-#define BITS_PER_LONG			(sizeof(long) * 8)
-#define NBITS(x)			((((x) - 1) / BITS_PER_LONG) + 1)
-#define OFF(x)				((x) % BITS_PER_LONG)
-#define BIT(x)				(1UL << OFF(x))
-#define LONG(x)				((x)/BITS_PER_LONG)
-#define test_bit(bit, array)		((array[LONG(bit)] >> OFF(bit)) & 1)
 
 /* When MCE is made modular, this will be handled differently */
 gboolean mce_input_init(void);
