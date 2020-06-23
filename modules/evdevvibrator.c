@@ -61,6 +61,16 @@ typedef enum {
 	NUMBER_OF_PATTERN_FIELDS
 } pattern_field;
 
+typedef enum {
+    VIBRATE_POLICY_PLAY_DISPLAY_OFF = 0,
+    VIBRATE_POLICY_PLAY_DISPLAY_ON_OR_OFF = 1,
+    VIBRATE_POLICY_PLAY_DISPLAY_OFF_ACTDEAD = 2,
+    VIBRATE_POLICY_PLAY_DISPLAY_ON_ACTDEAD = 3,
+    VIBRATE_POLICY_PLAY_DISPLAY_OFF_OR_ACTDEAD = 4,
+    VIBRATE_POLICY_PLAY_ALWAYS = 5,
+} policy_field;
+
+
 static pattern_t *patterns = NULL;
 uint_fast32_t patternsCount = 0;
 
@@ -84,21 +94,21 @@ static pattern_t find_pattern(const char *const name)
 
 static gboolean should_run_pattern(const pattern_t pattern)
 {
-	if (pattern.policy == 5 || pattern.policy == 3)
+	if (pattern.policy == VIBRATE_POLICY_PLAY_ALWAYS || pattern.policy == VIBRATE_POLICY_PLAY_DISPLAY_ON_ACTDEAD)
 		return true;
-	else if (pattern.policy == 4 &&
+	else if (pattern.policy == VIBRATE_POLICY_PLAY_DISPLAY_OFF_OR_ACTDEAD &&
 		 (system_state == MCE_STATE_ACTDEAD
 		  || display_state == MCE_DISPLAY_OFF))
 		return true;
-	else if (pattern.policy == 2 &&
+	else if (pattern.policy == VIBRATE_POLICY_PLAY_DISPLAY_OFF_ACTDEAD &&
 		 (system_state == MCE_STATE_ACTDEAD
 		  && display_state == MCE_DISPLAY_OFF))
 		return true;
-	else if (pattern.policy == 1 &&
+	else if (pattern.policy == VIBRATE_POLICY_PLAY_DISPLAY_ON_OR_OFF &&
 		 (system_state != MCE_STATE_ACTDEAD
 		  && display_state == MCE_DISPLAY_ON))
 		return true;
-	else if (pattern.policy == 0 &&
+	else if (pattern.policy == VIBRATE_POLICY_PLAY_DISPLAY_OFF &&
 		 (system_state != MCE_STATE_ACTDEAD
 		  && display_state == MCE_DISPLAY_OFF))
 		return true;
