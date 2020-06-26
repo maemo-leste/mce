@@ -262,22 +262,22 @@ static gboolean init_patterns(void)
 
 			++patternsCount;
 			pattern = &patterns[i];
-			pattern.name = strdup(patternlist[i]);
-			pattern.priority = tmp[PATTERN_PRIO_FIELD];
-			pattern.policy = tmp[PATTERN_SCREEN_ON_FIELD];
-			pattern.timeout =
+			pattern->name = strdup(patternlist[i]);
+			pattern->priority = tmp[PATTERN_PRIO_FIELD];
+			pattern->policy = tmp[PATTERN_SCREEN_ON_FIELD];
+			pattern->timeout =
 			    tmp[PATTERN_TIMEOUT_FIELD] ?
 			    tmp[PATTERN_TIMEOUT_FIELD] : -1;
-			pattern.repeat_count =
+			pattern->repeat_count =
 			    ABS(tmp[PATTERN_REPEAT_COUNT_FIELD]);
-			pattern.accel_period =
+			pattern->accel_period =
 			    ABS(tmp[PATTERN_ACCEL_PERIOD_FIELD]);
-			pattern.on_period = ABS(tmp[PATTERN_ON_PERIOD_FIELD]);
-			pattern.decel_period =
+			pattern->on_period = ABS(tmp[PATTERN_ON_PERIOD_FIELD]);
+			pattern->decel_period =
 			    ABS(tmp[PATTERN_DECEL_PERIOD_FIELD]);
-			pattern.off_period = ABS(tmp[PATTERN_OFF_PERIOD_FIELD]);
-			pattern.speed = ABS(tmp[PATTERN_SPEED_FIELD]);
-			pattern.invalid = false;
+			pattern->off_period = ABS(tmp[PATTERN_OFF_PERIOD_FIELD]);
+			pattern->speed = ABS(tmp[PATTERN_SPEED_FIELD]);
+			pattern->invalid = false;
 
 			g_free(tmp);
 		}
@@ -381,7 +381,11 @@ static void read_callback(gpointer data, gsize bytes_read)
 static void error_cb(gpointer data, const gchar * device,
 		     gconstpointer iomon_id, GError * err)
 {
-	//here at maemo leste, error handling is our top priority.
+	mce_log(LL_ERR, "Monitoring fd: %i failed %s", evdev_fd, err->message);
+	if (evdev_fd > 0) {
+		close(evdev_fd);
+		evdev_fd = -1;
+	}
 }
 
 static void scan_device_cb(const char *filename)

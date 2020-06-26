@@ -15,6 +15,8 @@ static bool bit_in_array(unsigned char *array, size_t bit)
 bool ff_gain_set(const int fd, const int gain)
 {
 	struct input_event event;
+	if (fd < 0)
+		return false;
 	event.type = EV_FF;
 	event.code = FF_GAIN;
 	event.value = 0xFFFFUL * gain / 100;
@@ -24,6 +26,8 @@ bool ff_gain_set(const int fd, const int gain)
 bool ff_features_get(const int fd, struct fffeatures *features)
 {
 	unsigned char featuresBytes[1 + FF_MAX / 8];
+	if (fd < 0)
+		return false;
 	memset(featuresBytes, 0, sizeof(featuresBytes));
 	int ret =
 	    ioctl(fd, EVIOCGBIT(EV_FF, sizeof(featuresBytes)), featuresBytes);
@@ -59,6 +63,9 @@ bool ff_device_run(const int fd, const int lengthMs, const int delayMs,
 		   const short attackLengthMs, const short fadeLengthMs)
 {
 	static struct ff_effect effect;
+	
+	if (fd < 0)
+		return false;
 
 	if (first_run) {
 		memset(&effect, 0, sizeof(struct ff_effect));
