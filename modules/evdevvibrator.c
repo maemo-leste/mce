@@ -382,7 +382,7 @@ static void error_cb(gpointer data, const gchar * device,
 		     gconstpointer iomon_id, GError * err)
 {
 	mce_log(LL_ERR, "Monitoring fd: %i failed %s", evdev_fd, err->message);
-	if(evdev_fd > 0) {
+	if (evdev_fd > 0) {
 		close(evdev_fd);
 		evdev_fd = -1;
 	}
