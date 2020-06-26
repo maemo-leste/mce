@@ -1,14 +1,9 @@
-mce (1.8.128.16) unstable; urgency=medium
+mce (1.8.128.17) unstable; urgency=medium
 
-  * Disable touchscreen input events when device is locked. On the Droid 4,
-    events would still come through, opening and closing applications when
-    this should not happen.
-  * Close touchscreen devices when not in use to allow for ts idle
-  * Use DPMS to turn off the display to allow display to idle
-  * Add Motorola Droid 4 ALS sensor
-  * Add support for Motorola Droid 4 (and hopefully others) keyboard backlight
+  * Change PowerKeyLongDelay to 4000ms
+  * Add evdev vibrator backend by uvos
 
- -- Merlijn Wajer <merlijn@wizzup.org>  Mon, 06 Apr 2020 19:02:59 +0200
+ -- Merlijn Wajer <merlijn@wizzup.org>  Fri, 26 Jun 2020 15:45:54 +0200
 
 mce (1.8.128.15) unstable; urgency=medium
 
