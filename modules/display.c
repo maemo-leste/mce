@@ -28,8 +28,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <linux/fb.h>
-#include <X11/Xlib.h>
-#include <X11/extensions/dpms.h>
 #include <sys/ioctl.h>
 #include <mce/mode-names.h>
 #include "mce.h"
@@ -40,6 +38,7 @@
 #include "mce-dbus.h"
 #include "mce-gconf.h"
 #include "datapipe.h"
+#include "x11-utils.h"
 
 /** Module name */
 #define MODULE_NAME		"display"
@@ -367,38 +366,6 @@ EXIT:
 	return status;
 }
 
-/* Set DPMS mode for X11 display to on or off
- *
- * @params dpms_on To force the mode into on or off (blanked) mode.
- */
-static void dpms_set_display_on(gboolean dpms_on)
-{
-	Display* dpy = NULL;
-
-	dpy = XOpenDisplay(NULL);
-	if (dpy == NULL) {
-		dpy = XOpenDisplay(":0.0");
-	}
-
-	if (dpy == NULL) {
-		mce_log(LL_INFO, "%s: unable to open display", __func__);
-		return;
-	}
-
-	if (DPMSCapable(dpy)) {
-		DPMSEnable(dpy);
-		if (dpms_on) {
-			DPMSForceLevel(dpy, DPMSModeOn);
-		} else {
-			usleep(100000); // from xset
-			DPMSForceLevel(dpy, DPMSModeOff);
-		}
-	}
-
-	XCloseDisplay(dpy);
-}
-
-
 /**
  * Timeout callback for the brightness fade
  *
@@ -414,7 +381,7 @@ static gboolean brightness_fade_timeout_cb(gpointer data)
 
 	if ((cached_brightness <= 0) && (target_brightness != 0)) {
 		backlight_ioctl(FB_BLANK_UNBLANK);
-		dpms_set_display_on(TRUE);
+		x11_force_dpms_display_level(TRUE);
 	}
 
 	if ((cached_brightness == -1) ||
@@ -433,7 +400,7 @@ static gboolean brightness_fade_timeout_cb(gpointer data)
 
 	if (cached_brightness == 0) {
 		backlight_ioctl(FB_BLANK_POWERDOWN);
-		dpms_set_display_on(FALSE);
+		x11_force_dpms_display_level(FALSE);
 	}
 
 	if (retval == FALSE)
@@ -515,7 +482,7 @@ static void display_blank(void)
 	target_brightness = 0;
 	mce_write_number_string_to_file(brightness_file, 0);
 	backlight_ioctl(FB_BLANK_POWERDOWN);
-	dpms_set_display_on(FALSE);
+	x11_force_dpms_display_level(FALSE);
 }
 
 /**
@@ -525,7 +492,7 @@ static void display_dim(void)
 {
 	if (cached_brightness == 0) {
 		backlight_ioctl(FB_BLANK_UNBLANK);
-		dpms_set_display_on(TRUE);
+		x11_force_dpms_display_level(TRUE);
 	}
 
 	update_brightness_fade((maximum_display_brightness *
@@ -544,7 +511,7 @@ static void display_unblank(void)
 		backlight_ioctl(FB_BLANK_UNBLANK);
 		mce_write_number_string_to_file(brightness_file,
 						set_brightness);
-		dpms_set_display_on(TRUE);
+		x11_force_dpms_display_level(TRUE);
 	} else {
 		update_brightness_fade(set_brightness);
 	}

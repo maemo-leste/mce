@@ -29,10 +29,6 @@
 #include <systemui/dbus-names.h>
 #include <systemui/tklock-dbus-names.h>
 
-#include <X11/Xlib.h>
-#include <X11/extensions/XInput.h>
-#include <X11/extensions/XInput2.h>
-
 #include "mce.h"
 #include "tklock.h"
 #include "mce-io.h"
@@ -153,11 +149,6 @@ static inhibit_proximity_relock_t inhibit_proximity_relock = MCE_ALLOW_PROXIMITY
 
 /** TKLock activated due to proximity */
 static gboolean tklock_proximity = FALSE;
-
-static Atom x11_atom_touchscreen = None;
-static Atom x11_atom_device_enabled = None;
-static Atom x11_atom_device_enabled_type = None;
-static int x11_atom_device_enabled_format = 0;
 
 /** Autorelock triggers */
 static gint autorelock_triggers = AUTORELOCK_NO_TRIGGERS;
@@ -305,80 +296,6 @@ EXIT:
 	return;
 }
 
-/**
- * Enable/disable X11 input events (currently only for touchscreen)
- *
- * @param enable TRUE enable events, FALSE disable events
- * @return TRUE on success, FALSE on failure
- */
-static gboolean generic_x11_event_control(const gboolean enable)
-{
-	gboolean ret = FALSE;
-	Display* dpy = NULL;
-	XDeviceInfo *devinfo = NULL;
-	int ndev = 0;
-	unsigned char data = (unsigned char)enable;
-
-	dpy = XOpenDisplay(NULL);
-	if (dpy == NULL)
-		dpy = XOpenDisplay(":0.0");
-
-	if (dpy == NULL) {
-		mce_log(LL_INFO, "%s: unable to open display", __func__);
-		return ret;
-	}
-
-	if (x11_atom_touchscreen == None)
-		x11_atom_touchscreen = XInternAtom(dpy, XI_TOUCHSCREEN, True);
-
-	if (x11_atom_device_enabled == None)
-		x11_atom_device_enabled = XInternAtom(dpy, "Device Enabled", False);
-
-	if ((x11_atom_touchscreen == None) || (x11_atom_device_enabled == None)) {
-		mce_log(LL_WARN, "%s: unable to obtain X11 Atoms", __func__);
-		goto done;
-	}
-
-	devinfo = XListInputDevices(dpy, &ndev);
-
-	if (devinfo == NULL)
-		goto done;
-
-	for (int i = 0; i < ndev; i++) {
-		XDeviceInfo info = devinfo[i];
-
-		if (info.use != IsXExtensionPointer)
-			continue;
-		if (info.type != x11_atom_touchscreen)
-			continue;
-
-		if ((x11_atom_device_enabled_type == None) || (x11_atom_device_enabled_format == 0)) {
-			unsigned long ignore_bytes_after, ignore_nitems;
-			unsigned char *ignore_data = NULL;
-
-			if (XIGetProperty(dpy, info.id, x11_atom_device_enabled, 0, 0, False, AnyPropertyType, &x11_atom_device_enabled_type, &x11_atom_device_enabled_format, &ignore_nitems, &ignore_bytes_after, &ignore_data)) {
-				mce_log(LL_WARN, "%s: unable to obtain X11 Device Enabled property atom type", __func__);
-				break;
-			} else {
-				XFree(ignore_data);
-			}
-		}
-
-		XIChangeProperty(dpy, info.id, x11_atom_device_enabled,
-				x11_atom_device_enabled_type,
-				x11_atom_device_enabled_format, PropModeReplace, &data, 1);
-
-		ret = TRUE;
-	}
-
-	XFreeDeviceList(devinfo);
-
-done:
-	if (dpy != NULL)
-		XCloseDisplay(dpy);
-
-	return ret;
-}
 
 /**
  * Enable/disable touchscreen/keypad events
@@ -429,9 +346,6 @@ static gboolean ts_event_control(gboolean enable)
 {
 	execute_datapipe(&touchscreen_suspend_pipe, GINT_TO_POINTER(!enable),
 			USE_INDATA, CACHE_INDATA);
-
-	if (generic_x11_event_control(enable))
-		return TRUE;
 
 	return generic_event_control(mce_touchscreen_sysfs_disable_path,
 				     enable);
