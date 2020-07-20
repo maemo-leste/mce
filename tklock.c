@@ -347,8 +347,7 @@ static gboolean ts_event_control(gboolean enable)
 	execute_datapipe(&touchscreen_suspend_pipe, GINT_TO_POINTER(!enable),
 			USE_INDATA, CACHE_INDATA);
 
-	return generic_event_control(mce_touchscreen_sysfs_disable_path,
-				     enable);
+	return TRUE;
 }
 
 /**
