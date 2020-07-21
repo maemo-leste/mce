@@ -529,6 +529,9 @@ static void match_and_register_io_monitor(const gchar *filename)
 		/* If the driver for the event file is blacklisted, skip it */
 		close(fd);
 		goto EXIT;
+	} else if (strstr(filename, "event") == NULL) {
+		/* Only open event* devices */
+		goto EXIT;
 	} else if ((fd = mce_match_event_file(filename,
 					  touchscreen_event_drivers)) != -1) {
 		register_io_monitor_chunk(fd, filename, touchscreen_cb,
