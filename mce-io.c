@@ -374,40 +374,55 @@ static gboolean io_chunk_cb(GIOChannel *source,
 		io_status = g_io_channel_read_chars(source, chunk,
 						    iomon->chunk_size,
 						    &bytes_read, &error);
-	} while ((io_status == G_IO_STATUS_AGAIN) && (error != NULL));
 
-	/* Errors and empty reads are nasty */
-	if (error != NULL) {
-		mce_log(LL_ERR,
-			"Error when reading from %s: %s",
-			iomon->file, error->message);
+		/* Errors and empty reads are nasty */
+		if (error != NULL) {
+			mce_log(LL_ERR,
+				"Error when reading from %s: %s",
+				iomon->file, error->message);
 
-		if ((error->code == G_IO_CHANNEL_ERROR_FAILED) &&
-		    (errno == ENODEV) &&
-		    ((g_io_channel_get_flags(iomon->iochan) &
-		      G_IO_FLAG_IS_SEEKABLE) == G_IO_FLAG_IS_SEEKABLE)) {
-			GError *error2 = NULL;
+			if ((error->code == G_IO_CHANNEL_ERROR_FAILED) &&
+				(errno == ENODEV) &&
+				((g_io_channel_get_flags(iomon->iochan) &
+				G_IO_FLAG_IS_SEEKABLE) == G_IO_FLAG_IS_SEEKABLE)) {
+				GError *error2 = NULL;
 
-			g_io_channel_seek_position(iomon->iochan, 0,
-						   G_SEEK_END, &error2);
-			g_clear_error(&error2);
+				g_io_channel_seek_position(iomon->iochan, 0,
+							G_SEEK_END, &error2);
+				g_clear_error(&error2);
 
-			iomon->remdev_callback(iomon->remdev_data, iomon->file, iomon, error);
-			g_clear_error(&error);
-			return FALSE;
+				iomon->remdev_callback(iomon->remdev_data, iomon->file, iomon, error);
+				g_clear_error(&error);
+				return FALSE;
+			}
+
+			/* Reset errno,
+			* to avoid false positives down the line
+			*/
+			errno = 0;
+		} 
+		
+		if(io_status != G_IO_STATUS_AGAIN)
+		{
+			if (bytes_read == 0) {
+				mce_log(LL_ERR,
+					"Empty read from %s",
+					iomon->file);
+				break;
+			} else if (bytes_read < iomon->chunk_size) {
+				if (g_io_channel_get_flags(iomon->iochan) & G_IO_FLAG_IS_SEEKABLE)
+				{
+					GError *error2 = NULL;
+					g_io_channel_seek_position(iomon->iochan, -bytes_read,
+								G_SEEK_CUR, &error2);
+					g_clear_error(&error2);
+				}
+				break;
+			} else if (bytes_read == iomon->chunk_size) {
+				iomon->callback(chunk, bytes_read);
+			}
 		}
-
-		/* Reset errno,
-		 * to avoid false positives down the line
-		 */
-		errno = 0;
-	} else if (bytes_read == 0) {
-		mce_log(LL_ERR,
-			"Empty read from %s",
-			iomon->file);
-	} else {
-		iomon->callback(chunk, bytes_read);
-	}
+	} while (io_status == G_IO_STATUS_NORMAL);
 
 	g_free(chunk);
 
@@ -564,8 +579,7 @@ void mce_resume_io_monitor(gconstpointer io_monitor)
 		 * unless we use the rewind policy
 		 */
 		if ((iomon->rewind == FALSE) &&
-		    ((g_io_channel_get_flags(iomon->iochan) &
-		      G_IO_FLAG_IS_SEEKABLE) == G_IO_FLAG_IS_SEEKABLE)) {
+		    (g_io_channel_get_flags(iomon->iochan) & G_IO_FLAG_IS_SEEKABLE) {
 			g_io_channel_seek_position(iomon->iochan, 0,
 						   G_SEEK_END, &error);
 			g_clear_error(&error);
