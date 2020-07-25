@@ -240,6 +240,7 @@ mcebat_update_cb(gpointer user_data)
         }
 
         /* Generate activity */
+		mce_log(LL_DEBUG, "Setting inactive to false in %s %s %d",__FILE__, __func__, __LINE__);
         execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE),
                          USE_INDATA, CACHE_INDATA);
     }

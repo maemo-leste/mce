@@ -253,7 +253,8 @@ static gboolean update_orientation(gboolean timer_scan)
 			    (!strcmp(oldrot, MCE_ORIENTATION_PORTRAIT) ||
 			     !strcmp(orientation.rotation, MCE_ORIENTATION_PORTRAIT))) {
 				nested_call = TRUE;
-
+			
+				mce_log(LL_DEBUG, "Setting inactive to false in %s %s %d",__FILE__, __func__, __LINE__);
 				(void)execute_datapipe(&device_inactive_pipe,
 						        GINT_TO_POINTER(FALSE),
 						        USE_INDATA, CACHE_INDATA);
@@ -641,7 +642,6 @@ EXIT:
 static void display_state_trigger(gconstpointer data)
 {
 	display_state = GPOINTER_TO_INT(data);
-	mce_log(LL_DEBUG, "display_state = %d",	display_state);
 	if(old_display_state != display_state)
 	{
 		update_accelerometer_poll_intervals();

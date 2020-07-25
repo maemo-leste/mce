@@ -29,6 +29,7 @@
 #include "event-switches.h"
 #include "mce-io.h"
 #include "datapipe.h"
+#include "mce-log.h"
 
 /** ID for the lockkey I/O monitor */
 static gconstpointer lockkey_iomon_id = NULL;
@@ -86,6 +87,7 @@ void generic_activity_cb(gpointer data, gsize bytes_read)
 	(void)bytes_read;
 
 	/* Generate activity */
+	mce_log(LL_DEBUG, "Setting inactive to false in %s %s %d",__FILE__, __func__, __LINE__);
 	(void)execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE),
 			       USE_INDATA, CACHE_INDATA);
 }
@@ -110,6 +112,7 @@ void camera_launch_button_cb(gpointer data, gsize bytes_read)
 	}
 
 	/* Generate activity */
+	mce_log(LL_DEBUG, "Setting inactive to false in %s %s %d",__FILE__, __func__, __LINE__);
 	(void)execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE),
 			       USE_INDATA, CACHE_INDATA);
 
@@ -160,6 +163,7 @@ void kbd_slide_cb(gpointer data, gsize bytes_read)
 
 		/* Generate activity */
 		if ((mce_get_submode_int32() & MCE_EVEATER_SUBMODE) == 0) {
+			mce_log(LL_DEBUG, "Setting inactive to false in %s %s %d",__FILE__, __func__, __LINE__);
 			(void)execute_datapipe(&device_inactive_pipe,
 					       GINT_TO_POINTER(FALSE),
 					       USE_INDATA, CACHE_INDATA);
@@ -189,6 +193,7 @@ static void lid_cover_cb(gpointer data, gsize bytes_read)
 		lid_cover_state = COVER_OPEN;
 
 		/* Generate activity */
+		mce_log(LL_DEBUG, "Setting inactive to false in %s %s %d",__FILE__, __func__, __LINE__);
 		(void)execute_datapipe(&device_inactive_pipe,
 				       GINT_TO_POINTER(FALSE),
 				       USE_INDATA, CACHE_INDATA);
@@ -250,6 +255,7 @@ static void usb_cable_cb(gpointer data, gsize bytes_read)
 
 	/* Generate activity */
 	if ((mce_get_submode_int32() & MCE_EVEATER_SUBMODE) == 0) {
+		mce_log(LL_DEBUG, "Setting inactive to false in %s %s %d",__FILE__, __func__, __LINE__);
 		(void)execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE),
 				       USE_INDATA, CACHE_INDATA);
 	}
@@ -279,6 +285,7 @@ void lens_cover_cb(gpointer data, gsize bytes_read)
 
 	/* Generate activity */
 	if ((mce_get_submode_int32() & MCE_EVEATER_SUBMODE) == 0) {
+		mce_log(LL_DEBUG, "Setting inactive to false in %s %s %d",__FILE__, __func__, __LINE__);
 		(void)execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE),
 				       USE_INDATA, CACHE_INDATA);
 	}

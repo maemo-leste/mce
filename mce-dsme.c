@@ -256,6 +256,7 @@ void request_soft_poweron(void)
 					 USE_INDATA);
 
 	mce_rem_submode_int32(MCE_SOFTOFF_SUBMODE);
+	mce_log(LL_DEBUG, "MCE_DISPLAY_ON in %s", __func__);
 	execute_datapipe(&display_state_pipe,
 			 GINT_TO_POINTER(MCE_DISPLAY_ON),
 			 USE_INDATA, CACHE_INDATA);

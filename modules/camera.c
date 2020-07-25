@@ -27,6 +27,7 @@
 #include "mce-io.h"
 #include "mce-conf.h"
 #include "datapipe.h"
+#include "mce-log.h"
 
 /** Unlock the tklock if the camera is popped out? */
 static gboolean popout_unlock = DEFAULT_CAMERA_POPOUT_UNLOCK;
@@ -95,6 +96,7 @@ static void camera_popout_state_cb(gpointer data, gsize bytes_read)
 	(void)bytes_read;
 
 	/* Generate activity */
+	mce_log(LL_DEBUG, "Setting inactive to false in %s %s %d",__FILE__, __func__, __LINE__);
 	(void)execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE),
 			       USE_INDATA, CACHE_INDATA);
 

@@ -792,7 +792,7 @@ static void display_gconf_cb(GConfClient *const gcc, const guint id,
 		set_cabc_mode(cabc_mode);
 	} else if (id == disp_blank_timeout_gconf_cb_id) {
 		disp_blank_timeout = gconf_value_get_int(gcv);
-
+		mce_log(LL_DEBUG, "disp_blank_timeout set to %i", disp_blank_timeout);
 		/* Update blank prevent */
 		update_blanking_inhibit(FALSE);
 
@@ -803,7 +803,7 @@ static void display_gconf_cb(GConfClient *const gcc, const guint id,
 				       USE_INDATA, CACHE_INDATA);
 	} else if (id == disp_dim_timeout_gconf_cb_id) {
 		disp_dim_timeout = gconf_value_get_int(gcv);
-
+		mce_log(LL_DEBUG, "disp_dim_timeout set to %i", disp_dim_timeout);
 		/* Update blank prevent */
 		update_blanking_inhibit(FALSE);
 
@@ -1010,6 +1010,7 @@ static gboolean display_on_req_dbus_cb(DBusMessage *const msg)
 		"Received display on request");
 
 	if ((submode & MCE_TKLOCK_SUBMODE) == 0) {
+		mce_log(LL_DEBUG, "MCE_DISPLAY_ON in %s %s %d",__FILE__, __func__, __LINE__);
 		(void)execute_datapipe(&display_state_pipe,
 				       GINT_TO_POINTER(MCE_DISPLAY_ON),
 				       USE_INDATA, CACHE_INDATA);
@@ -1420,10 +1421,12 @@ static void charger_state_trigger(gconstpointer data)
 
 	charger_connected = GPOINTER_TO_INT(data);
 
-	if (system_state == MCE_STATE_ACTDEAD)
+	if (system_state != MCE_STATE_ACTDEAD) {
+		mce_log(LL_DEBUG, "MCE_DISPLAY_ON in %s %s %d",__FILE__, __func__, __LINE__);
 		(void)execute_datapipe(&display_state_pipe,
 				       GINT_TO_POINTER(MCE_DISPLAY_ON),
 				       USE_INDATA, CACHE_INDATA);
+	}
 
 	update_blanking_inhibit(FALSE);
 }
@@ -1450,6 +1453,7 @@ static void device_inactive_trigger(gconstpointer data)
 	      ((alarm_ui_state == MCE_ALARM_UI_VISIBLE_INT32) ||
 	       (alarm_ui_state == MCE_ALARM_UI_RINGING_INT32)))) &&
 	    (device_inactive == FALSE)) {
+		mce_log(LL_DEBUG, "MCE_DISPLAY_ON in %s %s %d",__FILE__, __func__, __LINE__);
 		(void)execute_datapipe(&display_state_pipe,
 				       GINT_TO_POINTER(MCE_DISPLAY_ON),
 				       USE_INDATA, CACHE_INDATA);
@@ -1667,6 +1671,7 @@ const gchar *g_module_check_init(GModule *module)
 		goto EXIT;
 
 	/* Request display on to get the state machine in sync */
+	mce_log(LL_DEBUG, "MCE_DISPLAY_ON in %s %s %d",__FILE__, __func__, __LINE__);
 	(void)execute_datapipe(&display_state_pipe,
 			       GINT_TO_POINTER(MCE_DISPLAY_ON),
 			       USE_INDATA, CACHE_INDATA);

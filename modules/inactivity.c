@@ -129,6 +129,7 @@ static gboolean inactivity_timeout_cb(gpointer data)
 	(void)data;
 
 	inactivity_timeout_cb_id = 0;
+	mce_log(LL_INFO, "device inactiveity timeout\n");
 
 	(void)execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(TRUE),
 			       USE_INDATA, CACHE_INDATA);
@@ -154,6 +155,7 @@ static void cancel_inactivity_timeout(void)
 static void setup_inactivity_timeout(void)
 {
 	gint timeout = datapipe_get_gint(inactivity_timeout_pipe);
+	mce_log(LL_INFO, "device inactiveity timeout %i\n", timeout);
 
 	cancel_inactivity_timeout();
 

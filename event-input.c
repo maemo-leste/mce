@@ -182,7 +182,10 @@ static void touchscreen_cb(gpointer data, gsize bytes_read)
 		goto EXIT;
 	}
 
+	mce_log(LL_DEBUG, "Got touchscreen event: %i,%i",ev->type, ev->code);
+	
 	/* Generate activity */
+	mce_log(LL_DEBUG, "Setting inactive to false in %s %s %d",__FILE__, __func__, __LINE__);
 	(void)execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE),
 			       USE_INDATA, CACHE_INDATA);
 
@@ -285,6 +288,8 @@ static void keypress_cb(gpointer data, gsize bytes_read)
 		ev->code = POWER_BUTTON;
 	}
 
+	mce_log(LL_DEBUG, "Got keyboard event: %i,%i",ev->type, ev->code);
+	
 	/* Generate activity:
 	 * 1 - press (always)
 	 * 2 - repeat (once a second)
@@ -294,7 +299,7 @@ static void keypress_cb(gpointer data, gsize bytes_read)
 		mce_log(LL_DEBUG, "send device_inactive_pipe -> FALSE");
 		if (!(submode & MCE_EVEATER_SUBMODE))
 		{
-			mce_log(LL_DEBUG, "send device_inactive_pipe -> FALSE");
+			mce_log(LL_DEBUG, "Setting inactive to false in %s %s %d",__FILE__, __func__, __LINE__);
 			(void)execute_datapipe(&device_inactive_pipe,
 					       GINT_TO_POINTER(FALSE),
 					       USE_INDATA, CACHE_INDATA);
@@ -453,9 +458,10 @@ static void misc_cb(gpointer data, gsize bytes_read)
 		goto EXIT;
 	}
 	/* ev->type for the jack sense is EV_SW */
-	mce_log(LL_DEBUG, "ev->type: %d", ev->type);
+	mce_log(LL_DEBUG, "Got misc event: %i,%i",ev->type, ev->code);
 
 	/* Generate activity */
+	mce_log(LL_DEBUG, "Setting inactive to false in %s %s %d",__FILE__, __func__, __LINE__);
 	(void)execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE),
 			       USE_INDATA, CACHE_INDATA);
 
@@ -534,11 +540,13 @@ static void match_and_register_io_monitor(const gchar *filename)
 		goto EXIT;
 	} else if ((fd = mce_match_event_file(filename,
 					  touchscreen_event_drivers)) != -1) {
+		mce_log(LL_DEBUG, "registering %s as ts", filename);
 		register_io_monitor_chunk(fd, filename, touchscreen_cb,
 					  &touchscreen_dev_list);
 		match = TRUE;
 	} else if ((fd = mce_match_event_file_by_caps(filename,
 					  touch_event_types, touch_event_keys)) != -1) {
+		mce_log(LL_DEBUG, "registering %s as ts", filename);
 		register_io_monitor_chunk(fd, filename, touchscreen_cb,
 					  &touchscreen_dev_list);
 		match = TRUE;

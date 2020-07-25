@@ -344,6 +344,7 @@ EXIT:
  */
 static gboolean ts_event_control(gboolean enable)
 {
+
 	execute_datapipe(&touchscreen_suspend_pipe, GINT_TO_POINTER(!enable),
 			USE_INDATA, CACHE_INDATA);
 
@@ -1616,6 +1617,7 @@ static void process_proximity_state(void)
 		}
 
 		/* Unblank screen */
+		mce_log(LL_DEBUG, "MCE_DISPLAY_ON in %s %s %d",__FILE__, __func__, __LINE__);
 		(void)execute_datapipe(&display_state_pipe,
 				       GINT_TO_POINTER(MCE_DISPLAY_ON),
 				       USE_INDATA, CACHE_INDATA);
@@ -1654,6 +1656,7 @@ static void process_proximity_state(void)
 				set_tklock_state(LOCK_OFF);
 
 			/* Unblank screen */
+			mce_log(LL_DEBUG, "MCE_DISPLAY_ON in %s %s %d",__FILE__, __func__, __LINE__);
 			(void)execute_datapipe(&display_state_pipe,
 					       GINT_TO_POINTER(MCE_DISPLAY_ON),
 					       USE_INDATA, CACHE_INDATA);
@@ -2006,6 +2009,7 @@ static void alarm_ui_state_trigger(gconstpointer data)
 			cancel_tklock_dim_timeout();
 
 			/* Unblank screen */
+			mce_log(LL_DEBUG, "MCE_DISPLAY_ON in %s %s %d",__FILE__, __func__, __LINE__);
 			(void)execute_datapipe(&display_state_pipe,
 					       GINT_TO_POINTER(MCE_DISPLAY_ON),
 					       USE_INDATA, CACHE_INDATA);
@@ -2288,6 +2292,7 @@ static void call_state_trigger(gconstpointer data)
 				set_tklock_state(LOCK_OFF_SILENT);
 
 			/* Unblank screen */
+			mce_log(LL_DEBUG, "MCE_DISPLAY_ON in %s %s %d",__FILE__, __func__, __LINE__);
 			(void)execute_datapipe(&display_state_pipe,
 					       GINT_TO_POINTER(MCE_DISPLAY_ON),
 					       USE_INDATA, CACHE_INDATA);

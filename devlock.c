@@ -91,6 +91,8 @@ static gboolean device_autolock_timeout_cb(gpointer data)
 	(void)data;
 
 	device_autolock_timeout_cb_id = 0;
+	
+	mce_log(LL_INFO, "AUTOLOCK TIMEOUT CB\n");
 
 	(void)execute_datapipe(&device_lock_pipe,
 			       GINT_TO_POINTER(LOCK_ON),
