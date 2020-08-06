@@ -90,7 +90,7 @@ static void iio_als_properties_changed (GDBusProxy *proxy,
 		unsigned int uilux = (unsigned int)lux;
 		
 		mce_log(LL_DEBUG, "%s: Light level: %u", MODULE_NAME, uilux);
-		(void)execute_datapipe(&light_sensor_pipe, GUINT_TO_POINTER(uilux), USE_INDATA, CACHE_INDATA);
+		(void)execute_datapipe(&light_sensor_pipe, GINT_TO_POINTER(uilux), USE_INDATA, CACHE_INDATA);
 		
 		g_variant_unref (v);
 		g_variant_unref (unit);
