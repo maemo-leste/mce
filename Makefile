@@ -38,7 +38,8 @@ MODULES := \
 	$(MODULE_DIR)/libaccelerometer.so \
 	$(MODULE_DIR)/libcallstate.so \
 	$(MODULE_DIR)/libaudiorouting.so \
-	$(MODULE_DIR)/libhomekey.so
+	$(MODULE_DIR)/libhomekey.so \
+	$(MODULE_DIR)/libiio-als.so
 MODEFILE := mode
 CONFFILE := mce.ini
 DBUSCONF := mce.conf
