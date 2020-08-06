@@ -533,7 +533,7 @@ int main(int argc, char **argv)
 	setup_datapipe(&proximity_sensor_pipe, READ_ONLY, DONT_FREE_CACHE,
 		       0, GINT_TO_POINTER(0));
 	setup_datapipe(&light_sensor_pipe, READ_WRITE, DONT_FREE_CACHE,
-		       0, GUINT_TO_POINTER(0));
+		       0, GINT_TO_POINTER(-1));
 	setup_datapipe(&device_lock_pipe, READ_ONLY, DONT_FREE_CACHE,
 		       0, GINT_TO_POINTER(LOCK_UNDEF));
 	setup_datapipe(&device_lock_inhibit_pipe, READ_ONLY, DONT_FREE_CACHE,
