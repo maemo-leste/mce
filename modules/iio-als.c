@@ -29,6 +29,22 @@ static display_state_t display_state = { 0 };
 static unsigned int watch_id;
 static GDBusProxy *iio_proxy;
 
+static double iio_als_get_light_value(GDBusProxy *proxy)
+{
+	GVariant *v;
+	GVariant *unit;
+	v = g_dbus_proxy_get_cached_property(iio_proxy, "LightLevel");
+	unit = g_dbus_proxy_get_cached_property(iio_proxy, "LightLevelUnit");
+	/*todo: Handle units other than lux?*/
+	double lux = g_variant_get_double(v);
+	if(lux < 0) lux = 0.0;
+			
+	g_variant_unref (v);
+	g_variant_unref (unit);
+	
+	mce_log(LL_DEBUG, "%s: Light level: %lf", MODULE_NAME, lux);
+	return lux;
+}
 
 static bool iio_als_claim_light_sensor(bool claim) {
 	static bool claimed = false;
@@ -46,6 +62,9 @@ static bool iio_als_claim_light_sensor(bool claim) {
 				return false;
 			}
 			g_clear_pointer (&ret, g_variant_unref);
+			
+			int ilux = (int)iio_als_get_light_value(iio_proxy);
+			(void)execute_datapipe(&light_sensor_pipe, GINT_TO_POINTER(ilux), USE_INDATA, CACHE_INDATA);
 		}
 		else if (!claim && claimed) {
 			mce_log(LL_DEBUG, "%s: ReleaseLight", MODULE_NAME);
@@ -74,26 +93,16 @@ static void iio_als_properties_changed (GDBusProxy *proxy,
 		    GStrv       invalidated_properties,
 		    gpointer    user_data)
 {
-	GVariant *v;
+	
 	GVariantDict dict;
 
 	g_variant_dict_init (&dict, changed_properties);
 
 	if (g_variant_dict_contains (&dict, "LightLevel")) {
-		GVariant *unit;
 
-		v = g_dbus_proxy_get_cached_property (iio_proxy, "LightLevel");
-		unit = g_dbus_proxy_get_cached_property (iio_proxy, "LightLevelUnit");
-		/*todo: Handle units other than lux?*/
-		double lux = g_variant_get_double (v);
-		if(lux < 0) lux = 0;
-		unsigned int uilux = (unsigned int)lux;
+		int ilux = (int)iio_als_get_light_value(iio_proxy);
+		(void)execute_datapipe(&light_sensor_pipe, GINT_TO_POINTER(ilux), USE_INDATA, CACHE_INDATA);
 		
-		mce_log(LL_DEBUG, "%s: Light level: %u", MODULE_NAME, uilux);
-		(void)execute_datapipe(&light_sensor_pipe, GINT_TO_POINTER(uilux), USE_INDATA, CACHE_INDATA);
-		
-		g_variant_unref (v);
-		g_variant_unref (unit);
 	}
 
 	g_variant_dict_clear (&dict);
@@ -130,6 +139,7 @@ static void iio_als_sensors_vanished (GDBusConnection *connection,
 {
 	(void)name;
 	(void)user_data;
+	(void)connection;
 	if (iio_proxy) {
 		g_clear_object (&iio_proxy);
 		iio_proxy = NULL;
