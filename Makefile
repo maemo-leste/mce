@@ -40,7 +40,7 @@ MODULES := \
 	$(MODULE_DIR)/libaudiorouting.so \
 	$(MODULE_DIR)/libhomekey.so \
 	$(MODULE_DIR)/libiio-als.so \
-	$(MODULE_DIR)/libbutton-backlight.so \
+	$(MODULE_DIR)/libbutton-backlight.so
 MODEFILE := mode
 CONFFILE := mce.ini
 DBUSCONF := mce.conf
