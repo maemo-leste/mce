@@ -63,7 +63,7 @@ static void set_backlight_states(bool by_display_state)
 				brightness = 0;
 			else if (system_state != MCE_STATE_USER)
 				brightness = 0;
-			/*if(backlight->value != brightness)*/ {
+			if(backlight->value != brightness) {
 				mce_log(LL_DEBUG, "%s: setting %s to %i", MODULE_NAME, backlight->file_sysfs,  brightness);
 				mce_write_number_string_to_glob(backlight->file_sysfs, brightness);
 				backlight->value = brightness;
@@ -207,8 +207,7 @@ static void als_trigger(gconstpointer data)
 
 	als_lux = new_als_lux;
 	
-	/* Re-filter the brightness */
-	(void)execute_datapipe(&display_brightness_pipe, NULL, USE_CACHE, DONT_CACHE_INDATA);
+	set_backlight_states(false);
 }
 
 
