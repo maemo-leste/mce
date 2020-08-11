@@ -743,9 +743,11 @@ static gboolean open_tklock_ui(const dbus_uint32_t mode,
 		break;
 
 	default:
-		mce_log(LL_ERR, "Invalid TKLock UI mode requested");
+		mce_log(LL_ERR, "tklock.c: Invalid TKLock UI mode requested");
 		goto EXIT;
 	}
+
+	mce_log(LL_DEBUG, "tklock.c: opening tklock mode %i", new_tklock_ui_state);
 
 	reply = dbus_send_with_block(SYSTEMUI_SERVICE, SYSTEMUI_REQUEST_PATH,
 				     SYSTEMUI_REQUEST_IF,
@@ -822,6 +824,8 @@ static gboolean close_tklock_ui(const dbus_bool_t silent)
 
 	dbus_error_init(&error);
 
+	mce_log(LL_DEBUG, "tklock.c: closeing tklock");
+
 	reply = dbus_send_with_block(SYSTEMUI_SERVICE, SYSTEMUI_REQUEST_PATH,
 				     SYSTEMUI_REQUEST_IF,
 				     SYSTEMUI_TKLOCK_CLOSE_REQ,
@@ -839,7 +843,7 @@ static gboolean close_tklock_ui(const dbus_bool_t silent)
 	if (dbus_message_get_args(reply, &error,
 				  DBUS_TYPE_INT32, &retval,
 				  DBUS_TYPE_INVALID) == FALSE) {
-		mce_log(LL_ERR,
+		mce_log(LL_ERR, "tklock.c: "
 			"Failed to get reply argument from %s.%s; %s",
 			SYSTEMUI_REQUEST_IF, SYSTEMUI_TKLOCK_CLOSE_REQ,
 			error.message);
@@ -873,7 +877,7 @@ static gboolean enable_tklock(gboolean silent)
 	gboolean status = FALSE;
 
 	if (is_tklock_enabled() == TRUE) {
-		mce_log(LL_DEBUG,
+		mce_log(LL_DEBUG, "tklock.c: "
 			"Touchscreen/keypad lock enabled "
 			"when already enabled");
 		silent = TRUE;
@@ -881,6 +885,7 @@ static gboolean enable_tklock(gboolean silent)
 	cancel_tklock_disable_timeout();
 	if (open_tklock_ui(TKLOCK_ENABLE, silent) == FALSE)
 	{
+		mce_log(LL_DEBUG, "tklock.c: failed to open tklock ui");
 		disable_tklock(TRUE);
 		goto EXIT;
 	}
@@ -970,11 +975,13 @@ static gboolean tklock_dim_timeout_cb(gpointer data)
 
 	tklock_dim_timeout_cb_id = 0;
 
+	mce_log(LL_DEBUG, "tklock.c MCE_DISPLAY_DIM");
 	(void)execute_datapipe(&display_state_pipe,
 			       GINT_TO_POINTER(MCE_DISPLAY_DIM),
 			       USE_INDATA, CACHE_INDATA);
 
 	if ((force_blank == TRUE) || (blank_immediately == TRUE)) {
+		mce_log(LL_DEBUG, "tklock.c MCE_DISPLAY_OFF");
 		(void)execute_datapipe(&display_state_pipe,
 				       GINT_TO_POINTER(MCE_DISPLAY_OFF),
 				       USE_INDATA, CACHE_INDATA);
@@ -1046,13 +1053,13 @@ static gboolean enable_tklock_policy(gboolean force_blank)
 	system_state_t system_state = datapipe_get_gint(system_state_pipe);
 	gboolean status = FALSE;
 
+	mce_log(LL_DEBUG, "tklock.c: %s", __func__);
 	/* If we're in any other state than USER, don't enable tklock */
 	if (system_state != MCE_STATE_USER) {
 		cancel_tklock_disable_timeout();
 		status = TRUE;
 		goto EXIT;
 	}
-
 	/* Enable lock */
 	if (enable_tklock(force_blank |
 			  dim_immediately |
@@ -1147,13 +1154,18 @@ static gboolean enable_eveater(void)
 		goto EXIT;
 
 	/* If we're already showing a tklock UI, exit */
-	if (tklock_ui_state != MCE_TKLOCK_UI_NONE)
+	if (tklock_ui_state != MCE_TKLOCK_UI_NONE) {
+		mce_log(LL_DEBUG, "tklock.c: %s: tklock allready showing", __func__);
 		goto EXIT;
+	}
 
-	if ((status = open_tklock_ui(TKLOCK_ONEINPUT, TRUE)) == TRUE)
+	if ((status = open_tklock_ui(TKLOCK_ONEINPUT, TRUE)) == TRUE) {
+		mce_log(LL_DEBUG, "tklock.c: %s: eveater enabled", __func__);
 		mce_add_submode_int32(MCE_EVEATER_SUBMODE);
-	else
+	} else {
+		mce_log(LL_WARN, "tklock.c: %s: tklock failed to open", __func__);
 		disable_eveater(TRUE);
+	}
 
 EXIT:
 	return status;
@@ -1180,6 +1192,7 @@ static gboolean disable_eveater(gboolean silent)
 			goto EXIT;
 	}
 
+	mce_log(LL_WARN, "tklock.c: %s: eveater disabled", __func__);
 	mce_rem_submode_int32(MCE_EVEATER_SUBMODE);
 	status = TRUE;
 
@@ -1315,6 +1328,7 @@ EXIT:
  */
 static void set_tklock_state(lock_state_t lock_state)
 {
+	mce_log(LL_DEBUG, "tklock.c: %s lock state: %i", __func__, lock_state);
 	switch (lock_state) {
 	case LOCK_OFF:
 		(void)disable_tklock(FALSE);
@@ -1389,6 +1403,8 @@ static void set_tklock_state(lock_state_t lock_state)
 static void trigger_visual_tklock(void)
 {
 	display_state_t display_state = datapipe_get_gint(display_state_pipe);
+
+	mce_log(LL_DEBUG, "tklock.c: %s: %i, %i, %i", __func__, display_state == MCE_DISPLAY_OFF, is_tklock_enabled(), is_autorelock_enabled());
 
 	if ((is_tklock_enabled() == FALSE) ||
 	    (is_autorelock_enabled() == FALSE))
@@ -2014,7 +2030,6 @@ static void display_state_trigger(gconstpointer data)
 		    (old_display_state == MCE_DISPLAY_OFF)) {
 			(void)ts_kp_enable_policy();
 		}
-		mce_log(LL_DEBUG, "disable eveater (FALSE) when display on");
 		(void)disable_eveater(FALSE);
 		break;
 	}
