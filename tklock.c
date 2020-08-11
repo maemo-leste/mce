@@ -1410,10 +1410,8 @@ static void trigger_visual_tklock(void)
 	    (is_autorelock_enabled() == FALSE))
 		goto EXIT;
 
-	if (display_state == MCE_DISPLAY_OFF) {
-		if (open_tklock_ui(TKLOCK_ENABLE_VISUAL, FALSE) == TRUE) {
-			mce_add_submode_int32(MCE_VISUAL_TKLOCK_SUBMODE);
-		}
+	if (open_tklock_ui(TKLOCK_ENABLE_VISUAL, FALSE) == TRUE) {
+		mce_add_submode_int32(MCE_VISUAL_TKLOCK_SUBMODE);
 	}
 
 	/* If visual tklock is enabled, reset the timeout */
