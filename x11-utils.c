@@ -100,7 +100,7 @@ bool x11_set_all_input_devices_enabled(Display *dpy, const bool enable)
 		disabledDevices = malloc(sizeof(*disabledDevices) * ndev);
 	}
 
-	if (!enable)
+	if (!enable) {
 		for (int i = 0; i < ndev; ++i) {
 			if (devinfo[i].use == XIMasterPointer || devinfo[i].use == XIMasterKeyboard
 			    || !devinfo[i].enabled)
@@ -115,6 +115,7 @@ bool x11_set_all_input_devices_enabled(Display *dpy, const bool enable)
 				disabledDevices[disabledDevicesCount] = devinfo[i];
 				++disabledDevicesCount;
 			}
+		}
 	} else {
 		for (int i = 0; i < ndev; ++i) {
 			if (devinfo[i].use == XIMasterPointer || devinfo[i].use == XIMasterKeyboard)
