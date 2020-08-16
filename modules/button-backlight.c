@@ -1,4 +1,8 @@
 #include <glib.h>
+#include <glib/gstdio.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <gmodule.h>
 #include <stdlib.h>
 #include "mce.h"
@@ -233,6 +237,7 @@ static gboolean init_backlights(void)
 
 	for (int i = 0; backlightlist[i]; ++i) {
 		int *tmp;
+		struct button_backlight backlight;
 
 		mce_log(LL_DEBUG, "%s: Getting config for: %s", MODULE_NAME, backlightlist[i]);
 
@@ -245,34 +250,40 @@ static gboolean init_backlights(void)
 				continue;
 			}
 
-
-
-			button_backlights[i].file_sysfs = 
+			backlight.file_sysfs = 
 				malloc(strlen(LED_SYSFS_PATH)+strlen(backlightlist[i])+strlen(LED_BRIGHTNESS_PATH)+1);
-			if (!button_backlights[i].file_sysfs) {
+			if (!backlight.file_sysfs) {
 				g_free(tmp);
 				mce_log(LL_CRIT, "Out of memory!");
 				continue;
 			}
-			strcpy(button_backlights[i].file_sysfs, LED_SYSFS_PATH);
-			strcat(button_backlights[i].file_sysfs, backlightlist[i]);
-			strcat(button_backlights[i].file_sysfs, LED_BRIGHTNESS_PATH);
-			
-			button_backlights[i].hidden_by_slider = tmp[BACKLIGHT_HIDDEN_FIELD];
-			button_backlights[i].is_keyboard = tmp[BACKLIGHT_IS_KEYBOARD_FIELD];
-			button_backlights[i].on_when_dimmed = tmp[BACKLIGHT_ON_WHEN_DIMMED_FIELD];
-			button_backlights[i].locked = tmp[BACKLIGHT_LOCKED_FIELD];
-			button_backlights[i].fade_time = tmp[BACKLIGHT_FADE_TIME_FIELD];
-			int profile = tmp[BACKLIGHT_PROFILE_FIELD];
-			if(profile > 1 || profile < 0) profile = 0;
-			if(profile == 0) button_backlights[i].brightness_map = &brightness_map_kbd;
-			else button_backlights[i].brightness_map = &brightness_map_btn;
-			button_backlights[i].value = 0;
-			
-			mce_log(LL_DEBUG, "%s: %s %i %i %i %i %i %i", MODULE_NAME, 
-					button_backlights[i].file_sysfs, button_backlights[i].hidden_by_slider, button_backlights[i].is_keyboard, button_backlights[i].on_when_dimmed, button_backlights[i].locked, button_backlights[i].fade_time, profile );
-			
-			++count_backlights;
+			strcpy(backlight.file_sysfs, LED_SYSFS_PATH);
+			strcat(backlight.file_sysfs, backlightlist[i]);
+			strcat(backlight.file_sysfs, LED_BRIGHTNESS_PATH);
+
+			if (g_access(backlight.file_sysfs, W_OK) == 0)
+			{
+				backlight.hidden_by_slider = tmp[BACKLIGHT_HIDDEN_FIELD];
+				backlight.is_keyboard = tmp[BACKLIGHT_IS_KEYBOARD_FIELD];
+				backlight.on_when_dimmed = tmp[BACKLIGHT_ON_WHEN_DIMMED_FIELD];
+				backlight.locked = tmp[BACKLIGHT_LOCKED_FIELD];
+				backlight.fade_time = tmp[BACKLIGHT_FADE_TIME_FIELD];
+				int profile = tmp[BACKLIGHT_PROFILE_FIELD];
+				if(profile > 1 || profile < 0) profile = 0;
+				if(profile == 0) backlight.brightness_map = &brightness_map_kbd;
+				else backlight.brightness_map = &brightness_map_btn;
+				backlight.value = 0;
+				
+				mce_log(LL_DEBUG, "%s: %s %i %i %i %i %i %i", MODULE_NAME, 
+						backlight.file_sysfs, backlight.hidden_by_slider, backlight.is_keyboard, backlight.on_when_dimmed, backlight.locked, backlight.fade_time, profile );
+				
+				button_backlights[count_backlights] = backlight;
+				++count_backlights;
+			} else {
+				mce_log(LL_INFO, "%s: %s configured but dose not exist on this device.", MODULE_NAME, backlight.file_sysfs);
+				free(backlight.file_sysfs);
+			}
+
 			g_free(tmp);
 		}
 	}
@@ -303,7 +314,7 @@ const gchar *g_module_check_init(GModule *module)
 	append_output_trigger_to_datapipe(&keyboard_slide_pipe, keyboard_slide_trigger);
 	append_output_trigger_to_datapipe(&display_state_pipe, display_state_trigger);
 	append_output_trigger_to_datapipe(&light_sensor_pipe, als_trigger);
-	
+
 	mce_gconf_get_bool(MCE_GCONF_DISPLAY_ALS_ENABLED_PATH, &als_enabled);
 	
 	if (mce_gconf_notifier_add(MCE_GCONF_DISPLAY_PATH,
@@ -337,6 +348,12 @@ void g_module_unload(GModule *module)
 	remove_output_trigger_from_datapipe(&keyboard_slide_pipe, keyboard_slide_trigger);
 	remove_output_trigger_from_datapipe(&system_state_pipe, system_state_trigger);
 	remove_output_trigger_from_datapipe(&light_sensor_pipe, als_trigger);
+
+	for (unsigned int i = 0; i < count_backlights; ++i) {
+		free(button_backlights[i].file_sysfs);
+	}
+	
+	free(button_backlights);
 
 	return;
 }
