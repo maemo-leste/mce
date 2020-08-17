@@ -30,22 +30,24 @@ static display_state_t display_state = { 0 };
 static unsigned int watch_id;
 static GDBusProxy *iio_proxy;
 
-static double iio_als_get_light_value(GDBusProxy * proxy)
+static int cal_scale = 1000;
+
+static int iio_als_get_light_value(GDBusProxy * proxy)
 {
 	GVariant *v;
 	GVariant *unit;
 	v = g_dbus_proxy_get_cached_property(iio_proxy, "LightLevel");
 	unit = g_dbus_proxy_get_cached_property(iio_proxy, "LightLevelUnit");
 	/*todo: Handle units other than lux? */
-	double lux = g_variant_get_double(v);
-	if (lux < 0)
-		lux = 0.0;
+	double mlux = g_variant_get_double(v)*cal_scale;
+	if (mlux < 0)
+		mlux = 0.0;
 
 	g_variant_unref(v);
 	g_variant_unref(unit);
 
-	mce_log(LL_DEBUG, "%s: Light level: %lf", MODULE_NAME, lux);
-	return lux;
+	mce_log(LL_DEBUG, "%s: Light level: %lf mlux", MODULE_NAME, mlux);
+	return (int)mlux;
 }
 
 static bool iio_als_claim_light_sensor(bool claim)
@@ -68,7 +70,7 @@ static bool iio_als_claim_light_sensor(bool claim)
 			}
 			g_clear_pointer(&ret, g_variant_unref);
 
-			int ilux = (int)iio_als_get_light_value(iio_proxy);
+			int ilux = iio_als_get_light_value(iio_proxy);
 			(void)execute_datapipe(&light_sensor_pipe, GINT_TO_POINTER(ilux), USE_INDATA, CACHE_INDATA);
 		} else if (!claim && claimed) {
 			mce_log(LL_DEBUG, "%s: ReleaseLight", MODULE_NAME);
@@ -155,6 +157,10 @@ const char *g_module_check_init(GModule * module)
 	(void)module;
 
 	mce_log(LL_DEBUG, "Initalizing %s", MODULE_NAME);
+
+	cal_scale = mce_conf_get_int("IioAls", "CalScale", 1000, NULL);
+	if (cal_scale < 0) 
+		cal_scale = 1000;
 
 	append_output_trigger_to_datapipe(&display_state_pipe, display_state_trigger);
 
