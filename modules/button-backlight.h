@@ -44,8 +44,9 @@ struct button_backlight{
 	const struct brightness *brightness_map;
 };
 
-static const struct brightness brightness_map_kbd = { {10, 10000, 70000, 600000, 1200000}, {80, 128, 0, 0, 0} };
-static const struct brightness brightness_map_btn = { {10, 10000, 70000, 600000, 1200000}, {1, 1, 0, 0, 0} };
+/* format: { {series of 5 points in mlux}, {5 corresponding brightness values} } */
+static const struct brightness brightness_map_kbd = { {25, 250000, 1750000, 15000000, 30000000}, {80, 128, 0, 0, 0} };
+static const struct brightness brightness_map_btn = { {25, 250000, 1750000, 15000000, 30000000}, {1, 1, 0, 0, 0} };
 
 
 #endif
