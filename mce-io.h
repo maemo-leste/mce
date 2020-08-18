@@ -67,6 +67,7 @@ gconstpointer mce_register_io_monitor_chunk(const gint fd,
 					    iomon_error_cb remdev_callback,
 					    gpointer remdev_data);
 void mce_unregister_io_monitor(gconstpointer io_monitor);
+gboolean mcs_io_monitor_seek_to_end(gconstpointer io_monitor);
 const gchar *mce_get_io_monitor_name(gconstpointer io_monitor);
 int mce_get_io_monitor_fd(gconstpointer io_monitor);
 
