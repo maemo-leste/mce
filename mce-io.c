@@ -22,9 +22,9 @@
 #include <glob.h>
 #include <glib.h>
 #include <errno.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include "mce.h"
 #include "mce-io.h"
 #include "mce-log.h"
@@ -383,14 +383,8 @@ static gboolean io_chunk_cb(GIOChannel *source,
 			iomon->file, error->message);
 
 		if ((error->code == G_IO_CHANNEL_ERROR_FAILED) &&
-		    (errno == ENODEV) &&
-		    ((g_io_channel_get_flags(iomon->iochan) &
-		      G_IO_FLAG_IS_SEEKABLE) == G_IO_FLAG_IS_SEEKABLE)) {
-			GError *error2 = NULL;
-
-			g_io_channel_seek_position(iomon->iochan, 0,
-						   G_SEEK_END, &error2);
-			g_clear_error(&error2);
+		    (errno == ENODEV)) {
+			mcs_io_monitor_seek_to_end(iomon);
 
 			iomon->remdev_callback(iomon->remdev_data, iomon->file, iomon, error);
 			g_clear_error(&error);
@@ -424,6 +418,23 @@ EXIT:
 	return TRUE;
 }
 
+
+static loglevel_t io_mon_get_log_level(iomon_struct *iomon)
+{
+	switch (iomon->error_policy) {
+	case MCE_IO_ERROR_POLICY_EXIT:
+		return LL_CRIT;
+
+	case MCE_IO_ERROR_POLICY_WARN:
+		return LL_WARN;
+
+	case MCE_IO_ERROR_POLICY_IGNORE:
+	default:
+		/* No log message when ignoring errors */
+		return LL_NONE;
+	}
+}
+
 /**
  * Callback for I/O errors
  *
@@ -451,22 +462,9 @@ static gboolean io_error_cb(GIOChannel *source,
 		goto EXIT;
 	}
 
-	switch (iomon->error_policy) {
-	case MCE_IO_ERROR_POLICY_EXIT:
+	loglevel = io_mon_get_log_level(iomon);
+	if(loglevel == LL_CRIT)
 		exit_on_error = TRUE;
-		loglevel = LL_CRIT;
-		break;
-
-	case MCE_IO_ERROR_POLICY_WARN:
-		loglevel = LL_WARN;
-		break;
-
-	case MCE_IO_ERROR_POLICY_IGNORE:
-	default:
-		/* No log message when ignoring errors */
-		loglevel = LL_NONE;
-		break;
-	}
 
 	/* We just got an I/O condition we've already reported
 	 * since the last successful read; don't log
@@ -558,18 +556,10 @@ void mce_resume_io_monitor(gconstpointer io_monitor)
 	}
 
 	if (callback != NULL) {
-		GError *error = NULL;
 
-		/* Seek to the end of the file if the file is seekable,
-		 * unless we use the rewind policy
-		 */
-		if ((iomon->rewind == FALSE) &&
-		    ((g_io_channel_get_flags(iomon->iochan) &
-		      G_IO_FLAG_IS_SEEKABLE) == G_IO_FLAG_IS_SEEKABLE)) {
-			g_io_channel_seek_position(iomon->iochan, 0,
-						   G_SEEK_END, &error);
-			g_clear_error(&error);
-		}
+		/* Seek to the end of the file; unless we use the rewind policy */
+		if (iomon->rewind == FALSE)
+		    mcs_io_monitor_seek_to_end(io_monitor);
 
 		iomon->error_source_id = g_io_add_watch(iomon->iochan,
 							G_IO_HUP | G_IO_NVAL,
@@ -579,6 +569,7 @@ void mce_resume_io_monitor(gconstpointer io_monitor)
 						       G_IO_ERR,
 						       callback, iomon);
 		iomon->suspended = FALSE;
+
 	} else {
 		mce_log(LL_ERR,
 			"Failed to resume `%s'; invalid callback",
@@ -866,6 +857,37 @@ void mce_unregister_io_monitor(gconstpointer io_monitor)
 
 EXIT:
 	return;
+}
+
+gboolean mcs_io_monitor_seek_to_end(gconstpointer io_monitor)
+{
+	iomon_struct *iomon = (iomon_struct *)io_monitor;
+	GError *error = NULL;
+	gboolean seek_success = FALSE;
+	loglevel_t loglevel = io_mon_get_log_level(iomon);
+
+	if ((g_io_channel_get_flags(iomon->iochan) & G_IO_FLAG_IS_SEEKABLE) == G_IO_FLAG_IS_SEEKABLE) {
+		g_io_channel_seek_position(iomon->iochan, 0, G_SEEK_END, &error);
+		if (error)
+			mce_log(loglevel, "%s %s", __func__, error->message);
+		else
+			seek_success = TRUE;
+		g_clear_error(&error);
+	}
+
+	error = NULL;
+
+	if (!seek_success) {
+		int bytes_read;
+		char buffer[1024];
+		do {
+			g_io_channel_read_chars(iomon->iochan, buffer,
+						sizeof(buffer),
+						&bytes_read, &error);
+		} while (bytes_read > 0 && error == NULL);
+	}
+
+	return TRUE;
 }
 
 /**
