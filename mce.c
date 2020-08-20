@@ -44,6 +44,7 @@
 #include "tklock.h"
 #include "devlock.h"
 #include "powerkey.h"
+#include "x11-utils.h"
 
 #ifdef ENABLE_SYSTEMD_SUPPORT
 #include <systemd/sd-daemon.h>
@@ -645,6 +646,7 @@ EXIT:
 	mce_dsme_exit();
 	mce_mode_exit();
 	mce_connectivity_exit();
+	x11_force_dpms_display_level(TRUE);
 
 	/* Free all datapipes */
 	free_datapipe(&tvout_pipe);
