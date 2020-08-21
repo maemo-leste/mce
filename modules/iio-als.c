@@ -27,8 +27,8 @@ G_MODULE_EXPORT module_info_struct module_info = {
 
 static display_state_t display_state = { 0 };
 
-static unsigned int watch_id;
-static GDBusProxy *iio_proxy;
+static unsigned int watch_id = 0;
+static GDBusProxy *iio_proxy = NULL;
 
 static int cal_scale = 1000;
 
@@ -86,7 +86,10 @@ static bool iio_als_claim_light_sensor(bool claim)
 			g_clear_pointer(&ret, g_variant_unref);
 		}
 		claimed = claim;
+	} else {
+		claimed = false;
 	}
+	
 	return true;
 }
 
@@ -148,6 +151,7 @@ static void iio_als_sensors_vanished(GDBusConnection * connection, const gchar *
 		g_clear_object(&iio_proxy);
 		iio_proxy = NULL;
 		mce_log(LL_WARN, "%s: connection to iio_sensor_proxy lost", MODULE_NAME);
+		iio_als_claim_light_sensor(false);
 	}
 }
 
@@ -179,5 +183,13 @@ void g_module_unload(GModule * module)
 	(void)module;
 
 	remove_output_trigger_from_datapipe(&display_state_pipe, display_state_trigger);
+	
+	g_bus_unwatch_name(watch_id);
+	
+	if (iio_proxy) {
+		g_clear_object(&iio_proxy);
+		iio_proxy = NULL;
+		iio_als_claim_light_sensor(false);
+	}
 
 }
