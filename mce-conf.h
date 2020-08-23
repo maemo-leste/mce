@@ -40,5 +40,4 @@ void mce_conf_free_conf_file(gpointer keyfileptr);
 
 gboolean mce_conf_init(void);
 void mce_conf_exit(void);
-
 #endif /* _MCE_CONF_H_ */

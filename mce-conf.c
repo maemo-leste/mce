@@ -20,12 +20,53 @@
  * License along with mce.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <glib.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 #include "mce.h"
 #include "mce-conf.h"
 #include "mce-log.h"
 
+struct mce_conf_file
+{
+	gpointer keyfile;
+	gchar *path;
+	gchar *filename;
+};
+
 /** Pointer to the keyfile structure where config values are read from */
-static gpointer keyfile = NULL;
+static struct mce_conf_file *conf_files = NULL;
+static size_t mce_conf_file_count = 0;
+
+static struct mce_conf_file *mce_conf_find_key_in_files(const gchar *group, const gchar *key) 
+{
+	GError *error = NULL;
+
+	for (size_t i = 0; i < mce_conf_file_count; ++i) {
+		if (g_key_file_has_key(conf_files[i].keyfile, group, key, &error) && 
+			error == NULL) {
+			g_clear_error(&error);
+			return &(conf_files[i]);
+		}
+	}
+	
+	g_clear_error(&error);
+	return NULL;
+}
+
+static gpointer mce_conf_decide_keyfile_to_use(const gchar *group, const gchar *key, gpointer keyfile)
+{
+	if (keyfile == NULL) {
+		struct mce_conf_file *conf_file;
+		conf_file = mce_conf_find_key_in_files(group, key);
+		if (conf_file == NULL)
+			mce_log(LL_WARN, "mce-conf: Could not get config key %s/%s", group, key);
+		else
+			keyfile = conf_file->keyfile;
+	}
+
+	return keyfile;
+}
 
 /**
  * Get a boolean configuration value
@@ -42,24 +83,16 @@ gboolean mce_conf_get_bool(const gchar *group, const gchar *key,
 	gboolean tmp = FALSE;
 	GError *error = NULL;
 
+	keyfileptr = mce_conf_decide_keyfile_to_use(group, key, keyfileptr);
 	if (keyfileptr == NULL) {
-		if (keyfile == NULL) {
-			mce_log(LL_ERR,
-				"Could not get config key %s/%s; "
-				"no configuration file initialised; "
-				"defaulting to `%d'",
-				group, key, defaultval);
-			tmp = defaultval;
-			goto EXIT;
-		} else {
-			keyfileptr = keyfile;
-		}
+		tmp = defaultval;
+		goto EXIT;
 	}
 
 	tmp = g_key_file_get_boolean(keyfileptr, group, key, &error);
 
 	if (error != NULL) {
-		mce_log(LL_WARN,
+		mce_log(LL_WARN, "mce-conf: "
 			"Could not get config key %s/%s; %s; "
 			"defaulting to `%d'",
 			group, key, error->message, defaultval);
@@ -87,24 +120,16 @@ gint mce_conf_get_int(const gchar *group, const gchar *key,
 	gint tmp = -1;
 	GError *error = NULL;
 
+	keyfileptr = mce_conf_decide_keyfile_to_use(group, key, keyfileptr);
 	if (keyfileptr == NULL) {
-		if (keyfile == NULL) {
-			mce_log(LL_ERR,
-				"Could not get config key %s/%s; "
-				"no configuration file initialised; "
-				"defaulting to `%d'",
-				group, key, defaultval);
-			tmp = defaultval;
-			goto EXIT;
-		} else {
-			keyfileptr = keyfile;
-		}
+		tmp = defaultval;
+		goto EXIT;
 	}
 
 	tmp = g_key_file_get_integer(keyfileptr, group, key, &error);
 
 	if (error != NULL) {
-		mce_log(LL_WARN,
+		mce_log(LL_WARN, "mce-conf: "
 			"Could not get config key %s/%s; %s; "
 			"defaulting to `%d'",
 			group, key, error->message, defaultval);
@@ -132,24 +157,17 @@ gint *mce_conf_get_int_list(const gchar *group, const gchar *key,
 	gint *tmp = NULL;
 	GError *error = NULL;
 
+	keyfileptr = mce_conf_decide_keyfile_to_use(group, key, keyfileptr);
 	if (keyfileptr == NULL) {
-		if (keyfile == NULL) {
-			mce_log(LL_ERR,
-				"Could not get config key %s/%s; "
-				"no configuration file initialised",
-				group, key);
-			*length = 0;
-			goto EXIT;
-		} else {
-			keyfileptr = keyfile;
-		}
+		*length = 0;
+		goto EXIT;
 	}
 
 	tmp = g_key_file_get_integer_list(keyfileptr, group, key,
 					  length, &error);
 
 	if (error != NULL) {
-		mce_log(LL_WARN,
+		mce_log(LL_WARN, "mce-conf: "
 			"Could not get config key %s/%s; %s",
 			group, key, error->message);
 		*length = 0;
@@ -175,28 +193,18 @@ gchar *mce_conf_get_string(const gchar *group, const gchar *key,
 {
 	gchar *tmp = NULL;
 	GError *error = NULL;
-
+	
+	keyfileptr = mce_conf_decide_keyfile_to_use(group, key, keyfileptr);
 	if (keyfileptr == NULL) {
-		if (keyfile == NULL) {
-			mce_log(LL_ERR,
-				"Could not get config key %s/%s; "
-				"no configuration file initialised; "
-				"defaulting to `%s'",
-				group, key, defaultval);
-
-			if (defaultval != NULL)
-				tmp = g_strdup(defaultval);
-
-			goto EXIT;
-		} else {
-			keyfileptr = keyfile;
-		}
+		if (defaultval != NULL)
+			tmp = g_strdup(defaultval);
+		goto EXIT;
 	}
 
 	tmp = g_key_file_get_string(keyfileptr, group, key, &error);
 
 	if (error != NULL) {
-		mce_log(LL_WARN,
+		mce_log(LL_WARN, "mce-conf: "
 			"Could not get config key %s/%s; %s; %s%s%s",
 			group, key, error->message,
 			defaultval ? "defaulting to `" : "no default set",
@@ -228,24 +236,17 @@ gchar **mce_conf_get_string_list(const gchar *group, const gchar *key,
 	gchar **tmp = NULL;
 	GError *error = NULL;
 
+	keyfileptr = mce_conf_decide_keyfile_to_use(group, key, keyfileptr);
 	if (keyfileptr == NULL) {
-		if (keyfile == NULL) {
-			mce_log(LL_ERR,
-				"Could not get config key %s/%s; "
-				"no configuration file initialised",
-				group, key);
-			*length = 0;
-			goto EXIT;
-		} else {
-			keyfileptr = keyfile;
-		}
+		*length = 0;
+		goto EXIT;
 	}
 
 	tmp = g_key_file_get_string_list(keyfileptr, group, key,
 					 length, &error);
 
 	if (error != NULL) {
-		mce_log(LL_WARN,
+		mce_log(LL_WARN, "mce-conf: "
 			"Could not get config key %s/%s; %s",
 			group, key, error->message);
 		*length = 0;
@@ -269,6 +270,26 @@ void mce_conf_free_conf_file(gpointer keyfileptr)
 	}
 }
 
+
+static int mce_conf_compare_file_prio(const void *a, const void *b)
+{
+	const struct mce_conf_file *conf_a = (const struct mce_conf_file *) a;
+	const struct mce_conf_file *conf_b = (const struct mce_conf_file *) b;
+	
+	if (conf_a->filename == NULL && conf_b->filename == NULL)
+		return 0;
+	if (conf_a->filename == NULL && conf_b->filename != NULL)
+		return -1;
+	if (conf_a->filename != NULL && conf_b->filename == NULL)
+		return 1;
+	if (strcmp(conf_a->filename, G_STRINGIFY(MCE_CONF_FILE)) == 0)
+		return -1;
+	if (strcmp(conf_b->filename, G_STRINGIFY(MCE_CONF_FILE)) == 0)
+		return 1;
+
+	return strverscmp(conf_a->filename, conf_b->filename);
+}
+
 /**
  * Read configuration file
  *
@@ -287,7 +308,7 @@ gpointer mce_conf_read_conf_file(const gchar *const conffile)
 				      G_KEY_FILE_NONE, &error) == FALSE) {
 		mce_conf_free_conf_file(keyfileptr);
 		keyfileptr = NULL;
-		mce_log(LL_WARN, "Could not load %s; %s",
+		mce_log(LL_WARN, "mce-conf: Could not load %s; %s",
 			conffile, error->message);
 		goto EXIT;
 	}
@@ -305,16 +326,60 @@ EXIT:
  */
 gboolean mce_conf_init(void)
 {
-	gboolean status = FALSE;
+	DIR *dir = NULL;
+	mce_conf_file_count = 1;
+	struct dirent *direntry;
 
-	if ((keyfile = mce_conf_read_conf_file(G_STRINGIFY(MCE_CONF_FILE))) == NULL) {
-		goto EXIT;
+	gchar *override_dir_path = g_strconcat(G_STRINGIFY(MCE_CONF_DIR), "/", 
+										 G_STRINGIFY(MCE_CONF_OVERRIDE_DIR), NULL);
+	dir = opendir(override_dir_path);
+	if (dir) {
+		while ((direntry = readdir(dir)) != NULL && telldir(dir)) {
+			if (direntry->d_type == DT_REG)
+				++mce_conf_file_count;
+		}
+		rewinddir(dir);
+	} else {
+		mce_log(LL_WARN, "mce-conf: could not open dir %s", override_dir_path);
 	}
+	g_free(override_dir_path);
 
-	status = TRUE;
+	conf_files = calloc(mce_conf_file_count, sizeof(*conf_files));
+	
+	conf_files[0].filename = g_strdup(G_STRINGIFY(MCE_CONF_FILE));
+	conf_files[0].path     = g_strconcat(G_STRINGIFY(MCE_CONF_DIR), "/", 
+										 G_STRINGIFY(MCE_CONF_FILE), NULL);
+	gpointer main_conf_file = mce_conf_read_conf_file(conf_files[0].path);
+	if (main_conf_file == NULL) {
+		mce_log(LL_ERR, "mce-conf: failed to open main config file %s %s", 
+				conf_files[0].path, g_strerror(errno));
+		g_free(conf_files[0].filename);
+		g_free(conf_files[0].path);
+		free(conf_files);
+		conf_files = NULL;
+		return FALSE;
+	}
+	conf_files[0].keyfile = main_conf_file;
 
-EXIT:
-	return status;
+	if (dir) {
+		direntry = readdir(dir);
+		for (size_t i = 1; direntry != NULL && i < mce_conf_file_count && telldir(dir); ++i) {
+			conf_files[i].filename = g_strdup(direntry->d_name);
+			conf_files[i].path     = g_strconcat(G_STRINGIFY(MCE_CONF_DIR), "/", 
+										 G_STRINGIFY(MCE_CONF_OVERRIDE_DIR), "/", 
+										 conf_files[i].filename, NULL);
+			conf_files[i].keyfile  = mce_conf_read_conf_file(conf_files[i].path);
+			direntry = readdir(dir);
+		}
+		closedir(dir);
+		
+		qsort(conf_files, mce_conf_file_count, sizeof(*conf_files), &mce_conf_compare_file_prio);
+	}
+	
+	for (size_t i = 0; i < mce_conf_file_count; ++i)
+		mce_log(LL_DEBUG, "mce-conf: found conf file %d: %s", i, conf_files[i].filename);
+
+	return TRUE;
 }
 
 /**
@@ -322,7 +387,14 @@ EXIT:
  */
 void mce_conf_exit(void)
 {
-	mce_conf_free_conf_file(keyfile);
+	for (size_t i = 0; i < mce_conf_file_count; ++i) {
+		if (conf_files[i].filename)
+			g_free(conf_files[i].filename);
+		if (conf_files[i].path)
+			g_free(conf_files[i].path);
+		
+		mce_conf_free_conf_file(conf_files[i].keyfile);
+	}
 
 	return;
 }
