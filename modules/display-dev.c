@@ -717,7 +717,8 @@ static void tvout_trigger(gconstpointer data)
 static bool get_display(void)
 {
 	bool ret = false;
-	gchar *bright_file, *max_bright_file = NULL;
+	gchar *bright_file = NULL;
+	gchar *max_bright_file = NULL;
 	const char *path;
 	GDir* dir;
 	
@@ -742,8 +743,9 @@ static bool get_display(void)
 	}
 
 	g_dir_close(dir);
-
-	mce_log(LL_DEBUG, "%s: using %s as backlight brightness", MODULE_NAME, bright_file);
+	
+	if (bright_file)
+		mce_log(LL_DEBUG, "%s: using %s as backlight brightness", MODULE_NAME, bright_file);
 
 	return ret;
 }
