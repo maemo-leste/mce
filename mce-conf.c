@@ -338,7 +338,7 @@ gboolean mce_conf_init(void)
 	dir = opendir(override_dir_path);
 	if (dir) {
 		while ((direntry = readdir(dir)) != NULL && telldir(dir)) {
-			if (direntry->d_type == DT_REG)
+			if (direntry->d_type == DT_REG && strstr(direntry->d_name, ".ini") != NULL)
 				++mce_conf_file_count;
 		}
 		rewinddir(dir);
@@ -365,13 +365,17 @@ gboolean mce_conf_init(void)
 	conf_files[0].keyfile = main_conf_file;
 
 	if (dir) {
+		size_t i = 1;
 		direntry = readdir(dir);
-		for (size_t i = 1; direntry != NULL && i < mce_conf_file_count && telldir(dir); ++i) {
-			conf_files[i].filename = g_strdup(direntry->d_name);
-			conf_files[i].path     = g_strconcat(G_STRINGIFY(MCE_CONF_DIR), "/", 
-										 G_STRINGIFY(MCE_CONF_OVERRIDE_DIR), "/", 
-										 conf_files[i].filename, NULL);
-			conf_files[i].keyfile  = mce_conf_read_conf_file(conf_files[i].path);
+		while (direntry != NULL && i < mce_conf_file_count && telldir(dir)) {
+			if (direntry->d_type == DT_REG && strstr(direntry->d_name, ".ini") != NULL) {
+				conf_files[i].filename = g_strdup(direntry->d_name);
+				conf_files[i].path     = g_strconcat(G_STRINGIFY(MCE_CONF_DIR), "/", 
+											G_STRINGIFY(MCE_CONF_OVERRIDE_DIR), "/", 
+											conf_files[i].filename, NULL);
+				conf_files[i].keyfile  = mce_conf_read_conf_file(conf_files[i].path);
+				 ++i;
+			}
 			direntry = readdir(dir);
 		}
 		closedir(dir);
