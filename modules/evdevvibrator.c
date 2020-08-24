@@ -250,7 +250,7 @@ static gboolean init_patterns(void)
 		mce_log(LL_DEBUG, "Getting Vibra pattern for: %s",
 			patternlist[i]);
 
-		tmp = mce_conf_get_int_list(MCE_CONF_VIBRA_PATTERN_RX51_GROUP,
+		tmp = mce_conf_get_int_list(MCE_CONF_VIBRATOR_GROUP,
 					    patternlist[i], &length, NULL);
 		if (tmp != NULL) {
 			if (length != NUMBER_OF_PATTERN_FIELDS) {
