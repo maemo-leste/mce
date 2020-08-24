@@ -156,7 +156,8 @@ static gboolean run_pattern(const pattern_t pattern)
 			} else {
 				count = INT_MAX;
 			}
-			setup_priority_timeout((pattern.accel_period + pattern.on_period + pattern.decel_period)*count);
+			if( ((int64_t)count)*(pattern.accel_period + pattern.on_period + pattern.decel_period) < INT_MAX )
+				setup_priority_timeout((pattern.accel_period + pattern.on_period + pattern.decel_period)*count);
 			return ff_device_run(evdev_fd,
 					     pattern.accel_period +
 					     pattern.on_period +
