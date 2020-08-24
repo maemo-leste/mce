@@ -42,15 +42,18 @@ static struct mce_conf_file *mce_conf_find_key_in_files(const gchar *group, cons
 {
 	GError *error = NULL;
 
-	for (size_t i = 0; i < mce_conf_file_count; ++i) {
-		if (g_key_file_has_key(conf_files[i].keyfile, group, key, &error) && 
+	for (size_t i = mce_conf_file_count; i > 0; --i) {
+		if (g_key_file_has_key(conf_files[i-1].keyfile, group, key, &error) && 
 			error == NULL) {
 			g_clear_error(&error);
-			return &(conf_files[i]);
+			return &(conf_files[i-1]);
+		}
+		else {
+			g_clear_error(&error);
+			error = NULL;
 		}
 	}
-	
-	g_clear_error(&error);
+
 	return NULL;
 }
 
