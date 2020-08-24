@@ -20,8 +20,6 @@
 
 #define MODULE_NAME		"evdevvibrator"
 
-#define DISABLE_PRIORITY true
-
 static const char *const provides[] = { MODULE_NAME, NULL };
 
 G_MODULE_EXPORT module_info_struct module_info = {
@@ -32,7 +30,6 @@ G_MODULE_EXPORT module_info_struct module_info = {
 
 int evdev_fd = -1;
 bool vibratorArmed = true;
-gconstpointer iomonitor = NULL;
 
 typedef struct pattern_t {
 	char *name;
@@ -75,10 +72,38 @@ static pattern_t *patterns = NULL;
 uint_fast32_t patternsCount = 0;
 
 int_fast32_t priority = 256;
+static unsigned int priority_timeout_cb_id = 0;
 
 display_state_t display_state = { 0 };
 system_state_t system_state = { 0 };
 call_state_t call_state = { 0 };
+
+
+static gboolean priority_timeout_cb(gpointer data)
+{
+	(void)data;
+
+	priority = 256;
+
+	return FALSE;
+}
+
+static void cancel_priority_timeout(void)
+{
+	if (priority_timeout_cb_id != 0) {
+		g_source_remove(priority_timeout_cb_id);
+		priority_timeout_cb_id = 0;
+	}
+}
+
+static void setup_priority_timeout(unsigned int msec)
+{
+	cancel_priority_timeout();
+
+	/* Setup new timeout */
+	priority_timeout_cb_id = g_timeout_add(msec, priority_timeout_cb, NULL);
+}
+
 
 static pattern_t find_pattern(const char *const name)
 {
@@ -118,10 +143,7 @@ static gboolean should_run_pattern(const pattern_t pattern)
 static gboolean run_pattern(const pattern_t pattern)
 {
 	if (!pattern.invalid && vibratorArmed && should_run_pattern(pattern)) {
-#ifndef DISABLE_PRIORITY
 		if (pattern.priority < priority) {
-#endif
-			mce_resume_io_monitor(iomonitor);
 			priority = pattern.priority;
 			int count;
 			if (pattern.repeat_count != 0)
@@ -131,8 +153,10 @@ static gboolean run_pattern(const pattern_t pattern)
 				    (pattern.timeout * 1000ULL) /
 				    (pattern.on_period + pattern.off_period) +
 				    1;
-			} else
+			} else {
 				count = INT_MAX;
+			}
+			setup_priority_timeout((pattern.accel_period + pattern.on_period + pattern.decel_period)*count);
 			return ff_device_run(evdev_fd,
 					     pattern.accel_period +
 					     pattern.on_period +
@@ -141,9 +165,7 @@ static gboolean run_pattern(const pattern_t pattern)
 					     pattern.speed,
 					     pattern.accel_period,
 					     pattern.decel_period);
-#ifndef DISABLE_PRIORITY
 		}
-#endif
 	}
 	return true;
 }
@@ -183,7 +205,8 @@ static gboolean vibrator_deactivate_pattern_dbus_cb(DBusMessage * const msg)
 	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
 	if (!ff_device_stop(evdev_fd))
 		return false;
-
+	
+	cancel_priority_timeout();
 	priority = 256;
 
 	if (no_reply == false) {
@@ -312,11 +335,9 @@ static gboolean vibrator_start_manual_vibration_cb(DBusMessage * msg)
 		dbus_error_free(&error);
 		return false;
 	} else {
-#ifndef DISABLE_PRIORITY
 		if (priority == 256)
-#endif
 		{
-
+			setup_priority_timeout(duration);
 			if (!ff_device_run
 			    (evdev_fd, duration, 0, 1, speed, 0, 0)) {
 				mce_log(LL_WARN,
@@ -360,32 +381,6 @@ static void vibrator_pattern_deactivate_trigger(gconstpointer data)
 {
 	(void)data;
 	ff_device_stop(evdev_fd);
-}
-
-static void read_callback(gpointer data, gsize bytes_read)
-{
-	struct input_event *event;
-
-	event = data;
-
-	if (bytes_read != sizeof(struct input_event))
-		return;
-
-	if (event->code == FF_STATUS_STOPPED) {
-		priority = 256;
-
-		mce_suspend_io_monitor(iomonitor);
-	}
-}
-
-static void error_cb(gpointer data, const gchar * device,
-		     gconstpointer iomon_id, GError * err)
-{
-	mce_log(LL_ERR, "Monitoring fd: %i failed %s", evdev_fd, err->message);
-	if (evdev_fd > 0) {
-		close(evdev_fd);
-		evdev_fd = -1;
-	}
 }
 
 static void scan_device_cb(const char *filename)
@@ -437,13 +432,6 @@ const char *g_module_check_init(GModule * module)
 			"No usable force feedback device available, vibration disabled.");
 		return NULL;
 	}
-
-	iomonitor =
-	    mce_register_io_monitor_chunk(evdev_fd, NULL,
-					  MCE_IO_ERROR_POLICY_WARN, false,
-					  &read_callback,
-					  sizeof(struct input_event), &error_cb,
-					  NULL);
 
 	if (mce_dbus_handler_add(MCE_REQUEST_IF,
 				 MCE_ACTIVATE_VIBRATOR_PATTERN,
@@ -513,8 +501,7 @@ void g_module_unload(GModule * module)
 {
 	(void)module;
 
-	if (iomonitor != NULL)
-		mce_unregister_io_monitor(iomonitor);
+	cancel_priority_timeout();
 
 	free_patterns();
 
