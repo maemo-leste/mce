@@ -257,7 +257,7 @@ static gboolean init_patterns(void)
 					       &length, NULL);
 
 	if (patternlist == NULL) {
-		mce_log(LL_WARN, "Failed to configure vibrator patterns");
+		mce_log(LL_WARN, "%s: Failed to configure vibrator patterns", MODULE_NAME);
 		return false;
 	}
 
@@ -270,15 +270,14 @@ static gboolean init_patterns(void)
 	for (int i = 0; patternlist[i]; ++i) {
 		int *tmp;
 
-		mce_log(LL_DEBUG, "Getting Vibra pattern for: %s",
-			patternlist[i]);
+		mce_log(LL_DEBUG, "%s: Getting Vibra pattern for: %s",
+			MODULE_NAME, patternlist[i]);
 
 		tmp = mce_conf_get_int_list(MCE_CONF_VIBRATOR_GROUP,
 					    patternlist[i], &length, NULL);
 		if (tmp != NULL) {
 			if (length != NUMBER_OF_PATTERN_FIELDS) {
-				mce_log(LL_ERR,
-					"Skipping invalid Vibra-pattern");
+				mce_log(LL_ERR, "%s: Skipping invalid Vibra-pattern", MODULE_NAME);
 				g_free(tmp);
 				continue;
 			}
@@ -324,12 +323,12 @@ static gboolean vibrator_start_manual_vibration_cb(DBusMessage * msg)
 	DBusError error;
 	dbus_error_init(&error);
 
-	mce_log(LL_DEBUG, "Received start manual vibration request");
+	mce_log(LL_DEBUG, "%s: Received start manual vibration request", MODULE_NAME);
 	if (dbus_message_get_args(msg, &error,
 				  DBUS_TYPE_INT32, &speed,
 				  DBUS_TYPE_INT32, &duration,
 				  DBUS_TYPE_INVALID) == false) {
-		mce_log(LL_CRIT, "Failed to get argument from %s.%s: %s",
+		mce_log(LL_CRIT, "%s: Failed to get argument from %s.%s: %s", MODULE_NAME, 
 			MCE_REQUEST_IF, MCE_ACTIVATE_VIBRATOR_PATTERN,
 			error.message);
 		dbus_error_free(&error);
@@ -340,8 +339,7 @@ static gboolean vibrator_start_manual_vibration_cb(DBusMessage * msg)
 			setup_priority_timeout(duration);
 			if (!ff_device_run
 			    (evdev_fd, duration, 0, 1, speed, 0, 0)) {
-				mce_log(LL_WARN,
-					"ff_device_run returned false");
+				mce_log(LL_WARN, "%s: ff_device_run returned false", MODULE_NAME);
 			}
 		}
 		if (no_reply == false) {
@@ -403,7 +401,7 @@ const char *g_module_check_init(GModule * module)
 {
 	(void)module;
 
-	mce_log(LL_DEBUG, "Initalizing evdevvibrator");
+	mce_log(LL_DEBUG, "%s: Initalizing", MODULE_NAME);
 
 	remove_output_trigger_from_datapipe(&vibrator_pattern_deactivate_pipe,
 					    vibrator_pattern_deactivate_trigger);
@@ -421,7 +419,7 @@ const char *g_module_check_init(GModule * module)
 	call_state = datapipe_get_gint(call_state_pipe);
 
 	if (!init_patterns()) {
-		mce_log(LL_CRIT, "Adding patterns failed");
+		mce_log(LL_CRIT, "%s: Adding patterns failed", MODULE_NAME);
 		return NULL;
 	}
 
@@ -429,7 +427,7 @@ const char *g_module_check_init(GModule * module)
 
 	if (evdev_fd < 0) {
 		mce_log(LL_WARN,
-			"No usable force feedback device available, vibration disabled.");
+			"%s: No usable force feedback device available, vibration disabled.", MODULE_NAME);
 		return NULL;
 	}
 
@@ -438,8 +436,8 @@ const char *g_module_check_init(GModule * module)
 				 NULL,
 				 DBUS_MESSAGE_TYPE_METHOD_CALL,
 				 vibrator_activate_pattern_dbus_cb) == NULL) {
-		mce_log(LL_CRIT, "Adding %s debus handler failed",
-			MCE_ACTIVATE_VIBRATOR_PATTERN);
+		mce_log(LL_CRIT, "%s: Adding %s debus handler failed",
+			MODULE_NAME, MCE_ACTIVATE_VIBRATOR_PATTERN);
 		return NULL;
 	}
 
@@ -448,8 +446,8 @@ const char *g_module_check_init(GModule * module)
 				 NULL,
 				 DBUS_MESSAGE_TYPE_METHOD_CALL,
 				 vibrator_deactivate_pattern_dbus_cb) == NULL) {
-		mce_log(LL_CRIT, "Adding %s debus handler failed",
-			MCE_DEACTIVATE_VIBRATOR_PATTERN);
+		mce_log(LL_CRIT, "%s: Adding %s debus handler failed",
+			MODULE_NAME, MCE_DEACTIVATE_VIBRATOR_PATTERN);
 		return NULL;
 	}
 
@@ -458,8 +456,8 @@ const char *g_module_check_init(GModule * module)
 				 NULL,
 				 DBUS_MESSAGE_TYPE_METHOD_CALL,
 				 vibrator_enable_dbus_cb) == NULL) {
-		mce_log(LL_CRIT, "Adding %s debus handler failed",
-			MCE_ENABLE_VIBRATOR);
+		mce_log(LL_CRIT, "%s: Adding %s debus handler failed",
+			MODULE_NAME, MCE_ENABLE_VIBRATOR);
 		return NULL;
 	}
 
@@ -468,8 +466,8 @@ const char *g_module_check_init(GModule * module)
 				 NULL,
 				 DBUS_MESSAGE_TYPE_METHOD_CALL,
 				 vibrator_disable_dbus_cb) == NULL) {
-		mce_log(LL_CRIT, "Adding %s debus handler failed",
-			MCE_DISABLE_VIBRATOR);
+		mce_log(LL_CRIT, "%s: Adding %s debus handler failed",
+			MODULE_NAME, MCE_DISABLE_VIBRATOR);
 		return NULL;
 	}
 
@@ -478,8 +476,8 @@ const char *g_module_check_init(GModule * module)
 				 NULL,
 				 DBUS_MESSAGE_TYPE_METHOD_CALL,
 				 vibrator_start_manual_vibration_cb) == NULL) {
-		mce_log(LL_CRIT, "Adding %s debus handler failed",
-			MCE_START_MANUAL_VIBRATION);
+		mce_log(LL_CRIT, "%s: Adding %s debus handler failed",
+			MODULE_NAME, MCE_START_MANUAL_VIBRATION);
 		return NULL;
 	}
 
@@ -488,8 +486,8 @@ const char *g_module_check_init(GModule * module)
 				 NULL,
 				 DBUS_MESSAGE_TYPE_METHOD_CALL,
 				 vibrator_stop_manual_vibration_cb) == NULL) {
-		mce_log(LL_CRIT, "Adding %s debus handler failed",
-			MCE_STOP_MANUAL_VIBRATION);
+		mce_log(LL_CRIT, "%s: Adding %s debus handler failed",
+			MODULE_NAME, MCE_STOP_MANUAL_VIBRATION);
 		return NULL;
 	}
 
