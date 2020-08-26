@@ -264,6 +264,8 @@ datapipe_struct device_inactive_pipe;
 datapipe_struct led_pattern_activate_pipe;
 /** LED pattern to deactivate; read only */
 datapipe_struct led_pattern_deactivate_pipe;
+/** LED enabled / disabled */
+datapipe_struct led_enabled_pipe;
 datapipe_struct vibrator_pattern_activate_pipe;
 datapipe_struct vibrator_pattern_deactivate_pipe;
 /** State of display; read only */
