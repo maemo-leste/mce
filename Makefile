@@ -33,6 +33,8 @@ MODULES := \
 	$(MODULE_DIR)/libbattery-upower.so \
 	$(MODULE_DIR)/libdisplay.so \
 	$(MODULE_DIR)/libled.so \
+	$(MODULE_DIR)/libled-sw.so \
+	$(MODULE_DIR)/libled-dbus.so \
 	$(MODULE_DIR)/libevdevvibrator.so \
 	$(MODULE_DIR)/libaccelerometer.so \
 	$(MODULE_DIR)/libcallstate.so \
