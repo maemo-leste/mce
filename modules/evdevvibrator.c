@@ -7,15 +7,17 @@
 #include <stdint.h>
 #include <limits.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <linux/input.h>
 #include "mce.h"
-#include "evdevvibrator.h"
 #include "mce-io.h"
 #include "mce-hal.h"
 #include "mce-log.h"
 #include "mce-conf.h"
 #include "mce-dbus.h"
 #include "datapipe.h"
-#include "evdevff.h"
 #include "event-input-utils.h"
 
 #define MODULE_NAME		"evdevvibrator"
@@ -27,6 +29,28 @@ G_MODULE_EXPORT module_info_struct module_info = {
 	.provides = provides,
 	.priority = 100
 };
+
+#define MCE_CONF_VIBRATOR_GROUP			"Vibrator"
+#define MCE_CONF_VIBRATOR_PATTERNS		"VibratorPatterns"
+
+typedef struct fffeatures {
+	bool constant:1;	/* can render constant force effects */
+	bool periodic:1;	/* can render periodic effects with the following waveforms: */
+	bool square:1;		/* square waveform */
+	bool triangle:1;	/* triangle waveform */
+	bool sine:1;		/* sine waveform */
+	bool saw_up:1;		/* sawtooth up waveform */
+	bool saw_down:1;	/* sawtooth down waveform */
+	bool custom:1;		/* custom waveform (not implemented) */
+	bool ramp:1;		/* can render ramp effects */
+	bool spring:1;		/* can simulate the presence of a spring */
+	bool friction:1;	/* can simulate friction */
+	bool damper:1;		/* can simulate damper effects */
+	bool rumble:1;		/* rumble effects */
+	bool inertia:1;		/* can simulate inertia */
+	bool gain:1;		/* gain is adjustable */
+	bool autocenter:1;	/* autocenter is adjustable */
+} fffeatures;
 
 int evdev_fd = -1;
 bool vibratorArmed = true;
@@ -74,10 +98,122 @@ uint_fast32_t patternsCount = 0;
 int_fast32_t priority = 256;
 static unsigned int priority_timeout_cb_id = 0;
 
-display_state_t display_state = { 0 };
-system_state_t system_state = { 0 };
-call_state_t call_state = { 0 };
+static display_state_t display_state = { 0 };
+static system_state_t system_state = { 0 };
+static call_state_t call_state = { 0 };
 
+static bool first_run = true;
+
+static bool bit_in_array(unsigned char *array, size_t bit)
+{
+	return array[bit / 8] & (1 << bit % 8);
+}
+
+static bool ff_gain_set(const int fd, const int gain)
+{
+	struct input_event event;
+	if (fd < 0)
+		return false;
+	event.type = EV_FF;
+	event.code = FF_GAIN;
+	event.value = 0xFFFFUL * gain / 100;
+	return write(fd, &event, sizeof(event)) >= 0;
+}
+
+static bool ff_features_get(const int fd, struct fffeatures *features)
+{
+	unsigned char featuresBytes[1 + FF_MAX / 8];
+	if (fd < 0)
+		return false;
+	memset(featuresBytes, 0, sizeof(featuresBytes));
+	int ret =
+	    ioctl(fd, EVIOCGBIT(EV_FF, sizeof(featuresBytes)), featuresBytes);
+	if (ret < 0)
+		return false;
+
+	if (ret * sizeof(unsigned long) * 8 >= 16) {
+		features->constant = bit_in_array(featuresBytes, FF_CONSTANT);
+		features->periodic = bit_in_array(featuresBytes, FF_PERIODIC);
+		features->square = bit_in_array(featuresBytes, FF_SQUARE);
+		features->triangle = bit_in_array(featuresBytes, FF_TRIANGLE);
+		features->sine = bit_in_array(featuresBytes, FF_SINE);
+		features->saw_up = bit_in_array(featuresBytes, FF_SAW_UP);
+		features->saw_down = bit_in_array(featuresBytes, FF_SAW_DOWN);
+		features->custom = bit_in_array(featuresBytes, FF_CUSTOM);
+		features->ramp = bit_in_array(featuresBytes, FF_RAMP);
+		features->spring = bit_in_array(featuresBytes, FF_SPRING);
+		features->friction = bit_in_array(featuresBytes, FF_FRICTION);
+		features->damper = bit_in_array(featuresBytes, FF_DAMPER);
+		features->rumble = bit_in_array(featuresBytes, FF_RUMBLE);
+		features->inertia = bit_in_array(featuresBytes, FF_INERTIA);
+		features->gain = bit_in_array(featuresBytes, FF_GAIN);
+		features->autocenter = bit_in_array(featuresBytes, FF_AUTOCENTER);
+	} else
+		return false;
+
+	return true;
+}
+
+static bool ff_device_run(const int fd, const int lengthMs, const int delayMs,
+		   const int count, const uint8_t strength,
+		   const short attackLengthMs, const short fadeLengthMs)
+{
+	static struct ff_effect effect;
+	
+	if (fd < 0)
+		return false;
+
+	if (first_run) {
+		memset(&effect, 0, sizeof(struct ff_effect));
+		effect.type = FF_PERIODIC;
+		effect.id = -1;
+		effect.u.periodic.waveform = FF_SINE;
+		effect.u.periodic.period = 100;
+		first_run = false;
+	}
+
+	effect.u.periodic.magnitude = (0x7fff * strength) / 255;
+	effect.u.periodic.envelope.attack_length = attackLengthMs;
+	effect.u.periodic.envelope.fade_length = fadeLengthMs;
+	effect.replay.delay = delayMs;
+	effect.replay.length = lengthMs;
+
+	if (ioctl(fd, EVIOCSFF, &effect) == -1) {
+		perror("Error at ioctl() in ff_device_run");
+		return false;
+	}
+
+	struct input_event run_event;
+	memset(&run_event, 0, sizeof(struct input_event));
+	run_event.type = EV_FF;
+	run_event.code = effect.id;
+	run_event.value = count;
+
+	if (write(fd, (const void *)&run_event, sizeof(run_event)) == -1) {
+		return false;
+	} else
+		return true;
+}
+
+static int ff_device_open(const char *const deviceName)
+{
+	int inputDevice = open(deviceName, O_RDWR);
+	if (inputDevice < 0)
+		return -4;
+	if (!ff_gain_set(inputDevice, 100))
+		return -1;
+	fffeatures features;
+	if (!ff_features_get(inputDevice, &features))
+		return -2;
+	if (!features.periodic || !features.sine || !features.gain)
+		return -3;
+	return inputDevice;
+}
+
+static bool ff_device_stop(const int fd)
+{
+	return ff_device_run(fd, 1, 0, 1, 0, 0, 0);
+}
 
 static gboolean priority_timeout_cb(gpointer data)
 {
@@ -129,9 +265,7 @@ static gboolean should_run_pattern(const pattern_t pattern)
 		 (system_state == MCE_STATE_ACTDEAD
 		  && display_state == MCE_DISPLAY_OFF))
 		return true;
-	else if (pattern.policy == VIBRATE_POLICY_PLAY_DISPLAY_ON_OR_OFF &&
-		 (system_state != MCE_STATE_ACTDEAD
-		  && display_state == MCE_DISPLAY_ON))
+	else if (pattern.policy == VIBRATE_POLICY_PLAY_DISPLAY_ON_OR_OFF && system_state != MCE_STATE_ACTDEAD)
 		return true;
 	else if (pattern.policy == VIBRATE_POLICY_PLAY_DISPLAY_OFF &&
 		 (system_state != MCE_STATE_ACTDEAD
@@ -283,9 +417,8 @@ static gboolean init_patterns(void)
 				continue;
 			}
 
-			++patternsCount;
-			pattern = &patterns[i];
-			pattern->name = strdup(patternlist[i]);
+			pattern = &patterns[patternsCount];
+			pattern->name = strdup(patternlist[patternsCount]);
 			pattern->priority = tmp[PATTERN_PRIO_FIELD];
 			pattern->policy = tmp[PATTERN_SCREEN_ON_FIELD];
 			pattern->timeout =
@@ -301,7 +434,9 @@ static gboolean init_patterns(void)
 			pattern->off_period = ABS(tmp[PATTERN_OFF_PERIOD_FIELD]);
 			pattern->speed = ABS(tmp[PATTERN_SPEED_FIELD]);
 			pattern->invalid = false;
-
+			
+			++patternsCount;
+			
 			g_free(tmp);
 		}
 	}
