@@ -39,7 +39,6 @@
 #include "mce-dbus.h"
 #include "mce-gconf.h"
 #include "datapipe.h"
-#include "x11-utils.h"
 
 /** Module name */
 #define MODULE_NAME		"display-dev"
@@ -152,7 +151,6 @@ static gboolean brightness_fade_timeout_cb(gpointer data)
 
 	if ((cached_brightness <= 0) && (target_brightness != 0)) {
 		backlight_ioctl(FB_BLANK_UNBLANK);
-		x11_force_dpms_display_level(TRUE);
 	}
 
 	if ((cached_brightness == -1) ||
@@ -171,7 +169,6 @@ static gboolean brightness_fade_timeout_cb(gpointer data)
 
 	if (cached_brightness == 0) {
 		backlight_ioctl(FB_BLANK_POWERDOWN);
-		x11_force_dpms_display_level(FALSE);
 	}
 
 	if (retval == FALSE)
@@ -253,7 +250,6 @@ static void display_blank(void)
 	target_brightness = 0;
 	mce_write_number_string_to_file(brightness_file, 0);
 	backlight_ioctl(FB_BLANK_POWERDOWN);
-	x11_force_dpms_display_level(FALSE);
 }
 
 /**
@@ -263,7 +259,6 @@ static void display_dim(void)
 {
 	if (cached_brightness == 0) {
 		backlight_ioctl(FB_BLANK_UNBLANK);
-		x11_force_dpms_display_level(TRUE);
 	}
 
 	update_brightness_fade((maximum_display_brightness *
@@ -282,7 +277,6 @@ static void display_unblank(void)
 		backlight_ioctl(FB_BLANK_UNBLANK);
 		mce_write_number_string_to_file(brightness_file,
 						set_brightness);
-		x11_force_dpms_display_level(TRUE);
 	} else {
 		update_brightness_fade(set_brightness);
 	}
