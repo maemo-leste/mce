@@ -32,13 +32,16 @@ static GDBusProxy *iio_proxy = NULL;
 
 static int cal_scale = 1000;
 
+/* TODO: Handle units other than lux, or check that unit is Lux?
+ * iio-sensor-proxy doesn't support other units at the moment, but it might
+ * in the future.
+ */
 static int iio_als_get_light_value(GDBusProxy * proxy)
 {
 	GVariant *v;
 	GVariant *unit;
 	v = g_dbus_proxy_get_cached_property(iio_proxy, "LightLevel");
 	unit = g_dbus_proxy_get_cached_property(iio_proxy, "LightLevelUnit");
-	/*todo: Handle units other than lux? */
 	double mlux = g_variant_get_double(v)*cal_scale;
 	if (mlux < 0)
 		mlux = 0.0;
