@@ -729,15 +729,8 @@ static void match_ts_only(const gchar* filename) {
 	close(fd);
 }
 
-static void touchscreen_control_trigger(gconstpointer data) {
-	gboolean enable = !GPOINTER_TO_INT(data);
-	if (enable)
-		mce_reopen_touchscreen_devices();
-	else
-		mce_clear_touchscreen_devices();
-}
 
-void mce_clear_touchscreen_devices(void) {
+static void mce_clear_touchscreen_devices(void) {
 	GSList *iter = touchscreen_dev_list;
 
 	if (touchscreen_dev_list == NULL)
@@ -754,9 +747,18 @@ void mce_clear_touchscreen_devices(void) {
 	touchscreen_dev_list = NULL;
 }
 
-void mce_reopen_touchscreen_devices(void) {
+static void mce_reopen_touchscreen_devices(void) {
 	if (touchscreen_dev_list == NULL)
 		mce_scan_inputdevices(match_ts_only);
+}
+
+
+static void touchscreen_control_trigger(gconstpointer data) {
+	gboolean enable = !GPOINTER_TO_INT(data);
+	if (enable)
+		mce_reopen_touchscreen_devices();
+	else
+		mce_clear_touchscreen_devices();
 }
 
 /**
