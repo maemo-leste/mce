@@ -206,7 +206,7 @@ static void als_trigger(gconstpointer data)
 	
 	int new_als_lux = datapipe_get_gint(light_sensor_pipe);
 	
-	if(new_als_lux < 0)
+	if (new_als_lux < 0)
 		return;
 
 	als_lux = new_als_lux;
@@ -269,8 +269,10 @@ static gboolean init_backlights(void)
 				backlight.locked = tmp[BACKLIGHT_LOCKED_FIELD];
 				backlight.fade_time = tmp[BACKLIGHT_FADE_TIME_FIELD];
 				int profile = tmp[BACKLIGHT_PROFILE_FIELD];
-				if(profile > 1 || profile < 0) profile = 0;
-				if(profile == 0) backlight.brightness_map = &brightness_map_kbd;
+				if (profile > 1 || profile < 0) 
+					profile = 0;
+				if (profile == 0) 
+					backlight.brightness_map = &brightness_map_kbd;
 				else backlight.brightness_map = &brightness_map_btn;
 				backlight.value = 0;
 				
@@ -306,7 +308,7 @@ const gchar *g_module_check_init(GModule *module)
 
 	(void)module;
 	
-	if(!init_backlights())
+	if (!init_backlights())
 		return NULL;
 
 	/* Append triggers/filters to datapipes */
@@ -323,7 +325,7 @@ const gchar *g_module_check_init(GModule *module)
 				&als_enabled_gconf_cb_id) == FALSE)
 		return NULL;
 
-	if ( mce_dbus_handler_add(MCE_REQUEST_IF, MCE_KEYBOARD_STATUS_GET, NULL, 1u, get_keyboard_status_dbus_cb) ) {
+	if (mce_dbus_handler_add(MCE_REQUEST_IF, MCE_KEYBOARD_STATUS_GET, NULL, 1u, get_keyboard_status_dbus_cb) ) {
 		status = NULL;
 	}
 	else {
