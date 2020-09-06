@@ -395,7 +395,7 @@ gboolean mce_conf_init(void)
 	}
 	
 	for (size_t i = 0; i < mce_conf_file_count; ++i)
-		mce_log(LL_DEBUG, "mce-conf: found conf file %d: %s", i, conf_files[i].filename);
+		mce_log(LL_DEBUG, "mce-conf: found conf file %lu: %s", (unsigned long)i, conf_files[i].filename);
 
 	return TRUE;
 }
