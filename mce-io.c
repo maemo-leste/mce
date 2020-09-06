@@ -878,7 +878,7 @@ gboolean mcs_io_monitor_seek_to_end(gconstpointer io_monitor)
 	error = NULL;
 
 	if (!seek_success) {
-		int bytes_read;
+		gsize bytes_read;
 		char buffer[1024];
 		do {
 			g_io_channel_read_chars(iomon->iochan, buffer,
