@@ -1,3 +1,12 @@
+mce (1.8.128.19) unstable; urgency=medium
+
+  * Further fix inactivity problems
+  * Introduce ALS sensor based on iio
+  * Fix some evdevvibrator problems
+  * Support /etc/mce.ini.d/*.ini config files to override defaults per device
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Sun, 06 Sep 2020 20:52:22 +0200
+
 mce (1.8.128.18) unstable; urgency=medium
 
   * Disable all input devices upon lock to work around X waking up the display
