@@ -124,8 +124,6 @@ static void iio_als_properties_changed(GDBusProxy * proxy,
 static void iio_als_sensors_appeared(GDBusConnection * connection, const gchar * name, const gchar * name_owner,
 				     gpointer user_data)
 {
-	GError *error = NULL;
-	GVariant *ret = NULL;
 	(void)name;
 	(void)name_owner;
 	(void)connection;
