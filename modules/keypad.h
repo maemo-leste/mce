@@ -32,8 +32,6 @@
 #define MCE_KEYBOARD_BACKLIGHT_BRIGHTNESS_SYS_PATH	MCE_KEYBOARD_BACKLIGHT_SYS_PATH "/brightness"
 #define MCE_KEYBOARD_BACKLIGHT_FADETIME_SYS_PATH	MCE_KEYBOARD_BACKLIGHT_SYS_PATH "/time"
 
-#define MCE_KEYBOARD_GENERIC_BACKLIGHT_SYS_PATH	"/sys/class/leds/*::kbd_backlight/brightness"
-
 #include "led.h"
 
 /** Default Lysti backlight LED current */
@@ -56,7 +54,5 @@
 #define MCE_CONF_KEY_BACKLIGHT_TIMEOUT	"BacklightTimeout"
 
 #define MCE_CONF_KEY_BACKLIGHT_FADETIME	"BacklightFadeTime"
-
-#define MCE_CONF_KEYPAD_GENERIC	"Generic"
 
 #endif /* _KEYPAD_H_ */
