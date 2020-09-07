@@ -29,7 +29,6 @@
 #include "mce.h"
 #include "led.h"
 #include "mce-io.h"
-#include "mce-hal.h"
 #include "mce-lib.h"
 #include "mce-log.h"
 #include "mce-conf.h"
@@ -112,32 +111,10 @@ static gint active_brightness = -1;
 /** Currently driven leds */
 static guint current_lysti_led_pattern = 0;
 
-/** Brightness levels for the mono-LED */
-static const gchar *const brightness_map[] = {
-	BRIGHTNESS_LEVEL_0,
-	BRIGHTNESS_LEVEL_1,
-	BRIGHTNESS_LEVEL_2,
-	BRIGHTNESS_LEVEL_3,
-	BRIGHTNESS_LEVEL_4,
-	BRIGHTNESS_LEVEL_5,
-	BRIGHTNESS_LEVEL_6,
-	BRIGHTNESS_LEVEL_7,
-	BRIGHTNESS_LEVEL_8,
-	BRIGHTNESS_LEVEL_9,
-	BRIGHTNESS_LEVEL_10,
-	BRIGHTNESS_LEVEL_11,
-	BRIGHTNESS_LEVEL_12,
-	BRIGHTNESS_LEVEL_13,
-	BRIGHTNESS_LEVEL_14,
-	BRIGHTNESS_LEVEL_15
-};
-
 /** LED type */
 typedef enum {
 	LED_TYPE_UNSET = -1,
 	LED_TYPE_NONE = 0,
-	LED_TYPE_MONO = 1,
-	LED_TYPE_NJOY = 2,
 	LED_TYPE_LYSTI = 3,
 } led_type_t;
 
@@ -161,7 +138,6 @@ static void cancel_pattern_timeout(void);
 static led_type_t get_led_type(void)
 {
 	static led_type_t led_type = LED_TYPE_UNSET;
-	product_id_t product_id = get_product_id();
 
 	/* If we have the LED type already, return it */
 	if (led_type != LED_TYPE_UNSET)
@@ -171,22 +147,6 @@ static led_type_t get_led_type(void)
 		led_type = LED_TYPE_LYSTI;
 
 		led_pattern_group = MCE_CONF_LED_PATTERN_RX51_GROUP;
-	} else if (g_access(MCE_NJOY_LED_MODE_PATH, W_OK) == 0) {
-		led_type = LED_TYPE_NJOY;
-
-		if (product_id == PRODUCT_RX44)
-			led_pattern_group = MCE_CONF_LED_PATTERN_RX44_GROUP;
-		else if (product_id == PRODUCT_RX48)
-			led_pattern_group = MCE_CONF_LED_PATTERN_RX48_GROUP;
-		else
-			led_pattern_group = MCE_CONF_LED_PATTERN_RX48_GROUP;
-	} else if (g_access(MCE_LED_TRIGGER_PATH, W_OK) == 0) {
-		led_type = LED_TYPE_MONO;
-
-		if (product_id == PRODUCT_RX34)
-			led_pattern_group = MCE_CONF_LED_PATTERN_RX34_GROUP;
-		else
-			led_pattern_group = MCE_CONF_LED_PATTERN_RX34_GROUP;
 	} else {
 		led_type = LED_TYPE_NONE;
 	}
@@ -297,50 +257,6 @@ static void lysti_set_brightness(gint brightness)
 }
 
 /**
- * Set NJoy-LED brightness
- *
- * @param brightness The brightness of the LED (0-3)
- */
-static void njoy_set_brightness(gint brightness)
-{
-	if (brightness < 0 || brightness > 3) {
-		mce_log(LL_WARN, "Invalid brightness value %d", brightness);
-		return;
-	}
-
-	if (active_brightness == brightness)
-		return;
-
-	active_brightness = brightness;
-	(void)mce_write_number_string_to_file(MCE_NJOY_LED_BRIGHTNESS_PATH,
-					      (unsigned)brightness);
-
-	mce_log(LL_DEBUG, "Brightness set to %d", brightness);
-}
-
-/**
- * Set mono-LED brightness
- *
- * @param brightness The brightness of the LED (0-15)
- */
-static void mono_set_brightness(gint brightness)
-{
-	if (brightness < 0 || brightness > 15) {
-		mce_log(LL_WARN, "Invalid brightness value %d", brightness);
-		return;
-	}
-
-	if (active_brightness == brightness)
-		return;
-
-	active_brightness = brightness;
-	(void)mce_write_string_to_file(MCE_MONO_LED_BRIGHTNESS_PATH,
-				       brightness_map[brightness]);
-
-	mce_log(LL_DEBUG, "Brightness set to %d", brightness);
-}
-
-/**
  * Disable the Lysti-LED
  */
 static void lysti_disable_led(void)
@@ -360,30 +276,6 @@ static void lysti_disable_led(void)
 }
 
 /**
- * Disable the NJoy-LED
- */
-static void njoy_disable_led(void)
-{
-	(void)mce_write_string_to_file(MCE_NJOY_LED_MODE_PATH,
-				       MCE_LED_LOAD_MODE);
-	(void)mce_write_string_to_file(MCE_NJOY_LED_CHANNELS_PATH, "rgb");
-	(void)mce_write_string_to_file(MCE_NJOY_LED_LOAD_PATH, "0000");
-	(void)mce_write_string_to_file(MCE_NJOY_LED_CHANNELS_PATH, "");
-	(void)mce_write_string_to_file(MCE_NJOY_LED_MODE_PATH,
-				       MCE_LED_RUN_MODE);
-}
-
-/**
- * Disable the mono-LED
- */
-static void mono_disable_led(void)
-{
-	(void)mce_write_string_to_file(MCE_LED_TRIGGER_PATH,
-				       MCE_LED_TRIGGER_NONE);
-	mono_set_brightness(0);
-}
-
-/**
  * Disable the LED
  */
 static void disable_led(void)
@@ -393,14 +285,6 @@ static void disable_led(void)
 	switch (get_led_type()) {
 	case LED_TYPE_LYSTI:
 		lysti_disable_led();
-		break;
-
-	case LED_TYPE_NJOY:
-		njoy_disable_led();
-		break;
-
-	case LED_TYPE_MONO:
-		mono_disable_led();
 		break;
 
 	default:
@@ -489,67 +373,6 @@ static void lysti_program_led(const pattern_struct *const pattern)
 }
 
 /**
- * Setup and activate a new NJoy-LED pattern
- *
- * @param pattern A pointer to a pattern_struct with the new pattern
- */
-static void njoy_program_led(const pattern_struct *const pattern)
-{
-	(void)mce_write_string_to_file(MCE_NJOY_LED_MODE_PATH,
-				       MCE_LED_LOAD_MODE);
-
-	(void)mce_write_string_to_file(MCE_NJOY_LED_CHANNELS_PATH, "r");
-	(void)mce_write_string_to_file(MCE_NJOY_LED_LOAD_PATH,
-				       pattern->channel1);
-
-	(void)mce_write_string_to_file(MCE_NJOY_LED_CHANNELS_PATH, "g");
-	(void)mce_write_string_to_file(MCE_NJOY_LED_LOAD_PATH,
-				       pattern->channel2);
-
-	(void)mce_write_string_to_file(MCE_NJOY_LED_CHANNELS_PATH, "b");
-	(void)mce_write_string_to_file(MCE_NJOY_LED_LOAD_PATH,
-				       pattern->channel3);
-
-	(void)mce_write_string_to_file(MCE_NJOY_LED_CHANNELS_PATH, "rgb");
-	(void)mce_write_string_to_file(MCE_NJOY_LED_MODE_PATH,
-				       MCE_LED_RUN_MODE);
-}
-
-/**
- * Setup and activate a new mono-LED pattern
- *
- * @param pattern A pointer to a pattern_struct with the new pattern
- */
-static void mono_program_led(const pattern_struct *const pattern)
-{
-	/* This shouldn't happen; disable the LED instead */
-	if (pattern->on_period == 0) {
-		mono_disable_led();
-		goto EXIT;
-	}
-
-	/* If we have a normal, on/off pattern,
-	 * use a timer trigger, otherwise disable the trigger
-	 */
-	if (pattern->off_period != 0) {
-		(void)mce_write_string_to_file(MCE_LED_TRIGGER_PATH,
-					       MCE_LED_TRIGGER_TIMER);
-		(void)mce_write_number_string_to_file(MCE_LED_OFF_PERIOD_PATH,
-						      (unsigned)pattern->off_period);
-		(void)mce_write_number_string_to_file(MCE_LED_ON_PERIOD_PATH,
-						      (unsigned)pattern->on_period);
-	} else {
-		(void)mce_write_string_to_file(MCE_LED_TRIGGER_PATH,
-					       MCE_LED_TRIGGER_NONE);
-	}
-
-	mono_set_brightness(pattern->brightness);
-
-EXIT:
-	return;
-}
-
-/**
  * Setup and activate a new LED pattern
  *
  * @param pattern A pointer to a pattern_struct with the new pattern
@@ -559,15 +382,6 @@ static void program_led(const pattern_struct *const pattern)
 	switch (get_led_type()) {
 	case LED_TYPE_LYSTI:
 		lysti_program_led(pattern);
-		break;
-
-	case LED_TYPE_NJOY:
-		njoy_program_led(pattern);
-		break;
-
-	case LED_TYPE_MONO:
-		mono_program_led(pattern);
-		break;
 
 	default:
 		break;
@@ -775,13 +589,6 @@ static void led_brightness_trigger(gconstpointer data)
 		lysti_set_brightness(led_brightness);
 		break;
 
-	case LED_TYPE_NJOY:
-		njoy_set_brightness(led_brightness);
-		break;
-
-	case LED_TYPE_MONO:
-	case LED_TYPE_UNSET:
-	case LED_TYPE_NONE:
 	default:
 		break;
 	}
@@ -1175,207 +982,6 @@ EXIT:
 	return status;
 }
 
-static gboolean init_njoy_patterns(void)
-{
-	gchar **patternlist = NULL;
-	gboolean status = FALSE;
-	gsize length;
-	gint i;
-
-	/* Get the list of valid LED patterns */
-	patternlist = mce_conf_get_string_list(MCE_CONF_LED_GROUP,
-					       MCE_CONF_LED_PATTERNS,
-					       &length,
-					       NULL);
-
-	/* Treat failed conf-value reads as if they were due to invalid keys
-	 * rather than failed allocations; let future allocation attempts fail
-	 * instead; otherwise we'll miss the real invalid key failures
-	 */
-	if (patternlist == NULL) {
-		mce_log(LL_WARN,
-			"Failed to configure LED patterns");
-		status = TRUE;
-		goto EXIT;
-	}
-
-	/* Used for RGB NJoy LED patterns */
-	for (i = 0; patternlist[i]; i++) {
-		gchar **tmp;
-
-		mce_log(LL_DEBUG,
-			"Getting LED pattern for: %s",
-			patternlist[i]);
-
-		tmp = mce_conf_get_string_list(led_pattern_group,
-					       patternlist[i],
-					       &length,
-					       NULL);
-
-		if (tmp != NULL) {
-			pattern_struct *psp;
-
-			if ((length != NUMBER_OF_PATTERN_FIELDS) ||
-			    (strlen(tmp[PATTERN_R_CHANNEL_FIELD]) >
-			     CHANNEL_SIZE) ||
-			    (strlen(tmp[PATTERN_G_CHANNEL_FIELD]) >
-			     CHANNEL_SIZE) ||
-			    (strlen(tmp[PATTERN_B_CHANNEL_FIELD]) >
-			     CHANNEL_SIZE)) {
-				mce_log(LL_ERR,
-					"Skipping invalid LED-pattern");
-				g_strfreev(tmp);
-				continue;
-			}
-
-			psp = g_slice_new(pattern_struct);
-
-			if (!psp) {
-				g_strfreev(tmp);
-				goto EXIT2;
-			}
-
-			psp->priority = strtoul(tmp[PATTERN_PRIO_FIELD],
-						NULL, 10);
-			psp->policy = strtoul(tmp[PATTERN_SCREEN_ON_FIELD],
-						 NULL, 10);
-
-			if ((psp->timeout = strtoul(tmp[PATTERN_TIMEOUT_FIELD],
-						    NULL, 10)) == 0)
-				psp->timeout = -1;
-
-			/* Catch all error checking for all three strtoul */
-			if ((errno == EINVAL) || (errno == ERANGE)) {
-				/* Reset errno,
-				 * to avoid false positives further down
-				 */
-				g_strfreev(tmp);
-				g_slice_free(pattern_struct, psp);
-				continue;
-			}
-
-			strncpy(psp->channel1,
-			       tmp[PATTERN_R_CHANNEL_FIELD],
-			       CHANNEL_SIZE);
-			strncpy(psp->channel2,
-			       tmp[PATTERN_G_CHANNEL_FIELD],
-			       CHANNEL_SIZE);
-			strncpy(psp->channel3,
-			       tmp[PATTERN_B_CHANNEL_FIELD],
-			       CHANNEL_SIZE);
-
-			psp->active = FALSE;
-
-			psp->enabled = pattern_get_enabled(patternlist[i],
-							   &(psp->gconf_cb_id));
-
-			psp->name = strdup(patternlist[i]);
-
-			g_strfreev(tmp);
-
-			g_queue_insert_sorted(pattern_stack, psp,
-					      queue_prio_compare,
-					      NULL);
-		}
-	}
-
-	/* Set the LED brightness */
-	execute_datapipe(&led_brightness_pipe,
-			 GINT_TO_POINTER(DEFAULT_NJOY_LED_CURRENT),
-			 USE_INDATA, CACHE_INDATA);
-
-	status = TRUE;
-
-EXIT2:
-	g_strfreev(patternlist);
-
-EXIT:
-	return status;
-}
-
-static gboolean init_mono_patterns(void)
-{
-	gchar **patternlist = NULL;
-	gboolean status = FALSE;
-	gsize length;
-	gint i;
-
-	/* Get the list of valid LED patterns */
-	patternlist = mce_conf_get_string_list(MCE_CONF_LED_GROUP,
-					       MCE_CONF_LED_PATTERNS,
-					       &length,
-					       NULL);
-
-	/* Treat failed conf-value reads as if they were due to invalid keys
-	 * rather than failed allocations; let future allocation attempts fail
-	 * instead; otherwise we'll miss the real invalid key failures
-	 */
-	if (patternlist == NULL) {
-		mce_log(LL_WARN,
-			"Failed to configure LED patterns");
-		status = TRUE;
-		goto EXIT;
-	}
-
-	/* Used for single-colour LED patterns */
-	for (i = 0; patternlist[i]; i++) {
-		gint *tmp;
-
-		mce_log(LL_DEBUG,
-			"Getting LED pattern for: %s",
-			patternlist[i]);
-
-		tmp = mce_conf_get_int_list(led_pattern_group,
-					    patternlist[i],
-					    &length,
-					    NULL);
-
-		if (tmp != NULL) {
-			pattern_struct *psp;
-
-			if (length != NUMBER_OF_PATTERN_FIELDS) {
-				mce_log(LL_ERR,
-					"Skipping invalid LED-pattern");
-				g_free(tmp);
-				continue;
-			}
-
-			psp = g_slice_new(pattern_struct);
-
-			if (!psp) {
-				g_free(tmp);
-				goto EXIT2;
-			}
-
-			psp->name = strdup(patternlist[i]);
-			psp->priority = tmp[PATTERN_PRIO_FIELD];
-			psp->policy = tmp[PATTERN_SCREEN_ON_FIELD];
-			psp->timeout = tmp[PATTERN_TIMEOUT_FIELD] ? tmp[PATTERN_TIMEOUT_FIELD] : -1;
-			psp->on_period = tmp[PATTERN_ON_PERIOD_FIELD];
-			psp->off_period = tmp[PATTERN_OFF_PERIOD_FIELD];
-			psp->brightness = tmp[PATTERN_BRIGHTNESS_FIELD];
-			psp->active = FALSE;
-
-			psp->enabled = pattern_get_enabled(patternlist[i],
-							   &(psp->gconf_cb_id));
-
-			g_free(tmp);
-
-			g_queue_insert_sorted(pattern_stack, psp,
-					      queue_prio_compare,
-					      NULL);
-		}
-	}
-
-	status = TRUE;
-
-EXIT2:
-	g_strfreev(patternlist);
-
-EXIT:
-	return status;
-}
-
 /**
  * Init patterns for the LED
  *
@@ -1388,14 +994,6 @@ static gboolean init_patterns(void)
 	switch (get_led_type()) {
 	case LED_TYPE_LYSTI:
 		status = init_lysti_patterns();
-		break;
-
-	case LED_TYPE_NJOY:
-		status = init_njoy_patterns();
-		break;
-
-	case LED_TYPE_MONO:
-		status = init_mono_patterns();
 		break;
 
 	default:

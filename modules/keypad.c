@@ -27,7 +27,6 @@
 #include "keypad.h"
 #include "mce-io.h"
 #include "mce-lib.h"
-#include "mce-hal.h"
 #include "mce-dbus.h"
 #include "mce-log.h"
 #include "datapipe.h"
@@ -55,6 +54,8 @@ G_MODULE_EXPORT module_info_struct module_info = {
 static guint key_backlight_timeout_cb_id = 0;
 
 static gboolean keyboard_light_state = FALSE;
+
+static gboolean is_generic = FALSE;
 
 /** Default backlight brightness */
 static gint key_backlight_timeout = DEFAULT_KEY_BACKLIGHT_TIMEOUT;
@@ -155,20 +156,6 @@ static void set_lysti_backlight_brightness(guint fadetime, guint brightness)
 				       MCE_LED_RUN_MODE);
 }
 
-static void set_n810_backlight_brightness(guint fadetime, guint brightness)
-{
-	if (brightness == 0) {
-		(void)mce_write_number_string_to_file(MCE_KEYPAD_BACKLIGHT_FADETIME_SYS_PATH, fadetime);
-		(void)mce_write_number_string_to_file(MCE_KEYBOARD_BACKLIGHT_FADETIME_SYS_PATH, fadetime);
-	} else {
-		(void)mce_write_number_string_to_file(MCE_KEYPAD_BACKLIGHT_FADETIME_SYS_PATH, 0);
-		(void)mce_write_number_string_to_file(MCE_KEYBOARD_BACKLIGHT_FADETIME_SYS_PATH, 0);
-	}
-
-	(void)mce_write_number_string_to_file(MCE_KEYPAD_BACKLIGHT_BRIGHTNESS_SYS_PATH, brightness);
-	(void)mce_write_number_string_to_file(MCE_KEYBOARD_BACKLIGHT_BRIGHTNESS_SYS_PATH, brightness);
-}
-
 static void set_generic_backlight_brightness(guint fadetime, guint brightness)
 {
 	(void)fadetime;
@@ -185,23 +172,10 @@ static void set_backlight_brightness(gconstpointer data)
 		goto EXIT;
 
 	cached_brightness = new_brightness;
-
-	switch (get_product_id()) {
-	case PRODUCT_RX51:
-		set_lysti_backlight_brightness(key_backlight_fadetime,
-					       new_brightness);
-		break;
-
-	case PRODUCT_RX48:
-	case PRODUCT_RX44:
-		set_n810_backlight_brightness(key_backlight_fadetime,
-					      new_brightness);
-		break;
-
-	default:
+	if (!is_generic)
+		set_lysti_backlight_brightness(key_backlight_fadetime, new_brightness);
+	else
 		set_generic_backlight_brightness(key_backlight_fadetime, new_brightness);
-		break;
-	}
 
 EXIT:
 	return;
@@ -452,6 +426,11 @@ const gchar *g_module_check_init(GModule *module)
 		mce_conf_get_int(MCE_CONF_KEYPAD_GROUP,
 				 MCE_CONF_KEY_BACKLIGHT_TIMEOUT,
 				 DEFAULT_KEY_BACKLIGHT_TIMEOUT,
+				 NULL);
+		
+	is_generic = mce_conf_get_bool(MCE_CONF_KEYPAD_GROUP,
+				 MCE_CONF_KEYPAD_GENERIC,
+				 FALSE,
 				 NULL);
 
 	key_backlight_fadetime =
