@@ -31,7 +31,6 @@
 #include "mce.h"
 #include "filter-brightness-als.h"
 #include "mce-io.h"
-#include "mce-hal.h"
 #include "mce-log.h"
 #include "mce-gconf.h"
 #include "datapipe.h"
