@@ -349,7 +349,8 @@ gboolean mce_conf_init(void)
 	dir = opendir(override_dir_path);
 	if (dir) {
 		while ((direntry = readdir(dir)) != NULL && telldir(dir)) {
-			if (direntry->d_type == DT_REG && mce_conf_is_ini_file(direntry->d_name))
+			if ((direntry->d_type == DT_REG || direntry->d_type == DT_LNK) && 
+				mce_conf_is_ini_file(direntry->d_name))
 				++mce_conf_file_count;
 		}
 		rewinddir(dir);
@@ -379,7 +380,8 @@ gboolean mce_conf_init(void)
 		size_t i = 1;
 		direntry = readdir(dir);
 		while (direntry != NULL && i < mce_conf_file_count && telldir(dir)) {
-			if (direntry->d_type == DT_REG && mce_conf_is_ini_file(direntry->d_name)) {
+			if ((direntry->d_type == DT_REG || direntry->d_type == DT_LNK) && 
+				mce_conf_is_ini_file(direntry->d_name)) {
 				conf_files[i].filename = g_strdup(direntry->d_name);
 				conf_files[i].path     = g_strconcat(G_STRINGIFY(MCE_CONF_DIR), "/", 
 											G_STRINGIFY(MCE_CONF_OVERRIDE_DIR), "/", 
