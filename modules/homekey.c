@@ -24,7 +24,6 @@
 #include <linux/input.h>
 #include "mce.h"
 #include "homekey.h"
-#include "mce-hal.h"
 #include "mce-log.h"
 #include "mce-conf.h"
 #include "mce-dbus.h"
@@ -171,9 +170,6 @@ const gchar *g_module_check_init(GModule *module)
 	gchar *tmp = NULL;
 
 	(void)module;
-
-	if (get_product_id() == PRODUCT_RX51)
-		return NULL;;
 
 	append_input_trigger_to_datapipe(&keypress_pipe,
 					 homekey_trigger);

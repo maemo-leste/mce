@@ -57,4 +57,6 @@
 
 #define MCE_CONF_KEY_BACKLIGHT_FADETIME	"BacklightFadeTime"
 
+#define MCE_CONF_KEYPAD_GENERIC	"Generic"
+
 #endif /* _KEYPAD_H_ */
