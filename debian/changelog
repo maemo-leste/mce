@@ -1,3 +1,9 @@
+mce (1.8.128.20) unstable; urgency=medium
+
+  * Support symlinks in /etc/mce.init.d/*
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Mon, 07 Sep 2020 21:46:57 +0200
+
 mce (1.8.128.19) unstable; urgency=medium
 
   * Further fix inactivity problems
