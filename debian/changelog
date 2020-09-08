@@ -1,3 +1,10 @@
+mce (1.8.128.21) unstable; urgency=medium
+
+  * Add x11-xctrl as a more clean (?) way to do X11 control
+  * Add inactivity-inhibit to make inactivity-dev work properly again
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Tue, 08 Sep 2020 22:15:09 +0200
+
 mce (1.8.128.20) unstable; urgency=medium
 
   * Support symlinks in /etc/mce.init.d/*
