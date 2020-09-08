@@ -31,6 +31,7 @@ MODULES := \
 	$(MODULE_DIR)/libkeypad.so \
 	$(MODULE_DIR)/libinactivity.so \
 	$(MODULE_DIR)/libinactivity-dev.so \
+	$(MODULE_DIR)/libinactivity-inhibit.so \
 	$(MODULE_DIR)/libcamera.so \
 	$(MODULE_DIR)/libalarm.so \
 	$(MODULE_DIR)/libbattery-upower.so \
