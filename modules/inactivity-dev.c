@@ -101,7 +101,6 @@ static bool inactiveity_inhibited(void)
 	system_state_t system_state = datapipe_get_gint(system_state_pipe);
 	call_state_t call_state = datapipe_get_gint(call_state_pipe);
 	gboolean charger_connected = datapipe_get_gint(charger_state_pipe);
-	gboolean inactiveity_prevented_by_timeout = datapipe_get_gint(device_lock_inhibit_pipe);
 
 	if ((call_state == CALL_STATE_RINGING) ||
 	    ((charger_connected == TRUE) &&
@@ -109,8 +108,7 @@ static bool inactiveity_inhibited(void)
 	      ((inactivity_inhibit_mode == INHIBIT_STAY_ON_WITH_CHARGER) ||
 	       (inactivity_inhibit_mode == INHIBIT_STAY_DIM_WITH_CHARGER)))) ||
 	    (inactivity_inhibit_mode == INHIBIT_STAY_ON) ||
-	    (inactivity_inhibit_mode == INHIBIT_STAY_DIM) ||
-		inactiveity_prevented_by_timeout) {
+	    (inactivity_inhibit_mode == INHIBIT_STAY_DIM)) {
 		/* Always inhibit blanking */
 		blanking_inhibited = true;
 	}
