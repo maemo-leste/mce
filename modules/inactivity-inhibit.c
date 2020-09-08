@@ -43,6 +43,8 @@ static gboolean blank_prevent_timeout_cb(gpointer data)
 	(void)data;
 	blank_prevent_timeout_cb_id = 0;
 	timed_inhibit = false;
+	execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE),
+					 USE_INDATA, CACHE_INDATA);
 	return FALSE;
 }
 
@@ -55,6 +57,8 @@ static void cancel_blank_prevent(void)
 		g_source_remove(blank_prevent_timeout_cb_id);
 		blank_prevent_timeout_cb_id = 0;
 		timed_inhibit = false;
+		execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE),
+						 USE_INDATA, CACHE_INDATA);
 	}
 }
 
