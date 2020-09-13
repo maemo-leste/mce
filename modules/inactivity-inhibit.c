@@ -152,8 +152,9 @@ static gboolean blanking_pause_req_dbus_cb(DBusMessage *const msg)
 static gpointer device_inactive_filter(gpointer data)
 {
 	gboolean device_inactive = GPOINTER_TO_INT(data);
+	display_state_t display_state = datapipe_get_gint(display_state_pipe);
 	
-	if (device_inactive && timed_inhibit) {
+	if (device_inactive && timed_inhibit && display_state != MCE_DISPLAY_OFF) {
 		mce_log(LL_DEBUG,
 		"%s: Device inactive state preventedby %s", MODULE_NAME, MODULE_NAME);
 		return GINT_TO_POINTER(FALSE);
