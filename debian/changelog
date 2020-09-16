@@ -1,3 +1,9 @@
+mce (1.8.128.22) unstable; urgency=medium
+
+  * Fix inactivity-inhibit module to only trigger when the display is not off
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Wed, 16 Sep 2020 10:34:05 +0200
+
 mce (1.8.128.21) unstable; urgency=medium
 
   * Add x11-xctrl as a more clean (?) way to do X11 control
