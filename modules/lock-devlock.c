@@ -31,7 +31,6 @@
 #include "mce-log.h"
 #include "mce-conf.h"
 #include "mce-dbus.h"
-#include "mce-dsme.h"
 #include "mce-gconf.h"
 #include "datapipe.h"
 
@@ -337,7 +336,7 @@ static gboolean shutdown_timeout_cb(gpointer data)
 	mce_log(LL_WARN,
 		"Requesting shutdown from devlock.c: shutdown_timeout_cb()");
 
-	request_normal_shutdown();
+	execute_datapipe(&system_power_request_pipe, GINT_TO_POINTER(MCE_POWER_REQ_OFF), USE_INDATA, CACHE_INDATA);
 
 	return FALSE;
 }
@@ -523,7 +522,7 @@ static gboolean systemui_devlock_dbus_cb(DBusMessage *const msg)
 			"Requesting shutdown from devlock.c: "
 			"systemui_devlock_dbus_cb()");
 
-		request_normal_shutdown();
+		execute_datapipe(&system_power_request_pipe, GINT_TO_POINTER(MCE_POWER_REQ_OFF), USE_INDATA, CACHE_INDATA);
 		break;
 
 	case DEVLOCK_RESPONSE_NOSHUTDOWN:

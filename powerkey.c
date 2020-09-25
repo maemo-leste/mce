@@ -30,7 +30,6 @@
 #include "mce-log.h"
 #include "mce-conf.h"
 #include "mce-dbus.h"
-#include "mce-dsme.h"
 #include "datapipe.h"
 
 /**
@@ -223,7 +222,7 @@ static void generic_powerkey_handler(poweraction_t action)
 				"action: %d",
 				action);
 
-			request_normal_shutdown();
+			execute_datapipe(&system_power_request_pipe, GINT_TO_POINTER(MCE_POWER_REQ_OFF), USE_INDATA, CACHE_INDATA);
 		}
 
 		break;
@@ -238,7 +237,7 @@ static void generic_powerkey_handler(poweraction_t action)
 		}
 
 		if ((submode & MCE_TKLOCK_SUBMODE) == 0) {
-			request_soft_poweroff();
+			execute_datapipe(&system_power_request_pipe, GINT_TO_POINTER(MCE_POWER_REQ_SOFT_OFF), USE_INDATA, CACHE_INDATA);
 		}
 
 		break;
@@ -313,7 +312,7 @@ static gboolean handle_longpress(void)
 		break;
 
 	case MCE_STATE_ACTDEAD:
-		request_powerup();
+		execute_datapipe(&system_power_request_pipe, GINT_TO_POINTER(MCE_POWER_REQ_ON), USE_INDATA, CACHE_INDATA);
 		break;
 
 	case MCE_STATE_USER:
@@ -321,7 +320,7 @@ static gboolean handle_longpress(void)
 		 * Otherwise, perform long press action
 		 */
 		if ((submode & MCE_SOFTOFF_SUBMODE)) {
-			request_soft_poweron();
+			execute_datapipe(&system_power_request_pipe, GINT_TO_POINTER(MCE_POWER_REQ_SOFT_ON), USE_INDATA, CACHE_INDATA);
 		} else {
 			generic_powerkey_handler(longpressaction);
 		}
@@ -342,7 +341,7 @@ static gboolean handle_longpress(void)
 			"powerkey.c: handle_longpress(); state: %d",
 			state);
 
-		request_normal_shutdown();
+		execute_datapipe(&system_power_request_pipe, GINT_TO_POINTER(MCE_POWER_REQ_OFF), USE_INDATA, CACHE_INDATA);
 		break;
 	}
 
@@ -497,11 +496,11 @@ static gboolean systemui_device_menu_dbus_cb(DBusMessage *const msg)
 		break;
 
 	case POWER_KEY_MENU_RESPONSE_REBOOT:
-		request_reboot();
+		execute_datapipe(&system_power_request_pipe, GINT_TO_POINTER(MCE_POWER_REQ_REBOOT), USE_INDATA, CACHE_INDATA);
 		break;
 
 	case POWER_KEY_MENU_RESPONSE_SOFT_POWEROFF:
-		request_soft_poweroff();
+		execute_datapipe(&system_power_request_pipe, GINT_TO_POINTER(MCE_POWER_REQ_SOFT_OFF), USE_INDATA, CACHE_INDATA);
 		break;
 
 	case POWER_KEY_MENU_RESPONSE_POWEROFF:
@@ -511,7 +510,7 @@ static gboolean systemui_device_menu_dbus_cb(DBusMessage *const msg)
 			"result: %d",
 			result);
 
-		request_normal_shutdown();
+		execute_datapipe(&system_power_request_pipe, GINT_TO_POINTER(MCE_POWER_REQ_OFF), USE_INDATA, CACHE_INDATA);
 		break;
 
 	case -6:
