@@ -725,6 +725,7 @@ static void system_state_trigger(gconstpointer data)
 G_MODULE_EXPORT const char *g_module_check_init(GModule * module);
 const char *g_module_check_init(GModule * module)
 {
+	(void)module;
 	gboolean status = FALSE;
 
 	append_output_trigger_to_datapipe(&device_inactive_pipe,
@@ -818,6 +819,7 @@ EXIT:
 G_MODULE_EXPORT void g_module_unload(GModule * module);
 void g_module_unload(GModule * module)
 {
+	(void)module;
 	if (devlock_autorelock_notify_cb_id)
 		devlock_notify_remove(devlock_autorelock_notify_cb_id);
 
