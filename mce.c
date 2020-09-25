@@ -41,8 +41,6 @@
 #include "connectivity.h"
 #include "datapipe.h"
 #include "modetransition.h"
-#include "tklock.h"
-#include "devlock.h"
 #include "powerkey.h"
 
 #ifdef ENABLE_SYSTEMD_SUPPORT
@@ -588,11 +586,6 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (mce_devlock_init() == FALSE) {
-		status = EXIT_FAILURE;
-		goto EXIT;
-	}
-
 	/* Initialise powerkey driver */
 	if (mce_powerkey_init() == FALSE) {
 		status = EXIT_FAILURE;
@@ -606,12 +599,6 @@ int main(int argc, char **argv)
 
 	/* Initialise switch driver */
 	if (mce_switches_init() == FALSE) {
-		status = EXIT_FAILURE;
-		goto EXIT;
-	}
-
-	/* Initialise tklock driver */
-	if (mce_tklock_init() == FALSE) {
 		status = EXIT_FAILURE;
 		goto EXIT;
 	}
@@ -643,11 +630,9 @@ EXIT:
 	mce_modules_exit();
 
 	/* Call the exit function for all components */
-	mce_tklock_exit();
 	mce_switches_exit();
 	mce_input_exit();
 	mce_powerkey_exit();
-	mce_devlock_exit();
 	mce_dsme_exit();
 	mce_mode_exit();
 	mce_connectivity_exit();
