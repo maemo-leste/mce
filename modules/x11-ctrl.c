@@ -111,10 +111,8 @@ static bool x11_set_all_input_devices_enabled(Display *dpy, const bool enable)
 		goto done;
 
 	if (enable && disabledDevices == NULL) {
-		mce_log(LL_DEBUG, "%s: this function only enables devices previously disabled by it", MODULE_NAME);
 		goto doneXiFree;
 	} else if (!enable && disabledDevices != NULL) {
-		mce_log(LL_DEBUG, "%s: this function can only disable devices once before renableing them", MODULE_NAME);
 		goto doneXiFree;
 	} else if (!enable && disabledDevices == NULL) {
 		disabledDevices = malloc(sizeof(*disabledDevices) * ndev);
@@ -251,11 +249,16 @@ static void x11_force_dpms_display_level(const bool on)
 
 static void display_state_trigger(gconstpointer data)
 {
-	(void)data;
-	if (datapipe_get_gint(display_state_pipe) == MCE_DISPLAY_OFF)
-		x11_force_dpms_display_level(false);
-	else
-		x11_force_dpms_display_level(true);
+	static display_state_t old_state = MCE_DISPLAY_UNDEF;
+	display_state_t new_state = (display_state_t)data;
+	
+	if (new_state != old_state) {
+		if (new_state == MCE_DISPLAY_OFF)
+			x11_force_dpms_display_level(false);
+		else
+			x11_force_dpms_display_level(true);
+		old_state = new_state;
+	}
 }
 
 G_MODULE_EXPORT const gchar *g_module_check_init(GModule *module);
