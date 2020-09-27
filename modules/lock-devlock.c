@@ -21,12 +21,12 @@
 #include <glib.h>
 
 #include <stdlib.h>
+#include <gmodule.h>
 #include "libdevlock.h"
 #include <mce/mode-names.h>
 #include <systemui/dbus-names.h>
 #include <systemui/devlock-dbus-names.h>
 #include "mce.h"
-#include "devlock.h"
 #include "mce-io.h"
 #include "mce-log.h"
 #include "mce-conf.h"
@@ -34,6 +34,51 @@
 #include "mce-dsme.h"
 #include "mce-gconf.h"
 #include "datapipe.h"
+
+#define MODULE_NAME		"lock-devlock"
+
+#define MODULE_PROVIDES	"devlock"
+
+static const char *const provides[] = { MODULE_PROVIDES, NULL };
+
+G_MODULE_EXPORT module_info_struct module_info = {
+	.name = MODULE_NAME,
+	.provides = provides,
+	.priority = 1000
+};
+
+#define MCE_CONF_DEVLOCK_GROUP			"DevLock"
+#define MCE_CONF_DEVLOCK_DELAY_0		"DevLockDelay0"
+#define MCE_CONF_DEVLOCK_DELAY_1		"DevLockDelay1"
+#define MCE_CONF_DEVLOCK_DELAY_2		"DevLockDelay2"
+#define MCE_CONF_DEVLOCK_DELAY_3		"DevLockDelay3"
+#define MCE_CONF_DEVLOCK_SHUTDOWN_TIMEOUT	"DevLockShutdownTimeout"
+
+#ifndef MCE_GCONF_LOCK_PATH
+#define MCE_GCONF_LOCK_PATH		"/system/osso/dsm/locks"
+#endif /* MCE_GCONF_LOCK_PATH */
+
+#define DEFAULT_DEVICE_AUTOLOCK_ENABLED		FALSE
+#define DEFAULT_DEVICE_AUTOLOCK_TIMEOUT		10
+#define DEFAULT_DEVICE_LOCK_FAILED		0
+#define DEFAULT_DEVICE_LOCK_TOTAL_FAILED	0
+
+#define MCE_GCONF_DEVICE_AUTOLOCK_ENABLED_PATH	MCE_GCONF_LOCK_PATH "/devicelock_autolock_enabled"
+#define MCE_GCONF_DEVICE_AUTOLOCK_TIMEOUT_PATH	MCE_GCONF_LOCK_PATH "/devicelock_autolock_timeout"
+#define MCE_GCONF_DEVICE_LOCK_FAILED_PATH	MCE_GCONF_LOCK_PATH "/devicelock_failed"
+#define MCE_GCONF_DEVICE_LOCK_TOTAL_FAILED_PATH	MCE_GCONF_LOCK_PATH "/devicelock_total_failed"
+
+#define MCE_DEVLOCK_CB_REQ		"devlock_callback"
+
+/** Default lock delays in seconds */
+enum {
+	DEFAULT_LOCK_DELAY_0 = 0,
+	DEFAULT_LOCK_DELAY_1 = 1,
+	DEFAULT_LOCK_DELAY_2 = 1,
+	DEFAULT_LOCK_DELAY_3 = 5,
+};
+
+#define DEFAULT_SHUTDOWN_TIMEOUT	0
 
 static gint device_lock_failed = DEFAULT_DEVICE_LOCK_FAILED;
 static gint device_lock_total_failed = DEFAULT_DEVICE_LOCK_TOTAL_FAILED;
@@ -677,8 +722,10 @@ static void system_state_trigger(gconstpointer data)
 	old_system_state = system_state;
 }
 
-gboolean mce_devlock_init(void)
+G_MODULE_EXPORT const char *g_module_check_init(GModule * module);
+const char *g_module_check_init(GModule * module)
 {
+	(void)module;
 	gboolean status = FALSE;
 
 	append_output_trigger_to_datapipe(&device_inactive_pipe,
@@ -766,11 +813,13 @@ gboolean mce_devlock_init(void)
 	status = TRUE;
 
 EXIT:
-	return status;
+	return status ? NULL : "Failure";
 }
 
-void mce_devlock_exit(void)
+G_MODULE_EXPORT void g_module_unload(GModule * module);
+void g_module_unload(GModule * module)
 {
+	(void)module;
 	if (devlock_autorelock_notify_cb_id)
 		devlock_notify_remove(devlock_autorelock_notify_cb_id);
 

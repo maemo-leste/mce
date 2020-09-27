@@ -22,6 +22,7 @@
  */
 #include <glib.h>
 #include <glib/gstdio.h>
+#include <gmodule.h>
 #include <string.h>
 #include <unistd.h>
 #include <linux/input.h>
@@ -30,7 +31,6 @@
 #include <systemui/tklock-dbus-names.h>
 
 #include "mce.h"
-#include "tklock.h"
 #include "mce-io.h"
 #include "mce-log.h"
 #include "datapipe.h"
@@ -38,6 +38,86 @@
 #include "mce-dbus.h"
 #include "mce-gconf.h"
 #include "event-input.h"
+
+#define MODULE_NAME		"lock-tklock"
+
+#define MODULE_PROVIDES	"lock"
+
+static const char *const provides[] = { MODULE_PROVIDES, NULL };
+
+G_MODULE_EXPORT module_info_struct module_info = {
+	.name = MODULE_NAME,
+	.provides = provides,
+	.priority = 1000
+};
+
+#ifndef MCE_GCONF_LOCK_PATH
+/** Path to the GConf settings for the touchscreen/keypad lock */
+#define MCE_GCONF_LOCK_PATH		"/system/osso/dsm/locks"
+#endif /* MCE_GCONF_LOCK_PATH */
+
+/** Default fallback setting for the touchscreen/keypad autolock */
+#define DEFAULT_TK_AUTOLOCK		FALSE		/* FALSE / TRUE */
+
+/** Path to the touchscreen/keypad autolock GConf setting */
+#define MCE_GCONF_TK_AUTOLOCK_ENABLED_PATH	MCE_GCONF_LOCK_PATH "/touchscreen_keypad_autolock_enabled"
+
+/** Name of D-Bus callback to provide to Touchscreen/Keypad Lock SystemUI */
+#define MCE_TKLOCK_CB_REQ		"tklock_callback"
+/** Delay before the touchscreen/keypad is unlocked */
+#define MCE_TKLOCK_UNLOCK_DELAY		500		/**< 0.5 seconds */
+
+#ifndef MCE_CONF_TKLOCK_GROUP
+/** Name of Touchscreen/Keypad lock configuration group */
+#define MCE_CONF_TKLOCK_GROUP		"TKLock"
+#endif /* MCE_CONF_TKLOCK_GROUP */
+
+/** Name of configuration key for touchscreen/keypad immediate blanking */
+#define MCE_CONF_BLANK_IMMEDIATELY	"BlankImmediately"
+
+/** Name of configuration key for touchscreen/keypad immediate dimming */
+#define MCE_CONF_DIM_IMMEDIATELY	"DimImmediately"
+
+/** Name of configuration key for touchscreen/keypad dim timeout */
+#define MCE_CONF_DIM_DELAY		"DimDelay"
+
+/** Name of configuration key for touchscreen immediate disabling */
+#define MCE_CONF_TS_OFF_IMMEDIATELY	"DisableTSImmediately"
+
+/** Name of configuration key for keyboard slide autolock */
+#define MCE_CONF_AUTOLOCK_SLIDE_OPEN	"AutolockWhenSlideOpen"
+
+/** Name of configuration key for lens cover triggered tklock unlocking */
+#define MCE_CONF_LENS_COVER_UNLOCK	"LensCoverUnlock"
+
+/** Default fallback setting for tklock immediate blanking */
+#define DEFAULT_BLANK_IMMEDIATELY	FALSE		/* FALSE / TRUE */
+
+/** Default fallback setting for tklock immediate dimming */
+#define DEFAULT_DIM_IMMEDIATELY		FALSE		/* FALSE / TRUE */
+
+/** Default visual lock blank timeout */
+#define DEFAULT_VISUAL_BLANK_DELAY	5000		/* 5 seconds */
+
+/** Default visual lock blank timeout */
+#define DEFAULT_VISUAL_FORCED_BLANK_DELAY	30000	/* 30 seconds */
+
+/** Default delay before the display dims */
+#define DEFAULT_DIM_DELAY		3000		/* 3 seconds */
+
+/** Default fallback setting for touchscreen immediate disabling */
+#define DEFAULT_TS_OFF_IMMEDIATELY	TRUE		/* FALSE / TRUE */
+
+/** Default fallback setting for autolock with open keyboard slide */
+#define DEFAULT_AUTOLOCK_SLIDE_OPEN	FALSE		/* FALSE */
+
+/** Default fallback setting for lens cover triggered tklock unlocking */
+#define DEFAULT_LENS_COVER_UNLOCK	TRUE		/* TRUE */
+
+/** Default fallback setting for proximity lock when callstate == ringing */
+#define DEFAULT_PROXIMITY_LOCK_WHEN_RINGING	TRUE		/* TRUE */
+
+#define DEFAULT_PROXIMITY_UNLOCK_DELAY 500 /* 0.5 second */
 
 /**
  * TRUE if the touchscreen/keypad autolock is enabled,
@@ -76,9 +156,6 @@ static gint dim_delay = DEFAULT_DIM_DELAY;
 /** Disable touchscreen immediately on tklock instead of at blank */
 static gboolean disable_ts_immediately = DEFAULT_TS_OFF_IMMEDIATELY;
 
-/** Disable keypad immediately on tklock instead of at blank */
-static gint disable_kp_immediately = DEFAULT_KP_OFF_IMMEDIATELY;
-
 /** Inhibit autolock when slide is open */
 static gboolean autolock_with_open_slide = DEFAULT_AUTOLOCK_SLIDE_OPEN;
 
@@ -88,21 +165,9 @@ static gboolean lens_cover_unlock = DEFAULT_LENS_COVER_UNLOCK;
 /** Proximity based locking when the phone is ringing */
 static gboolean proximity_lock_when_ringing = DEFAULT_PROXIMITY_LOCK_WHEN_RINGING;
 
-/** SysFS path to touchscreen event disable */
-static const gchar *mce_touchscreen_sysfs_disable_path = NULL;
-
-/** SysFS path to keypad event disable */
-static const gchar *mce_keypad_sysfs_disable_path = NULL;
-
 /** Submode at the beginning of a call */
 static submode_t saved_submode = MCE_INVALID_SUBMODE;
 static submode_t call_submode = MCE_INVALID_SUBMODE;
-
-static gint keypad_off_prevent_timeout = DISABLE_KEYPAD_PREVENT_TIMEOUT;
-
-static guint keypad_off_prevent_timeout_cb_id = 0;
-
-static gboolean keypad_off_prevent_event = 0; 
 
 /** TKLock UI state type */
 typedef enum {
@@ -166,7 +231,6 @@ static gboolean tklock_disable_timeout_cb(gpointer data);
  * @return TRUE if the event eater is enabled,
  *         FALSE if the event eater is disabled
  */
-static gboolean is_eveater_enabled(void) G_GNUC_PURE;
 static gboolean is_eveater_enabled(void)
 {
 	return ((mce_get_submode_int32() & MCE_EVEATER_SUBMODE) != 0);
@@ -178,13 +242,11 @@ static gboolean is_eveater_enabled(void)
  * @return TRUE if the touchscreen/keypad lock is enabled,
  *         FALSE if the touchscreen/keypad lock is disabled
  */
-static gboolean is_tklock_enabled(void) G_GNUC_PURE;
 static gboolean is_tklock_enabled(void)
 {
 	return ((mce_get_submode_int32() & MCE_TKLOCK_SUBMODE) != 0);
 }
 
-static void update_saved_submode(void);
 static void update_saved_submode(void)
 {
 	call_submode = MCE_INVALID_SUBMODE;
@@ -205,7 +267,6 @@ static void update_saved_submode(void)
  * @return TRUE if the visual touchscreen/keypad lock is enabled,
  *         FALSE if the visual touchscreen/keypad lock is disabled
  */
-static gboolean is_visual_tklock_enabled(void) G_GNUC_PURE;
 static gboolean is_visual_tklock_enabled(void)
 {
 	return ((mce_get_submode_int32() & MCE_VISUAL_TKLOCK_SUBMODE) != 0);
@@ -217,7 +278,6 @@ static gboolean is_visual_tklock_enabled(void)
  * @return TRUE if the autorelock is enabled,
  *         FALSE if the autorelock is disabled
  */
-static gboolean is_autorelock_enabled(void) G_GNUC_PURE;
 static gboolean is_autorelock_enabled(void)
 {
 	return ((mce_get_submode_int32() & MCE_AUTORELOCK_SUBMODE) != 0);
@@ -296,46 +356,6 @@ EXIT:
 	return;
 }
 
-
-/**
- * Enable/disable touchscreen/keypad events
- *
- * @param file Path to enable/disable file
- * @param enable TRUE enable events, FALSE disable events
- * @return TRUE on success, FALSE on failure
- */
-static gboolean generic_event_control(const gchar *const file,
-				      const gboolean enable)
-{
-	gboolean status = FALSE;
-
-	/* If no filename is specified, there is no interface
-	 * for event control available; just smile and be happy
-	 */
-	if (file == NULL) {
-		mce_log(LL_DEBUG,
-			"No event control interface available; "
-			"request ignored");
-		status = TRUE;
-		goto EXIT;
-	}
-
-	if (mce_write_number_string_to_file(file, !enable ? 1 : 0) == FALSE) {
-		mce_log(LL_ERR,
-			"%s: Event status *not* modified",
-			file);
-		goto EXIT;
-	}
-
-	mce_log(LL_DEBUG,
-		"%s: events %s\n",
-		file, enable ? "enabled" : "disabled");
-	status = TRUE;
-
-EXIT:
-	return status;
-}
-
 /**
  * Enable/disable touchscreen events
  *
@@ -351,98 +371,11 @@ static gboolean ts_event_control(gboolean enable)
 }
 
 /**
- * Enable/disable keypad events
- *
- * @param enable TRUE enable events, FALSE disable events
- * @return TRUE on success, FALSE on failure
- */
-static gboolean kp_event_control(gboolean enable)
-{
-	return generic_event_control(mce_keypad_sysfs_disable_path, enable);
-}
-
-/**
- * Enable touchscreen (events will be generated by kernel)
- *
- * @return TRUE on success, FALSE on failure
- */
-static gboolean ts_enable(void)
-{
-	return ts_event_control(TRUE);
-}
-
-/**
- * Disable touchscreen (no events will be generated by kernel)
- *
- * @return TRUE on success, FALSE on failure
- */
-static gboolean ts_disable(void)
-{
-	return ts_event_control(FALSE);
-}
-
-/**
- * Enable keypad (events will be generated by kernel)
- *
- * @return TRUE on success, FALSE on failure
- */
-static gboolean kp_enable(void)
-{
-	return kp_event_control(TRUE);
-}
-
-/**
- * Disable keypad (no events will be generated by kernel)
- *
- * @return TRUE on success, FALSE on failure
- */
-static gboolean kp_disable(void)
-{
-	return kp_event_control(FALSE);
-}
-
-/**
- * Enable touchscreen and keypad
+ * Policy based enabling of touchscreen
  *
  * @return TRUE on success, FALSE on failure or partial failure
  */
-static gboolean ts_kp_enable(void)
-{
-	gboolean status = TRUE;
-
-	if (kp_enable() == FALSE)
-		status = FALSE;
-
-	if (ts_enable() == FALSE)
-		status = FALSE;
-
-	return status;
-}
-
-/**
- * Disable touchscreen and keypad
- *
- * @return TRUE on success, FALSE on failure or partial failure
- */
-static gboolean ts_kp_disable(void)
-{
-	gboolean status = TRUE;
-
-	if (kp_disable() == FALSE)
-		status = FALSE;
-
-	if (ts_disable() == FALSE)
-		status = FALSE;
-
-	return status;
-}
-
-/**
- * Policy based enabling of touchscreen and keypad
- *
- * @return TRUE on success, FALSE on failure or partial failure
- */
-static gboolean ts_kp_enable_policy(void)
+static gboolean ts_enable_policy(void)
 {
 	system_state_t system_state = datapipe_get_gint(system_state_pipe);
 	cover_state_t lid_cover_state = datapipe_get_gint(lid_cover_pipe);
@@ -457,7 +390,7 @@ static gboolean ts_kp_enable_policy(void)
 	if ((system_state == MCE_STATE_USER) ||
 	    (alarm_ui_state == MCE_ALARM_UI_RINGING_INT32) ||
 	    (alarm_ui_state == MCE_ALARM_UI_VISIBLE_INT32)) {
-		if (ts_kp_enable() == FALSE)
+		if (ts_event_control(TRUE) == FALSE)
 			goto EXIT;
 	}
 
@@ -469,23 +402,22 @@ EXIT:
 }
 
 /**
- * Policy based disabling of touchscreen and keypad
+ * Policy based disabling of touchscreen
  *
  * @return TRUE on success, FALSE on failure
  */
-static gboolean ts_kp_disable_policy(void)
+static gboolean ts_disable_policy(void)
 {
 	display_state_t display_state = datapipe_get_gint(display_state_pipe);
 	system_state_t system_state = datapipe_get_gint(system_state_pipe);
 	alarm_ui_state_t alarm_ui_state =
 				datapipe_get_gint(alarm_ui_state_pipe);
 	submode_t submode = mce_get_submode_int32();
-	call_state_t call_state = datapipe_get_gint(call_state_pipe);
 	gboolean status = FALSE;
 
 	/* If we're in softoff submode, always disable */
 	if ((submode & MCE_SOFTOFF_SUBMODE) != 0) {
-		if (ts_kp_disable() == FALSE)
+		if (ts_event_control(FALSE) == FALSE)
 			goto EXIT;
 
 		goto EXIT2;
@@ -503,42 +435,16 @@ static gboolean ts_kp_disable_policy(void)
 		goto EXIT2;
 	}
 
-	if (system_state != MCE_STATE_USER) {
-		if (ts_kp_disable() == FALSE)
-			goto EXIT;
-	} else if ((display_state == MCE_DISPLAY_OFF) &&
-		   (is_tklock_enabled() == TRUE)) {
-		if (disable_kp_immediately == 2) {
-			if (ts_disable() == FALSE)
-				goto EXIT;
-		} else if (disable_kp_immediately == 1) {
-			if (keypad_off_prevent_event == 1){
-				if (ts_disable() == FALSE)
+	if (system_state != MCE_STATE_USER)
+	{
+		if (ts_event_control(FALSE) == FALSE)
 					goto EXIT;
-			}else {
-				/*  Don't disable kp during call (volume must work) */
-				if (call_state != CALL_STATE_NONE) {
-					if (ts_disable() == FALSE)
-						goto EXIT;
-				} else {
-					if (ts_kp_disable() == FALSE) {
-						goto EXIT;
-					}
-				}
-			}
-		} else if (ts_kp_disable() == FALSE) {
-			goto EXIT;
-		}
-	} else if (is_tklock_enabled() == TRUE) {
-		/*  Don't disable kp during call (volume must work) */
-		if ((disable_kp_immediately == 1) && (call_state == CALL_STATE_NONE) && (keypad_off_prevent_event != 1)) {
-			if (kp_disable() == FALSE)
-				goto EXIT;
-		}
-
-		if (disable_ts_immediately == TRUE)
-			if (ts_disable() == FALSE)
-				goto EXIT;
+	} else if((display_state == MCE_DISPLAY_OFF) && (is_tklock_enabled() == TRUE)) {
+		if (ts_event_control(FALSE) == FALSE)
+					goto EXIT;
+	} else if (is_tklock_enabled() == TRUE && disable_ts_immediately == TRUE) {
+		if (ts_event_control(FALSE) == FALSE)
+					goto EXIT;
 	}
 
 EXIT2:
@@ -982,7 +888,7 @@ static gboolean enable_tklock_policy(gboolean force_blank)
 	setup_dim_blank_timeout_policy(force_blank);
 
 	/* Disable touchscreen and keypad */
-	(void)ts_kp_disable_policy();
+	(void)ts_disable_policy();
 
 	status = TRUE;
 
@@ -1039,7 +945,7 @@ static gboolean disable_tklock(gboolean silent)
 	mce_rem_submode_int32(MCE_VISUAL_TKLOCK_SUBMODE);
 	mce_rem_submode_int32(MCE_TKLOCK_SUBMODE);
 	(void)mce_send_tklock_mode(NULL);
-	(void)ts_kp_enable();
+	(void)ts_event_control(TRUE);
 	status = TRUE;
 
 EXIT:
@@ -1215,7 +1121,7 @@ static gboolean enable_autokeylock(void)
 	     (call_state == CALL_STATE_NONE))) {
 		if ((status = enable_tklock(TRUE)) == TRUE)
 		{
-			(void)ts_kp_disable_policy();
+			(void)ts_disable_policy();
 		} else {
 			disable_eveater(TRUE);
 			disable_tklock(TRUE);
@@ -1347,7 +1253,7 @@ static gboolean tklock_mode_get_req_dbus_cb(DBusMessage *const msg)
 {
 	gboolean status = FALSE;
 
-	mce_log(LL_DEBUG, "Received tklock mode get request");
+	mce_log(LL_DEBUG, "%s: Received tklock mode get request", MODULE_NAME);
 
 	/* Try to send a reply that contains the current tklock mode */
 	if (mce_send_tklock_mode(msg) == FALSE)
@@ -1482,58 +1388,6 @@ EXIT:
 	return status;
 }
 
-static gboolean keypad_off_prevent_timeout_cb(gpointer data)
-{
-	(void)data;
-	keypad_off_prevent_timeout_cb_id = 0;
-	keypad_off_prevent_event = 0;
-	if (is_tklock_enabled() == TRUE) {
-		if (kp_disable() == FALSE) {
-			mce_log(LL_WARN, " Couldn't disable keypad!");
-		}
-	}
-	return FALSE;
-}
-
-static void request_keypad_off_pause(void)
-{
-	keypad_off_prevent_event = 1;
-	if (keypad_off_prevent_timeout_cb_id  != 0) {
-		g_source_remove(keypad_off_prevent_timeout_cb_id );
-		keypad_off_prevent_timeout_cb_id  = 0;
-	}else if (is_tklock_enabled() == TRUE) {
-		if (kp_enable() == FALSE) {
-			mce_log(LL_WARN, " Couldn't enable keypad");
-		}
-	}
-	keypad_off_prevent_timeout_cb_id =
-		g_timeout_add_seconds(keypad_off_prevent_timeout,
-					  keypad_off_prevent_timeout_cb, NULL);
-}
-
-
-static gboolean keypad_off_pause_req_dbus_cb(DBusMessage *const msg)
-{
-	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
-	const gchar *sender = dbus_message_get_sender(msg);
-	gboolean status = FALSE;
-	mce_log(LL_DEBUG,
-		"Received keypad off prevent request from %s",
-		(sender == NULL) ? "(unknown)" : sender);
-	if (disable_kp_immediately != 2)
-	{
-		request_keypad_off_pause();
-	}
-	if (no_reply == FALSE) {
-		DBusMessage *reply = dbus_new_method_reply(msg);
-
-		status = dbus_send_message(reply);
-	} else {
-		status = TRUE;
-	}
-	return status;
-}
-
 /**
  * GConf callback for touchscreen/keypad lock related settings
  *
@@ -1552,8 +1406,8 @@ static void tklock_gconf_cb(GConfClient *const gcc, const guint id,
 
 	/* Key is unset */
 	if (gcv == NULL) {
-		mce_log(LL_DEBUG,
-			"GConf Key `%s' has been unset",
+		mce_log(LL_DEBUG, "%s: "
+			"GConf Key `%s' has been unset", MODULE_NAME,
 			gconf_entry_get_key(entry));
 		goto EXIT;
 	}
@@ -1561,7 +1415,7 @@ static void tklock_gconf_cb(GConfClient *const gcc, const guint id,
 	if (id == tk_autolock_enabled_cb_id) {
 		tk_autolock_enabled = gconf_value_get_bool(gcv) ? 1 : 0;
 	} else {
-		mce_log(LL_WARN, "Spurious GConf value received; confused!");
+		mce_log(LL_WARN, "%s: Spurious GConf value received; confused!", MODULE_NAME);
 	}
 
 EXIT:
@@ -1609,7 +1463,7 @@ static void process_proximity_state(void)
 	     ((alarm_ui_state == MCE_ALARM_UI_VISIBLE_INT32) ||
 	      (alarm_ui_state == MCE_ALARM_UI_RINGING_INT32))) &&
 	     (proximity_sensor_state == COVER_OPEN))) {
-		(void)ts_kp_enable_policy();
+		(void)ts_enable_policy();
 
 		if (is_tklock_enabled() || is_eveater_enabled()) {
 			/* Disable tklock/event eater */
@@ -1619,7 +1473,7 @@ static void process_proximity_state(void)
 				disable_tklock(TRUE);
 				goto EXIT;
 			}
-			mce_log(LL_DEBUG, "process_proximity_state: removing lock submodes");
+			mce_log(LL_DEBUG, "%s: process_proximity_state: removing lock submodes", MODULE_NAME);
 			mce_rem_submode_int32(MCE_EVEATER_SUBMODE);
 			mce_rem_submode_int32(MCE_TKLOCK_SUBMODE);
 			/* Disable timeouts, just to be sure */
@@ -1869,20 +1723,8 @@ static void touchscreen_trigger(gconstpointer const data)
  */
 static void system_state_trigger(gconstpointer data)
 {
-	system_state_t system_state = GPOINTER_TO_INT(data);
-
-	switch (system_state) {
-	case MCE_STATE_SHUTDOWN:
-	case MCE_STATE_REBOOT:
-	case MCE_STATE_ACTDEAD:
-		(void)ts_kp_disable_policy();
-		break;
-
-	case MCE_STATE_USER:
-	default:
-		(void)ts_kp_enable_policy();
-		break;
-	}
+	(void)data;
+	(void)ts_enable_policy();
 }
 
 /**
@@ -1900,15 +1742,12 @@ static void display_state_trigger(gconstpointer data)
 	switch (display_state) {
 	case MCE_DISPLAY_OFF:
 		if (tklock_ui_state == MCE_TKLOCK_UI_NORMAL)
-		{
 			break;
-		}
 		if (((alarm_ui_state != MCE_ALARM_UI_RINGING_INT32) &&
 		     (alarm_ui_state != MCE_ALARM_UI_RINGING_INT32)) &&
 		    (is_tklock_enabled() == TRUE)) {
-			if (enable_tklock(TRUE) == TRUE)
-			{
-				(void)ts_kp_disable_policy();
+			if (enable_tklock(TRUE) == TRUE) {
+				(void)ts_disable_policy();
 			} else {
 				disable_eveater(TRUE);
 				disable_tklock(TRUE);
@@ -1927,7 +1766,7 @@ static void display_state_trigger(gconstpointer data)
 		 */
 		if ((old_display_state == MCE_DISPLAY_UNDEF) ||
 		    (old_display_state == MCE_DISPLAY_OFF)) {
-			(void)ts_kp_enable_policy();
+			(void)ts_enable_policy();
 		}
 
 		break;
@@ -1939,7 +1778,7 @@ static void display_state_trigger(gconstpointer data)
 		 */
 		if ((old_display_state == MCE_DISPLAY_UNDEF) ||
 		    (old_display_state == MCE_DISPLAY_OFF)) {
-			(void)ts_kp_enable_policy();
+			(void)ts_enable_policy();
 		}
 		(void)disable_eveater(FALSE);
 		break;
@@ -1979,7 +1818,7 @@ static void alarm_ui_state_trigger(gconstpointer data)
 			enable_autorelock();
 			setup_dim_blank_timeout_policy(TRUE);
 		} else if (is_eveater_enabled() == TRUE) {
-			(void)ts_kp_enable_policy();
+			(void)ts_enable_policy();
 
 			if (open_tklock_ui(TKLOCK_ONEINPUT, TRUE) == FALSE) {
 				disable_eveater(TRUE);
@@ -1998,7 +1837,7 @@ static void alarm_ui_state_trigger(gconstpointer data)
 		ignore_proximity_events = 0;
 		get_submode();
 		if (proximity_sensor_state == COVER_OPEN) {
-			(void)ts_kp_enable_policy();
+			(void)ts_enable_policy();
 
 			autorelock_triggers = ~(~autorelock_triggers |
 				                AUTORELOCK_ON_PROXIMITY);
@@ -2031,7 +1870,7 @@ static void alarm_ui_state_trigger(gconstpointer data)
 		break;
 
 	case MCE_ALARM_UI_OFF_INT32:
-		(void)ts_kp_disable_policy();
+		(void)ts_disable_policy();
 		tklock_proximity = FALSE;
 		ignore_proximity_events = (call_state == CALL_STATE_INVALID) || (call_state == CALL_STATE_NONE);
 		mce_log(LL_DEBUG, "MCE_ALARM_UI_OFF_INT32(): ignore_proximity_events = %d",ignore_proximity_events);
@@ -2223,15 +2062,10 @@ static void submode_trigger(gconstpointer data)
 	 * disable touchscreen and keypad events,
 	 * otherwise enable them
 	 */
-	if ((submode & MCE_SOFTOFF_SUBMODE) != 0) {
-		if ((old_submode & MCE_SOFTOFF_SUBMODE) == 0) {
-			(void)ts_kp_disable();
-		}
-	} else {
-		if ((old_submode & MCE_SOFTOFF_SUBMODE) != 0) {
-			(void)ts_kp_enable();
-		}
-	}
+	if ((submode & MCE_SOFTOFF_SUBMODE) != 0 && (old_submode & MCE_SOFTOFF_SUBMODE) == 0)
+		(void)ts_event_control(FALSE);
+	else if ((submode & MCE_SOFTOFF_SUBMODE) == 0 && (old_submode & MCE_SOFTOFF_SUBMODE) != 0)
+		(void)ts_event_control(TRUE);
 
 	old_submode = submode;
 }
@@ -2342,44 +2176,6 @@ static void audio_route_trigger(gconstpointer data)
 	process_proximity_state();
 }
 
-/**
- * Handle USB cable connection change
- *
- * @param data The usb cable state stored in a pointer
- */
-static void usb_cable_trigger(gconstpointer data)
-{
-	system_state_t system_state = datapipe_get_gint(system_state_pipe);
-	usb_cable_state_t usb_cable_state = GPOINTER_TO_INT(data);
-
-	if ((system_state != MCE_STATE_USER))
-		goto EXIT;
-
-	switch (usb_cable_state) {
-	case USB_CABLE_CONNECTED:
-		if (is_tklock_enabled() == TRUE) {
-			(void)disable_tklock(FALSE);
-		}
-		else
-		{
-			if (is_eveater_enabled())
-			{
-				disable_eveater(TRUE);
-				synthesise_activity();
-			}
-		}
-
-		break;
-
-	case USB_CABLE_DISCONNECTED:
-	default:
-		break;
-	}
-
-EXIT:
-	return;
-}
-
 static gboolean tklock_disable_timeout_cb(gpointer data)
 {
 	gboolean silent = GPOINTER_TO_INT(data);
@@ -2393,7 +2189,7 @@ static gboolean tklock_disable_timeout_cb(gpointer data)
 		mce_rem_submode_int32(MCE_VISUAL_TKLOCK_SUBMODE);
 		mce_rem_submode_int32(MCE_TKLOCK_SUBMODE);
 		(void)mce_send_tklock_mode(NULL);
-		(void)ts_kp_enable();
+		(void)ts_event_control(TRUE);
 		synthesise_activity();
 		unlock_attempts = 0;
 		return FALSE;
@@ -2419,37 +2215,13 @@ static gboolean tklock_disable_timeout_cb(gpointer data)
  * Init function for the touchscreen/keypad lock component
  *
  * @todo the call to disable_tklock needs error handling
- *
- * @return TRUE on success, FALSE on failure
+ * 
  */
-gboolean mce_tklock_init(void)
+G_MODULE_EXPORT const char *g_module_check_init(GModule * module);
+const char *g_module_check_init(GModule * module)
 {
+	(void)module;
 	gboolean status = FALSE;
-
-	/* Init event control files */
-	if (g_access(MCE_RX51_KEYBOARD_SYSFS_DISABLE_PATH, W_OK) == 0) {
-		mce_keypad_sysfs_disable_path =
-			MCE_RX51_KEYBOARD_SYSFS_DISABLE_PATH;
-	} else if (g_access(MCE_RX44_KEYBOARD_SYSFS_DISABLE_PATH, W_OK) == 0) {
-		mce_keypad_sysfs_disable_path =
-			MCE_RX44_KEYBOARD_SYSFS_DISABLE_PATH;
-	} else if (g_access(MCE_KEYPAD_SYSFS_DISABLE_PATH, W_OK) == 0) {
-		mce_keypad_sysfs_disable_path =
-			MCE_KEYPAD_SYSFS_DISABLE_PATH;
-	}
-
-	if (g_access(MCE_TOUCHSCREEN_SYSFS_DISABLE_PATH, W_OK) == 0) {
-		mce_touchscreen_sysfs_disable_path =
-			MCE_TOUCHSCREEN_SYSFS_DISABLE_PATH;
-	}
-	else if (g_access(MCE_TOUCHSCREEN_SYSFS_DISABLE_PATH_3x, W_OK) == 0) {
-		mce_touchscreen_sysfs_disable_path =
-			MCE_TOUCHSCREEN_SYSFS_DISABLE_PATH_3x;
-	}
-	else if (g_access(MCE_TOUCHSCREEN_SYSFS_DISABLE_PATH_4x, W_OK) == 0) {
-		mce_touchscreen_sysfs_disable_path =
-			MCE_TOUCHSCREEN_SYSFS_DISABLE_PATH_4x;
-	}
 
 	/* Close the touchscreen/keypad lock and event eater UI,
 	 * to make sure MCE doesn't end up in a confused state
@@ -2489,8 +2261,6 @@ gboolean mce_tklock_init(void)
 					  call_state_trigger);
 	append_output_trigger_to_datapipe(&audio_route_pipe,
 					  audio_route_trigger);
-	append_output_trigger_to_datapipe(&usb_cable_pipe,
-					  usb_cable_trigger);
 
 	/* Touchscreen/keypad autolock */
 	/* Since we've set a default, error handling is unnecessary */
@@ -2527,13 +2297,6 @@ gboolean mce_tklock_init(void)
 				 systemui_tklock_dbus_cb) == NULL)
 		goto EXIT;
 
-	if (mce_dbus_handler_add(MCE_REQUEST_IF,
-				 MCE_PREVENT_KEYPAD_OFF_REQ,
-				 NULL,
-				 DBUS_MESSAGE_TYPE_METHOD_CALL,
-				 keypad_off_pause_req_dbus_cb) == NULL)
-		goto EXIT;
-
 	/* Get configuration options */
 	blank_immediately = mce_conf_get_bool(MCE_CONF_TKLOCK_GROUP,
 					      MCE_CONF_BLANK_IMMEDIATELY,
@@ -2555,11 +2318,6 @@ gboolean mce_tklock_init(void)
 						   DEFAULT_TS_OFF_IMMEDIATELY,
 						   NULL);
 
-	disable_kp_immediately = mce_conf_get_int(MCE_CONF_TKLOCK_GROUP,
-						  MCE_CONF_KP_OFF_IMMEDIATELY,
-						  DEFAULT_KP_OFF_IMMEDIATELY,
-						  NULL);
-
 	autolock_with_open_slide =
 		mce_conf_get_bool(MCE_CONF_TKLOCK_GROUP,
 				  MCE_CONF_AUTOLOCK_SLIDE_OPEN,
@@ -2574,7 +2332,7 @@ gboolean mce_tklock_init(void)
 	status = TRUE;
 
 EXIT:
-	return status;
+	return status ? NULL : "Failure";
 }
 
 /**
@@ -2582,11 +2340,11 @@ EXIT:
  *
  * @todo D-Bus unregistration
  */
-void mce_tklock_exit(void)
+G_MODULE_EXPORT void g_module_unload(GModule * module);
+void g_module_unload(GModule * module)
 {
+	(void)module;
 	/* Remove triggers/filters from datapipes */
-	remove_output_trigger_from_datapipe(&usb_cable_pipe,
-					    usb_cable_trigger);
 	remove_output_trigger_from_datapipe(&audio_route_pipe,
 					    audio_route_trigger);
 	remove_output_trigger_from_datapipe(&call_state_pipe,
@@ -2626,5 +2384,4 @@ void mce_tklock_exit(void)
 	cancel_tklock_unlock_timeout();
 	cancel_tklock_dim_timeout();
 
-	return;
 }
