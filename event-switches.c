@@ -45,9 +45,6 @@ static gconstpointer cam_launch_iomon_id = NULL;
 /** ID for the lid cover I/O monitor */
 static gconstpointer lid_cover_iomon_id = NULL;
 
-/** ID for the proximity sensor I/O monitor */
-static gconstpointer proximity_sensor_iomon_id = NULL;
-
 static gconstpointer tahvo_usb_cable_iomon_id = NULL;
 
 /** ID for the MUSB OMAP3 usb cable I/O monitor */
@@ -64,12 +61,6 @@ static gconstpointer lens_cover_iomon_id = NULL;
 
 /** ID for the battery cover I/O monitor */
 static gconstpointer bat_cover_iomon_id = NULL;
-
-/** Cached call state */
-static call_state_t call_state = CALL_STATE_INVALID;
-
-/** Cached alarm UI state */
-static alarm_ui_state_t alarm_ui_state = MCE_ALARM_UI_INVALID_INT32;
 
 /** Does the device have a flicker key? */
 gboolean has_flicker_key = FALSE;
@@ -202,30 +193,6 @@ static void lid_cover_cb(gpointer data, gsize bytes_read)
 }
 
 /**
- * I/O monitor callback for the proximity sensor
- *
- * @param data The new data
- * @param bytes_read Unused
- */
-void proximity_sensor_cb(gpointer data, gsize bytes_read)
-{
-	cover_state_t proximity_sensor_state;
-
-	(void)bytes_read;
-
-	if (!strncmp(data, MCE_PROXIMITY_SENSOR_OPEN,
-		     strlen(MCE_PROXIMITY_SENSOR_OPEN))) {
-		proximity_sensor_state = COVER_OPEN;
-	} else {
-		proximity_sensor_state = COVER_CLOSED;
-	}
-
-	(void)execute_datapipe(&proximity_sensor_pipe,
-			       GINT_TO_POINTER(proximity_sensor_state),
-			       USE_INDATA, CACHE_INDATA);
-}
-
-/**
  * I/O monitor callback for the USB cable
  *
  * @param data The new data
@@ -286,40 +253,6 @@ void lens_cover_cb(gpointer data, gsize bytes_read)
 	(void)execute_datapipe(&lens_cover_pipe,
 			       GINT_TO_POINTER(lens_cover_state),
 			       USE_INDATA, CACHE_INDATA);
-}
-
-/**
- * Update the proximity state
- *
- * @note Only gives reasonable readings when the proximity sensor is enabled
- * @return TRUE on success, FALSE on failure
- */
-static gboolean update_proximity_sensor_state(void)
-{
-	cover_state_t proximity_sensor_state;
-	gboolean status = FALSE;
-	gchar *tmp = NULL;
-
-	if (mce_read_string_from_file(MCE_PROXIMITY_SENSOR_STATE_PATH,
-				      &tmp) == FALSE) {
-		goto EXIT;
-	}
-
-	if (!strncmp(tmp, MCE_PROXIMITY_SENSOR_OPEN,
-		     strlen(MCE_PROXIMITY_SENSOR_OPEN))) {
-		proximity_sensor_state = COVER_OPEN;
-	} else {
-		proximity_sensor_state = COVER_CLOSED;
-	}
-
-	(void)execute_datapipe(&proximity_sensor_pipe,
-			       GINT_TO_POINTER(proximity_sensor_state),
-			       USE_INDATA, CACHE_INDATA);
-
-	g_free(tmp);
-
-EXIT:
-	return status;
 }
 
 static void gpio_keys_foreach (gpointer data, gpointer user_data)
@@ -414,50 +347,6 @@ static gboolean gpio_keys_enable_switch(int type, gint key, gboolean disable)
 }
 
 /**
- * Update the proximity monitoring
- */
-static void update_proximity_monitor(void)
-{
-	if ((call_state == CALL_STATE_RINGING) ||
-	    (call_state == CALL_STATE_ACTIVE) ||
-	    (alarm_ui_state == MCE_ALARM_UI_VISIBLE_INT32) ||
-	    (alarm_ui_state == MCE_ALARM_UI_RINGING_INT32)) {
-		mce_write_string_to_file(MCE_PROXIMITY_SENSOR_DISABLE_PATH,
-					 "0");
-		gpio_keys_enable_switch(EV_SW, SW_FRONT_PROXIMITY, FALSE);
-		(void)update_proximity_sensor_state();
-	} else {
-		mce_write_string_to_file(MCE_PROXIMITY_SENSOR_DISABLE_PATH,
-					 "1");
-		gpio_keys_enable_switch(EV_SW, SW_FRONT_PROXIMITY, TRUE);
-	}
-}
-
-/**
- * Handle call state change
- *
- * @param data The call state stored in a pointer
- */
-static void call_state_trigger(gconstpointer const data)
-{
-	call_state = GPOINTER_TO_INT(data);
-
-	update_proximity_monitor();
-}
-
-/**
- * Handle alarm UI state change
- *
- * @param data The alarm state stored in a pointer
- */
-static void alarm_ui_state_trigger(gconstpointer const data)
-{
-	alarm_ui_state = GPOINTER_TO_INT(data);
-
-	update_proximity_monitor();
-}
-
-/**
  * Handle submode change
  *
  * @param data The submode stored in a pointer
@@ -504,10 +393,6 @@ gboolean mce_switches_init(void)
 	gboolean status = FALSE;
 
 	/* Append triggers/filters to datapipes */
-	append_input_trigger_to_datapipe(&call_state_pipe,
-					 call_state_trigger);
-	append_input_trigger_to_datapipe(&alarm_ui_state_pipe,
-					 alarm_ui_state_trigger);
 	append_output_trigger_to_datapipe(&submode_pipe,
 					  submode_trigger);
 
@@ -543,11 +428,6 @@ gboolean mce_switches_init(void)
 					       MCE_LID_COVER_STATE_PATH,
 					       MCE_IO_ERROR_POLICY_IGNORE,
 					       TRUE, lid_cover_cb, handle_device_error_cb, NULL);
-	proximity_sensor_iomon_id =
-		mce_register_io_monitor_string(-1,
-					       MCE_PROXIMITY_SENSOR_STATE_PATH,
-					       MCE_IO_ERROR_POLICY_IGNORE,
-					       TRUE, proximity_sensor_cb, handle_device_error_cb, NULL);
 	musb_omap3_usb_cable_iomon_id =
 		mce_register_io_monitor_string(-1,
 					       MCE_MUSB_OMAP3_USB_CABLE_STATE_PATH,
@@ -580,8 +460,6 @@ gboolean mce_switches_init(void)
 					       MCE_IO_ERROR_POLICY_IGNORE,
 					       TRUE, generic_activity_cb, handle_device_error_cb, NULL);
 
-	update_proximity_monitor();
-
 	if (lockkey_iomon_id != NULL)
 		has_flicker_key = TRUE;
 
@@ -598,10 +476,6 @@ void mce_switches_exit(void)
 	/* Remove triggers/filters from datapipes */
 	remove_output_trigger_from_datapipe(&submode_pipe,
 					    submode_trigger);
-	remove_input_trigger_from_datapipe(&alarm_ui_state_pipe,
-					   alarm_ui_state_trigger);
-	remove_input_trigger_from_datapipe(&call_state_pipe,
-					   call_state_trigger);
 
 	/* Unregister I/O monitors */
 	mce_unregister_io_monitor(bat_cover_iomon_id);
@@ -609,7 +483,6 @@ void mce_switches_exit(void)
 	mce_unregister_io_monitor(mmc0_cover_iomon_id);
 	mce_unregister_io_monitor(lens_cover_iomon_id);
 	mce_unregister_io_monitor(tahvo_usb_cable_iomon_id);
-	mce_unregister_io_monitor(proximity_sensor_iomon_id);
 	mce_unregister_io_monitor(lid_cover_iomon_id);
 	mce_unregister_io_monitor(cam_launch_iomon_id);
 	mce_unregister_io_monitor(cam_focus_iomon_id);
