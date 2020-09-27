@@ -28,38 +28,17 @@
 
 #define MCE_CONF_LED_PATTERNS			"LEDPatterns"
 
-#define MCE_CONF_LED_PATTERN_RX34_GROUP		"LEDPatternMonoRX34"
-
-#define MCE_CONF_LED_PATTERN_RX44_GROUP		"LEDPatternNJoyRX44"
-
-#define MCE_CONF_LED_PATTERN_RX48_GROUP		"LEDPatternNJoyRX48"
-
 #define MCE_CONF_LED_PATTERN_RX51_GROUP		"LEDPatternLystiRX51"
 
 #define MCE_GCONF_LED_PATH			"/system/osso/dsm/leds"
 
 #define DEFAULT_PATTERN_ENABLED			TRUE
 
-#define DEFAULT_NJOY_LED_CURRENT		2	/* 4.7 mA */
-
 #define DEFAULT_LYSTI_RGB_LED_CURRENT		47	/* 4.7 mA */
-
-#define MCE_MONO_LED_SYS_PATH			"/sys/class/leds/keypad"
-#define MCE_MONO_LED_BRIGHTNESS_PATH		MCE_MONO_LED_SYS_PATH "/brightness"
-#define MCE_LED_ON_PERIOD_PATH			MCE_MONO_LED_SYS_PATH "/delay_on"
-#define MCE_LED_OFF_PERIOD_PATH			MCE_MONO_LED_SYS_PATH "/delay_off"
-#define MCE_LED_TRIGGER_PATH			MCE_MONO_LED_SYS_PATH "/trigger"
 
 #define MCE_LED_TRIGGER_TIMER			"timer"
 #define MCE_LED_TRIGGER_NONE			"none"
 
-
-#define MCE_NJOY_LED_SYS_PATH			"/sys/devices/platform/i2c_omap.2/i2c-0/0-0032"
-#define MCE_NJOY_LED_BRIGHTNESS_PATH		MCE_NJOY_LED_SYS_PATH "/led_current"
-#define MCE_NJOY_LED_MODE_PATH			MCE_NJOY_LED_SYS_PATH "/mode"
-#define MCE_NJOY_LED_LOAD_PATH			MCE_NJOY_LED_SYS_PATH "/load"
-#define MCE_NJOY_LED_COLOUR_PATH		MCE_NJOY_LED_SYS_PATH "/color"
-#define MCE_NJOY_LED_CHANNELS_PATH		MCE_NJOY_LED_SYS_PATH "/active_channels"
 
 #define MCE_LYSTI_DIRECT_SYS_PATH		"/sys/class/leds/lp5523"
 
