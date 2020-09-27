@@ -37,6 +37,7 @@ static int cal_scale = 1000;
  */
 static int iio_als_get_light_value(GDBusProxy * proxy)
 {
+	(void)proxy;
 	GVariant *v;
 	GVariant *unit;
 	v = g_dbus_proxy_get_cached_property(iio_proxy, "LightLevel");
@@ -105,7 +106,9 @@ static void display_state_trigger(gconstpointer data)
 static void iio_als_properties_changed(GDBusProxy * proxy,
 				       GVariant * changed_properties, GStrv invalidated_properties, gpointer user_data)
 {
-
+	(void)proxy;
+	(void)invalidated_properties;
+	(void)user_data;
 	GVariantDict dict;
 
 	g_variant_dict_init(&dict, changed_properties);

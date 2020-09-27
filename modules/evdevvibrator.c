@@ -110,7 +110,7 @@ static bool bit_in_array(unsigned char *array, size_t bit)
 
 static bool ff_gain_set(const int fd, const int gain)
 {
-	struct input_event event;
+	struct input_event event = {0};
 	if (fd < 0)
 		return false;
 	event.type = EV_FF;
