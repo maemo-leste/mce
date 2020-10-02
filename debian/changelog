@@ -1,3 +1,9 @@
+mce (1.8.128.23) unstable; urgency=medium
+
+  * Add iio-accelerometer, led-sw and led-dbus modules (thanks uvos!)
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Fri, 02 Oct 2020 14:40:50 +0200
+
 mce (1.8.128.22) unstable; urgency=medium
 
   * Fix inactivity-inhibit module to only trigger when the display is not off
