@@ -100,18 +100,8 @@ static void resume_io_monitor(gpointer io_monitor, gpointer user_data)
  */
 static void unregister_io_monitor(gpointer io_monitor, gpointer user_data)
 {
-	/* If we opened an fd to monitor, retrieve it to ensure
-	 * that we can close it after unregistering the I/O monitor
-	 */
-	int fd = mce_get_io_monitor_fd(io_monitor);
-
 	(void)user_data;
-
 	mce_unregister_io_monitor(io_monitor);
-
-	/* Close the fd if there is one */
-	if (fd != -1)
-		close(fd);
 }
 
 /**
@@ -540,37 +530,37 @@ static void match_and_register_io_monitor(const gchar *filename)
 		goto EXIT;
 	} else if ((fd = mce_match_event_file(filename,
 					  touchscreen_event_drivers)) != -1) {
-		mce_log(LL_DEBUG, "Registering %s as touchscreen", filename);
+		mce_log(LL_DEBUG, "Registering %s as touchscreen fd: %i", filename, fd);
 		register_io_monitor_chunk(fd, filename, touchscreen_cb,
 					  &touchscreen_dev_list);
 		match = TRUE;
 	} else if ((fd = mce_match_event_file_by_caps(filename,
 					  touch_event_types, touch_event_keys)) != -1) {
-		mce_log(LL_DEBUG, "Registering %s as touchscreen", filename);
+		mce_log(LL_DEBUG, "Registering %s as touchscreen fd: %i", filename, fd);
 		register_io_monitor_chunk(fd, filename, touchscreen_cb,
 					  &touchscreen_dev_list);
 		match = TRUE;
 	} else if ((fd = mce_match_event_file(filename,
 					  keyboard_event_drivers)) != -1) {
-		mce_log(LL_DEBUG, "Registering %s as keyboard", filename);
+		mce_log(LL_DEBUG, "Registering %s as keyboard fd: %i", filename, fd);
 		register_io_monitor_chunk(fd, filename, keypress_cb,
 					  &keyboard_dev_list);
 		match = TRUE;
 	} else if ((fd = mce_match_event_file_by_caps(filename, power_event_types,
 					   power_event_keys)) != -1) {
-		mce_log(LL_DEBUG, "Registering %s as keyboard", filename);
+		mce_log(LL_DEBUG, "Registering %s as keyboard fd: %i", filename, fd);
 		register_io_monitor_chunk(fd, filename, keypress_cb,
 					  &keyboard_dev_list);
 		match = TRUE;
 	}  else if ((fd = mce_match_event_file_by_caps(filename, keyboard_event_types,
 					   keyboard_event_keys)) != -1) {
-		mce_log(LL_DEBUG, "Registering %s as keyboard", filename);
+		mce_log(LL_DEBUG, "Registering %s as keyboard fd: %i", filename, fd);
 		register_io_monitor_chunk(fd, filename, keypress_cb,
 					  &keyboard_dev_list);
 		match = TRUE;
 	} else if ((fd = mce_match_event_file_by_caps(filename, switch_event_types,
 					   switch_event_keys)) != -1) {
-		mce_log(LL_DEBUG, "Registering %s as switchboard", filename);
+		mce_log(LL_DEBUG, "Registering %s as switchboard fd: %i", filename, fd);
 		register_io_monitor_chunk(fd, filename, switch_cb,
 					  &switch_dev_list);
 		match = TRUE;
@@ -579,7 +569,7 @@ static void match_and_register_io_monitor(const gchar *filename)
 	if (!match) {
 		register_io_monitor_chunk(fd, filename, misc_cb,
 					  &misc_dev_list);
-		mce_log(LL_DEBUG, "Registering %s as misc input device", filename);
+		mce_log(LL_DEBUG, "Registering %s as misc input device fd: %i", filename, fd);
 	}
 
 EXIT:;
@@ -630,6 +620,19 @@ static void update_inputdevices(const gchar *device, gboolean add)
 	if (add == TRUE)
 		match_and_register_io_monitor(device);
 }
+
+/**
+ * Unregister monitors for touchscreen devices allocated by mce_scan_inputdevices
+ */
+static void unregister_touchscreen_devices(void) {
+	if (touchscreen_dev_list != NULL) {
+		mce_log(LL_DEBUG, "event-input: unbinding %u touchscreen devices", g_slist_length(touchscreen_dev_list));
+		g_slist_foreach(touchscreen_dev_list, (GFunc)unregister_io_monitor, NULL);
+		g_slist_free(touchscreen_dev_list);
+		touchscreen_dev_list = NULL;
+	}
+}
+
 
 /**
  * Unregister monitors for input devices allocated by mce_scan_inputdevices
@@ -717,34 +720,17 @@ static void match_ts_only(const gchar* filename) {
 					  touchscreen_event_drivers)) != -1) {
 		register_io_monitor_chunk(fd, filename, touchscreen_cb,
 					  &touchscreen_dev_list);
+		mce_log(LL_DEBUG, "Registering %s as touchscreen fd: %i", filename, fd);
 		return;
-	}
-	if ((fd = mce_match_event_file_by_caps(filename,
+	} else if ((fd = mce_match_event_file_by_caps(filename,
 					  touch_event_types, touch_event_keys)) != -1) {
 		register_io_monitor_chunk(fd, filename, touchscreen_cb,
 					  &touchscreen_dev_list);
+		mce_log(LL_DEBUG, "Registering %s as touchscreen fd: %i", filename, fd);
 		return;
 	}
 
 	close(fd);
-}
-
-
-static void mce_clear_touchscreen_devices(void) {
-	GSList *iter = touchscreen_dev_list;
-
-	if (touchscreen_dev_list == NULL)
-		return;
-
-	while ((iter) && (iter->data)) {
-		gconstpointer iomon_id = iter->data;
-		mce_unregister_io_monitor(iomon_id);
-
-		iter = iter->next;
-	}
-
-	g_slist_free(touchscreen_dev_list);
-	touchscreen_dev_list = NULL;
 }
 
 static void mce_reopen_touchscreen_devices(void) {
@@ -758,7 +744,7 @@ static void touchscreen_control_trigger(gconstpointer data) {
 	if (enable)
 		mce_reopen_touchscreen_devices();
 	else
-		mce_clear_touchscreen_devices();
+		unregister_touchscreen_devices();
 }
 
 /**
