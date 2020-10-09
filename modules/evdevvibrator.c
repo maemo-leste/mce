@@ -200,13 +200,28 @@ static int ff_device_open(const char *const deviceName)
 	int inputDevice = open(deviceName, O_RDWR);
 	if (inputDevice < 0)
 		return -4;
-	if (!ff_gain_set(inputDevice, 100))
+	if (!ff_gain_set(inputDevice, 100)) {
+		if (close(inputDevice) < 0) {
+			mce_log(LL_ERR, "%s: Can not close %i errno: %s", 
+					MODULE_NAME, inputDevice, strerror(errno));
+		}
 		return -1;
+	}
 	fffeatures features;
-	if (!ff_features_get(inputDevice, &features))
+	if (!ff_features_get(inputDevice, &features)) {
+		if (close(inputDevice) < 0) {
+			mce_log(LL_ERR, "%s: Can not close %i errno: %s", 
+					MODULE_NAME, inputDevice, strerror(errno));
+		}
 		return -2;
-	if (!features.periodic || !features.sine || !features.gain)
+	}
+	if (!features.periodic || !features.sine || !features.gain) {
+		if (close(inputDevice) < 0) {
+			mce_log(LL_ERR, "%s: Can not close %i errno: %s", 
+					MODULE_NAME, inputDevice, strerror(errno));
+		}
 		return -3;
+	}
 	return inputDevice;
 }
 
@@ -313,7 +328,7 @@ static gboolean vibrator_activate_pattern_dbus_cb(DBusMessage * const msg)
 
 	dbus_error_init(&error);
 
-	mce_log(LL_DEBUG, "Received activate vibrator pattern request");
+	mce_log(LL_DEBUG, "%s: Received activate vibrator pattern request", MODULE_NAME);
 
 	if (dbus_message_get_args(msg, &error,
 				  DBUS_TYPE_STRING, &patternName,
@@ -521,13 +536,12 @@ static void scan_device_cb(const char *filename)
 {
 	if (evdev_fd < 0) {
 		evdev_fd = ff_device_open(filename);
-		if (evdev_fd < 0) {
+		if (evdev_fd == -4) {
 			mce_log(LL_DEBUG,
-				"Can not open %s return: %i errno: %s",
-				filename, evdev_fd, strerror(errno));
-		} else {
-			mce_log(LL_INFO, "Using %s for force feedback",
-				filename);
+				"%s: Can not open %s errno: %s",
+				MODULE_NAME, filename, strerror(errno));
+		} else if (evdev_fd >= 0) {
+			mce_log(LL_INFO, "%s: Using %s for force feedback", MODULE_NAME, filename);
 		}
 	}
 }
