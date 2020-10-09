@@ -70,9 +70,8 @@ WARNINGS += -Wmissing-include-dirs -Wstrict-aliasing=2
 WARNINGS += -Wunsafe-loop-optimizations -Winvalid-pch
 WARNINGS += -Waddress -Wvolatile-register-var -Wstrict-overflow=5
 #WARNINGS += -Wmissing-format-attribute
-#WARNINGS += -Wswitch-enum -Wunreachable-code
+WARNINGS += -Wunreachable-code
 WARNINGS += -Wstack-protector
-#WARNINGS += -Werror
 
 COMMON_CFLAGS := $(WARNINGS)
 COMMON_CFLAGS += -D_GNU_SOURCE
@@ -80,15 +79,13 @@ COMMON_CFLAGS += -DG_DISABLE_DEPRECATED
 COMMON_CFLAGS += -DOSSOLOG_COMPILE
 COMMON_CFLAGS += -DMCE_VAR_DIR=$(VARDIR) -DMCE_RUN_DIR=$(RUNDIR)
 COMMON_CFLAGS += -DPRG_VERSION=$(VERSION)
-#COMMON_CFLAGS += -funit-at-a-time -fwhole-program -combine
-#COMMON_CFLAGS += -fstack-protector
 
 MCE_CFLAGS := $(COMMON_CFLAGS)
 MCE_CFLAGS += -DMCE_CONF_FILE=$(CONFFILE) -DMCE_CONF_DIR=$(CONFDIR) -DMCE_CONF_OVERRIDE_DIR=$(OVRCONFDIR)
 MCE_CFLAGS += $$(pkg-config glib-2.0 gio-2.0 gmodule-2.0 dbus-1 dbus-glib-1 gconf-2.0 osso-systemui-dbus conic x11 xi --cflags)
 MCE_LDFLAGS := $$(pkg-config glib-2.0 gio-2.0 gmodule-2.0 dbus-1 dbus-glib-1 gconf-2.0 dsme osso-systemui-dbus conic libdevlock1 x11 xi xext --libs)
-LIBS := modetransition.c powerkey.c connectivity.c mce-dbus.c mce-gconf.c event-input.c event-switches.c mce-hal.c mce-log.c mce-conf.c datapipe.c mce-modules.c mce-io.c mce-lib.c event-input-utils.c
-HEADERS := modetransition.h powerkey.h connectivity.h mce.h mce-dbus.h mce-gconf.h event-input.h event-switches.h mce-hal.h mce-log.h mce-conf.h datapipe.h mce-modules.h mce-io.h mce-lib.h event-input-utils.h
+LIBS := modetransition.c powerkey.c connectivity.c mce-dbus.c mce-gconf.c event-input.c event-switches.c mce-log.c mce-conf.c datapipe.c mce-modules.c mce-io.c mce-lib.c event-input-utils.c
+HEADERS := modetransition.h powerkey.h connectivity.h mce.h mce-dbus.h mce-gconf.h event-input.h event-switches.h mce-log.h mce-conf.h datapipe.h mce-modules.h mce-io.h mce-lib.h event-input-utils.h
 
 MODULE_CFLAGS := $(COMMON_CFLAGS)
 MODULE_CFLAGS += -fPIC -shared
