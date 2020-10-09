@@ -850,8 +850,9 @@ void mce_unregister_io_monitor(gconstpointer io_monitor)
 	}
 
 	g_io_channel_unref(iomon->iochan);
-	if (iomon->fd != -1)
-		close(iomon->fd);
+	if(iomon->fd != -1 && close(iomon->fd) < 0) {
+		mce_log(LL_ERR, "mce-io: Can not close %i errno: %s", iomon->fd, strerror(errno));
+	}
 	g_free(iomon->file);
 	g_slice_free(iomon_struct, iomon);
 
@@ -864,13 +865,10 @@ gboolean mcs_io_monitor_seek_to_end(gconstpointer io_monitor)
 	iomon_struct *iomon = (iomon_struct *)io_monitor;
 	GError *error = NULL;
 	gboolean seek_success = FALSE;
-	loglevel_t loglevel = io_mon_get_log_level(iomon);
 
 	if ((g_io_channel_get_flags(iomon->iochan) & G_IO_FLAG_IS_SEEKABLE) == G_IO_FLAG_IS_SEEKABLE) {
 		g_io_channel_seek_position(iomon->iochan, 0, G_SEEK_END, &error);
-		if (error)
-			mce_log(loglevel, "%s %s", __func__, error->message);
-		else
+		if (!error)
 			seek_success = TRUE;
 		g_clear_error(&error);
 	}
