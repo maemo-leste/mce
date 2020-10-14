@@ -235,6 +235,8 @@ static gboolean priority_timeout_cb(gpointer data)
 	(void)data;
 
 	priority = 256;
+	
+	priority_timeout_cb_id = 0;
 
 	return FALSE;
 }
