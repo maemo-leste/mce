@@ -386,9 +386,9 @@ static void request_soft_poweroff(void)
 			 USE_INDATA, CACHE_INDATA);
 
 	/* Enable the soft poweroff LED pattern */
-	execute_datapipe_output_triggers(&led_pattern_activate_pipe,
-					 MCE_LED_PATTERN_DEVICE_SOFT_OFF,
-					 USE_INDATA);
+	gchar *pattern = g_strdup(MCE_LED_PATTERN_DEVICE_SOFT_OFF);
+	execute_datapipe(&led_pattern_activate_pipe, pattern, USE_INDATA, DONT_CACHE_INDATA);
+	g_free(pattern);
 }
 
 /**
@@ -594,8 +594,12 @@ static gboolean io_data_ready_cb(GIOChannel *source,
 
 		switch (newstate) {
 		case MCE_STATE_USER:
-			execute_datapipe_output_triggers(&led_pattern_activate_pipe, MCE_LED_PATTERN_DEVICE_ON, USE_INDATA);
+		{
+			gchar *pattern = g_strdup(MCE_LED_PATTERN_DEVICE_ON);
+			execute_datapipe(&led_pattern_activate_pipe, pattern, USE_INDATA, DONT_CACHE_INDATA);
+			g_free(pattern);
 			break;
+		}
 
 		case MCE_STATE_ACTDEAD:
 		case MCE_STATE_BOOT:

@@ -30,10 +30,6 @@
 
 #define MCE_CONF_LED_PATTERN_RX51_GROUP		"LEDPatternLystiRX51"
 
-#define MCE_GCONF_LED_PATH			"/system/osso/dsm/leds"
-
-#define DEFAULT_PATTERN_ENABLED			TRUE
-
 #define DEFAULT_LYSTI_RGB_LED_CURRENT		47	/* 4.7 mA */
 
 #define MCE_LED_TRIGGER_TIMER			"timer"
