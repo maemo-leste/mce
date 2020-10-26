@@ -505,7 +505,7 @@ int main(int argc, char **argv)
 		       0, GINT_TO_POINTER(0));
 	setup_datapipe(&led_brightness_pipe, READ_WRITE, DONT_FREE_CACHE,
 		       0, GINT_TO_POINTER(0));
-	setup_datapipe(&led_pattern_activate_pipe, READ_ONLY, FREE_CACHE,
+	setup_datapipe(&led_pattern_activate_pipe, READ_WRITE, DONT_FREE_CACHE,
 		       0, NULL);
 	setup_datapipe(&led_pattern_deactivate_pipe, READ_ONLY, FREE_CACHE,
 		       0, NULL);

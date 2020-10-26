@@ -27,13 +27,11 @@
 #include <string.h>
 #include <unistd.h>
 #include "mce.h"
-#include "led.h"
+#include "led-lysti.h"
 #include "mce-io.h"
 #include "mce-lib.h"
 #include "mce-log.h"
 #include "mce-conf.h"
-#include "mce-dbus.h"
-#include "mce-gconf.h"
 #include "datapipe.h"
 
 /** Module name */
@@ -91,7 +89,6 @@ typedef struct {
 	gint off_period;		/**< Pattern off-period in ms  */
 	gint brightness;		/**< Pattern brightness */
 	gboolean active;		/**< Is the pattern active? */
-	gboolean enabled;		/**< Is the pattern enabled? */
 	guint engine1_mux;		/**< Muxing for engine 1 */
 	guint engine2_mux;		/**< Muxing for engine 2 */
 	/** Pattern for the R-channel/engine 1 */
@@ -406,17 +403,12 @@ static void led_update_active_pattern(void)
 	while ((new_active_pattern = g_queue_peek_nth(pattern_stack,
 						      i++)) != NULL) {
 		mce_log(LL_DEBUG,
-			"pattern: %s, active: %d, enabled: %d",
+			"pattern: %s, active: %d",
 			new_active_pattern->name,
-			new_active_pattern->active,
-			new_active_pattern->enabled);
+			new_active_pattern->active);
 
 		/* If the pattern is deactivated, ignore */
 		if (new_active_pattern->active == FALSE)
-			continue;
-
-		/* If the pattern is disabled through GConf, ignore */
-		if (new_active_pattern->enabled == FALSE)
 			continue;
 
 		/* Always show pattern with visibility 3 or 5 */
@@ -601,7 +593,9 @@ static void led_brightness_trigger(gconstpointer data)
  */
 static void led_pattern_activate_trigger(gconstpointer data)
 {
-	led_activate_pattern((gchar *)data);
+	if (data) {
+		led_activate_pattern((gchar *)data);
+	}
 }
 
 /**
@@ -612,228 +606,6 @@ static void led_pattern_activate_trigger(gconstpointer data)
 static void led_pattern_deactivate_trigger(gconstpointer data)
 {
 	led_deactivate_pattern((gchar *)data);
-}
-
-/**
- * Custom find function to get a GConf callback ID in the pattern stack
- *
- * @param data The pattern_struct entry
- * @param userdata The pattern name
- */
-static gint gconf_cb_find(gconstpointer data, gconstpointer userdata)
-{
-	pattern_struct *psp;
-
-	if ((data == NULL) || (userdata == NULL))
-		return -1;
-
-	psp = (pattern_struct *)data;
-
-	return psp->gconf_cb_id != *(guint *)userdata;
-}
-
-/**
- * GConf callback for LED related settings
- *
- * @param gcc Unused
- * @param id Connection ID from gconf_client_notify_add()
- * @param entry The modified GConf entry
- * @param data Unused
- */
-static void led_gconf_cb(GConfClient *const gcc, const guint id,
-			 GConfEntry *const entry, gpointer const data)
-{
-	GConfValue *gcv = gconf_entry_get_value(entry);
-	pattern_struct *psp = NULL;
-	GList *glp = NULL;
-
-	(void)gcc;
-	(void)data;
-
-	/* Key is unset */
-	if (gcv == NULL) {
-		mce_log(LL_DEBUG,
-			"GConf Key `%s' has been unset",
-			gconf_entry_get_key(entry));
-		goto EXIT;
-	}
-
-	if ((glp = g_queue_find_custom(pattern_stack,
-				       &id, gconf_cb_find)) != NULL) {
-		psp = (pattern_struct *)glp->data;
-		psp->enabled = gconf_value_get_bool(gcv);
-		led_update_active_pattern();
-	} else {
-		mce_log(LL_WARN, "Spurious GConf value received; confused!");
-	}
-
-EXIT:
-	return;
-}
-
-/**
- * Get the enabled/disabled value from GConf and set up a notifier
- */
-static gboolean pattern_get_enabled(const gchar *const patternname,
-				    guint *gconf_cb_id)
-{
-	gboolean retval = DEFAULT_PATTERN_ENABLED;
-	gchar *path = gconf_concat_dir_and_key(MCE_GCONF_LED_PATH,
-					       patternname);
-
-	/* Since we've set a default, error handling is unnecessary */
-	(void)mce_gconf_get_bool(path, &retval);
-
-	if (mce_gconf_notifier_add(MCE_GCONF_LED_PATH, path,
-				   led_gconf_cb, gconf_cb_id) == FALSE)
-		goto EXIT;
-
-EXIT:
-	g_free(path);
-
-	return retval;
-}
-
-/**
- * D-Bus callback for the activate LED pattern method call
- *
- * @param msg The D-Bus message
- * @return TRUE on success, FALSE on failure
- */
-static gboolean led_activate_pattern_dbus_cb(DBusMessage *const msg)
-{
-	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
-	gboolean status = FALSE;
-	gchar *pattern = NULL;
-	DBusError error;
-
-	/* Register error channel */
-	dbus_error_init(&error);
-
-	mce_log(LL_DEBUG, "Received activate LED pattern request");
-
-	if (dbus_message_get_args(msg, &error,
-				  DBUS_TYPE_STRING, &pattern,
-				  DBUS_TYPE_INVALID) == FALSE) {
-		// XXX: should we return an error instead?
-		mce_log(LL_CRIT,
-			"Failed to get argument from %s.%s: %s",
-			MCE_REQUEST_IF, MCE_ACTIVATE_LED_PATTERN,
-			error.message);
-		dbus_error_free(&error);
-		goto EXIT;
-	}
-
-	led_activate_pattern(pattern);
-
-	if (no_reply == FALSE) {
-		DBusMessage *reply = dbus_new_method_reply(msg);
-
-		status = dbus_send_message(reply);
-	} else {
-		status = TRUE;
-	}
-
-EXIT:
-	return status;
-}
-
-/**
- * D-Bus callback for the deactivate LED pattern method call
- *
- * @param msg The D-Bus message
- * @return TRUE on success, FALSE on failure
- */
-static gboolean led_deactivate_pattern_dbus_cb(DBusMessage *const msg)
-{
-	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
-	gboolean status = FALSE;
-	gchar *pattern = NULL;
-	DBusError error;
-
-	/* Register error channel */
-	dbus_error_init(&error);
-
-	mce_log(LL_DEBUG, "Received deactivate LED pattern request");
-
-	if (dbus_message_get_args(msg, &error,
-				  DBUS_TYPE_STRING, &pattern,
-				  DBUS_TYPE_INVALID) == FALSE) {
-		// XXX: should we return an error instead?
-		mce_log(LL_CRIT,
-			"Failed to get argument from %s.%s: %s",
-			MCE_REQUEST_IF, MCE_DEACTIVATE_LED_PATTERN,
-			error.message);
-		dbus_error_free(&error);
-		goto EXIT;
-	}
-
-	led_deactivate_pattern(pattern);
-
-	if (no_reply == FALSE) {
-		DBusMessage *reply = dbus_new_method_reply(msg);
-
-		status = dbus_send_message(reply);
-	} else {
-		status = TRUE;
-	}
-
-EXIT:
-	return status;
-}
-
-/**
- * D-Bus callback for the enable LED method call
- *
- * @param msg The D-Bus message
- * @return TRUE on success, FALSE on failure
- */
-static gboolean led_enable_dbus_cb(DBusMessage *const msg)
-{
-	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
-	gboolean status = FALSE;
-
-	mce_log(LL_DEBUG, "Received LED enable request");
-
-	led_enable();
-
-	if (no_reply == FALSE) {
-		DBusMessage *reply = dbus_new_method_reply(msg);
-
-		status = dbus_send_message(reply);
-	} else {
-		status = TRUE;
-	}
-
-//EXIT:
-	return status;
-}
-
-/**
- * D-Bus callback for the disable LED method call
- *
- * @param msg The D-Bus message
- * @return TRUE on success, FALSE on failure
- */
-static gboolean led_disable_dbus_cb(DBusMessage *const msg)
-{
-	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
-	gboolean status = FALSE;
-
-	mce_log(LL_DEBUG, "Received LED disable request");
-
-	led_disable();
-
-	if (no_reply == FALSE) {
-		DBusMessage *reply = dbus_new_method_reply(msg);
-
-		status = dbus_send_message(reply);
-	} else {
-		status = TRUE;
-	}
-
-//EXIT:
-	return status;
 }
 
 static gboolean init_lysti_patterns(void)
@@ -955,9 +727,6 @@ static gboolean init_lysti_patterns(void)
 
 			psp->active = FALSE;
 
-			psp->enabled = pattern_get_enabled(patternlist[i],
-							   &(psp->gconf_cb_id));
-
 			psp->name = strdup(patternlist[i]);
 
 			g_strfreev(tmp);
@@ -1040,38 +809,6 @@ const gchar *g_module_check_init(GModule *module)
 	if (init_patterns() == FALSE)
 		goto EXIT;
 
-	/* req_led_pattern_activate */
-	if (mce_dbus_handler_add(MCE_REQUEST_IF,
-				 MCE_ACTIVATE_LED_PATTERN,
-				 NULL,
-				 DBUS_MESSAGE_TYPE_METHOD_CALL,
-				 led_activate_pattern_dbus_cb) == NULL)
-		goto EXIT;
-
-	/* req_led_pattern_deactivate */
-	if (mce_dbus_handler_add(MCE_REQUEST_IF,
-				 MCE_DEACTIVATE_LED_PATTERN,
-				 NULL,
-				 DBUS_MESSAGE_TYPE_METHOD_CALL,
-				 led_deactivate_pattern_dbus_cb) == NULL)
-		goto EXIT;
-
-	/* req_led_enable */
-	if (mce_dbus_handler_add(MCE_REQUEST_IF,
-				 MCE_ENABLE_LED,
-				 NULL,
-				 DBUS_MESSAGE_TYPE_METHOD_CALL,
-				 led_enable_dbus_cb) == NULL)
-		goto EXIT;
-
-	/* req_led_disable */
-	if (mce_dbus_handler_add(MCE_REQUEST_IF,
-				 MCE_DISABLE_LED,
-				 NULL,
-				 DBUS_MESSAGE_TYPE_METHOD_CALL,
-				 led_disable_dbus_cb) == NULL)
-		goto EXIT;
-
 	led_enable();
 
 EXIT:
@@ -1116,7 +853,6 @@ void g_module_unload(GModule *module)
 		pattern_struct *psp;
 
 		while ((psp = g_queue_pop_head(pattern_stack)) != NULL) {
-			mce_gconf_notifier_remove(GINT_TO_POINTER(psp->gconf_cb_id), NULL);
 			g_free(psp->name);
 			g_slice_free(pattern_struct, psp);
 		}
