@@ -229,9 +229,9 @@ mcebat_update_cb(gpointer user_data)
 
         /* Charging led pattern */
         if (mcebat.charger_connected) {
-            execute_datapipe_output_triggers(&led_pattern_activate_pipe,
-                                             MCE_LED_PATTERN_BATTERY_CHARGING,
-                                             USE_INDATA);
+			gchar *pattern = g_strdup(MCE_LED_PATTERN_BATTERY_CHARGING);
+			execute_datapipe(&led_pattern_activate_pipe, pattern, USE_CACHE, DONT_CACHE_INDATA);
+			g_free(pattern);
         }
         else {
             execute_datapipe_output_triggers(&led_pattern_deactivate_pipe,
@@ -249,9 +249,9 @@ mcebat_update_cb(gpointer user_data)
 
         /* Battery full led pattern */
         if (mcebat.status == BATTERY_STATUS_FULL) {
-            execute_datapipe_output_triggers(&led_pattern_activate_pipe,
-                                             MCE_LED_PATTERN_BATTERY_FULL,
-                                             USE_INDATA);
+			gchar *pattern = g_strdup(MCE_LED_PATTERN_BATTERY_FULL);
+			execute_datapipe(&led_pattern_activate_pipe, pattern, USE_CACHE, DONT_CACHE_INDATA);
+			g_free(pattern);
         }
         else if (prev.status == BATTERY_STATUS_FULL) {
             execute_datapipe_output_triggers(&led_pattern_deactivate_pipe,
@@ -263,9 +263,9 @@ mcebat_update_cb(gpointer user_data)
         /* Battery low led pattern */
         if (mcebat.status == BATTERY_STATUS_LOW ||
             mcebat.status == BATTERY_STATUS_EMPTY) {
-            execute_datapipe_output_triggers(&led_pattern_activate_pipe,
-                                             MCE_LED_PATTERN_BATTERY_LOW,
-                                             USE_INDATA);
+			gchar *pattern = g_strdup(MCE_LED_PATTERN_BATTERY_LOW);
+			execute_datapipe(&led_pattern_activate_pipe, pattern, USE_CACHE, DONT_CACHE_INDATA);
+			g_free(pattern);
         }
         else {
             execute_datapipe_output_triggers(&led_pattern_deactivate_pipe,

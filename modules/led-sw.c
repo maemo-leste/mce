@@ -86,16 +86,16 @@ struct led_pattern {
 };
 
 static struct led_pattern *led_patterns = NULL;
-unsigned int patterns_count = 0;
-bool monochromic = false;
+static unsigned int patterns_count = 0;
+static bool monochromic = false;
 static char* r_sysfs = NULL;
 static char* g_sysfs = NULL;
 static char* b_sysfs = NULL;
 static char* w_sysfs = NULL;
 
-bool led_enabled;
-display_state_t display_state = { 0 };
-system_state_t system_state = { 0 };
+static bool led_enabled;
+static display_state_t display_state = { 0 };
+static system_state_t system_state = { 0 };
 
 static void update_patterns(void);
 
@@ -352,20 +352,22 @@ static void led_enabled_trigger(gconstpointer data)
 static void led_pattern_activate_trigger(gconstpointer data)
 {
 	const gchar * const name = (const gchar * const)data;
-	bool found = false;
-	for (unsigned int i = 0; i < patterns_count; ++i) {
-		if (strcmp(led_patterns[i].name, name) == 0) {
-			found = true;
-			led_patterns[i].active = true;
-			update_patterns();
-			setup_disable_timer(&led_patterns[i]);
-			mce_log(LL_DEBUG, "%s: activate called on: %s", MODULE_NAME, name);
-			break;
+	if (name) {
+		bool found = false;
+		for (unsigned int i = 0; i < patterns_count; ++i) {
+			if (strcmp(led_patterns[i].name, name) == 0) {
+				found = true;
+				led_patterns[i].active = true;
+				update_patterns();
+				setup_disable_timer(&led_patterns[i]);
+				mce_log(LL_DEBUG, "%s: activate called on: %s", MODULE_NAME, name);
+				break;
+			}
 		}
+		
+		if (!found)
+			mce_log(LL_WARN, "%s: activate called on non exisiting pattern: %s", MODULE_NAME, name);
 	}
-	
-	if (!found)
-		mce_log(LL_WARN, "%s: activate called on non exisiting pattern: %s", MODULE_NAME, name);
 }
 
 static void led_pattern_deactivate_trigger(gconstpointer data)
