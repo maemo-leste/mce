@@ -22,6 +22,7 @@
 
 #include "mce.h"
 #include "mce-log.h"
+#include "mce-conf.h"
 #include "mce-dbus.h"
 
 #include <stdlib.h>
@@ -58,6 +59,10 @@ G_MODULE_EXPORT module_info_struct module_info = {
 /** How long we want battery state to be forced after charger state changed */
 #define FORCE_STATE_TIME 10
 
+#define MCE_CONF_BATTERY_SECTION "battery"
+#define MCE_CONF_CRIT_VOLTAGE_KEY "CriticalVoltage"
+#define MCE_CONF_LOW_PERCENT_KEY "LowPercentage"
+
 
 /** Skip these devices */
 static const char* blacklist[] = {
@@ -77,14 +82,16 @@ static struct {
 	UpDevice *battery;
 	UpDevice *charger;
 	gboolean  fallback;
-	gdouble   prev_voltage;
 	time_t    force_state;
+	gdouble min_voltage;
+	int low_percentage;
 } private = {0};
 
 /** Battery properties available via UPower */
 struct {
 	guint    state;
 	gdouble  percentage;
+	gdouble  voltage;
 	gboolean charger_online;
 } upowbat = {0};
 
@@ -107,6 +114,7 @@ static void
 upowbat_init(void)
 {
 	upowbat.percentage = 50;
+	upowbat.voltage    = 3.8;
 	upowbat.state = UP_DEVICE_STATE_UNKNOWN;
 }
 
@@ -127,6 +135,7 @@ static void
 upowbat_update(void)
 {
 	gdouble percentage;
+	gdouble voltage;
 	guint   state;
 
 	if (private.battery == NULL)
@@ -135,11 +144,17 @@ upowbat_update(void)
 	g_object_get(private.battery,
 				"percentage", &percentage,
 				"state", &state,
+				"voltage", &voltage,
 				NULL);
 
 	if (upowbat.percentage != percentage) {
-		mce_log(LL_DEBUG, "Percentage: %d -> %d", (int)upowbat.percentage, (int)percentage);
+		mce_log(LL_DEBUG, "%s: Percentage: %d -> %d", MODULE_NAME, (int)upowbat.percentage, (int)percentage);
 		upowbat.percentage = percentage;
+	}
+	
+	if (upowbat.voltage != voltage) {
+		mce_log(LL_DEBUG, "%s: Voltage: %f -> %f", MODULE_NAME, upowbat.voltage, voltage);
+		upowbat.voltage = voltage;
 	}
 
 	if (time(NULL) < private.force_state) {
@@ -156,7 +171,7 @@ upowbat_update(void)
 			/* Prevent 'fully charged' -> 'charging' transition */
 			return;
 		}
-		mce_log(LL_DEBUG, "State: %d -> %d", upowbat.state, state);
+		mce_log(LL_DEBUG, "%s: State: %d -> %d", MODULE_NAME, upowbat.state, state);
 		upowbat.state = state;
 	}
 }
@@ -169,11 +184,11 @@ mcebat_update_from_upowbat(void)
 {
 	mcebat.status = BATTERY_STATUS_OK;
 
-	// FIXME: hardcoded 5% as low battery limit
-	if (upowbat.percentage < 5)
-		mcebat.status = BATTERY_STATUS_LOW;
-	else if (upowbat.state == UP_DEVICE_STATE_EMPTY)
+	if (upowbat.state == UP_DEVICE_STATE_EMPTY || 
+		upowbat.voltage < private.min_voltage)
 		mcebat.status = BATTERY_STATUS_EMPTY;
+	else if (upowbat.percentage < private.low_percentage)
+		mcebat.status = BATTERY_STATUS_LOW;
 	else if (upowbat.state == UP_DEVICE_STATE_FULLY_CHARGED)
 		mcebat.status = BATTERY_STATUS_FULL;
 
@@ -209,8 +224,6 @@ mcebat_update_cb(gpointer user_data)
 
 	mcebat_update_id = 0;
 
-	mce_log(LL_INFO, "----( state machine )----");
-
 	/* Update from UPower based information */
 	upowbat_update();
 	mcebat_update_from_upowbat();
@@ -218,7 +231,7 @@ mcebat_update_cb(gpointer user_data)
 	/* Process changes */
 	if (prev.charger_connected != mcebat.charger_connected)
 	{
-		mce_log(LL_INFO, "charger: %s -> %s",
+		mce_log(LL_INFO, "%s: charger: %s -> %s", MODULE_NAME,
 				charger_state_repr(prev.charger_connected),
 				charger_state_repr(mcebat.charger_connected));
 
@@ -245,7 +258,7 @@ mcebat_update_cb(gpointer user_data)
 	}
 
 	if (prev.status != mcebat.status) {
-		mce_log(LL_INFO, "status: %d -> %d", prev.status, mcebat.status);
+		mce_log(LL_INFO, "%s: status: %d -> %d", MODULE_NAME, prev.status, mcebat.status);
 
 		/* Battery full led pattern */
 		if (mcebat.status == BATTERY_STATUS_FULL) {
@@ -379,11 +392,7 @@ xup_find_devices(void)
 	GPtrArray *devices;
 	guint      i;
 
-<<<<<<< Updated upstream
-    devices = up_client_get_devices2(private.client);
-=======
-	devices = up_client_get_devices(private.client);
->>>>>>> Stashed changes
+	devices = up_client_get_devices2(private.client);
 
 	for (i = 0;  i < devices->len;  i++)
 	{
@@ -620,6 +629,9 @@ const gchar *g_module_check_init(GModule *module)
 	/* Reset data used by the state machine */
 	mcebat_init();
 	upowbat_init();
+
+	private.min_voltage = mce_conf_get_int(MCE_CONF_BATTERY_SECTION, MCE_CONF_CRIT_VOLTAGE_KEY, 0, NULL)/1000;
+	private.low_percentage = mce_conf_get_int(MCE_CONF_BATTERY_SECTION, MCE_CONF_LOW_PERCENT_KEY, 5, NULL);
 
 	/* Find battery/charger devices and add them to private */
 	xup_find_devices();
