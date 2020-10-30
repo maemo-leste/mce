@@ -478,7 +478,7 @@ int main(int argc, char **argv)
 
 	/* Setup all datapipes */
 	setup_datapipe(&system_state_pipe, READ_WRITE, DONT_FREE_CACHE,
-		       0, GINT_TO_POINTER(MCE_STATE_UNDEF));
+		       0, GINT_TO_POINTER(MCE_STATE_USER));
 	setup_datapipe(&system_power_request_pipe, READ_WRITE, DONT_FREE_CACHE,
 		       0, GINT_TO_POINTER(MCE_POWER_REQ_UNDEF));
 	setup_datapipe(&mode_pipe, READ_WRITE, DONT_FREE_CACHE,
