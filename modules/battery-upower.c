@@ -379,7 +379,7 @@ xup_find_devices(void)
     GPtrArray *devices;
     guint      i;
 
-    devices = up_client_get_devices(private.client);
+    devices = up_client_get_devices2(private.client);
 
     for (i = 0;  i < devices->len;  i++)
     {
