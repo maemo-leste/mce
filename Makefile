@@ -35,6 +35,7 @@ MODULES := \
 	$(MODULE_DIR)/libcamera.so \
 	$(MODULE_DIR)/libalarm.so \
 	$(MODULE_DIR)/libbattery-upower.so \
+	$(MODULE_DIR)/libbattery-guard.so \
 	$(MODULE_DIR)/libdisplay.so \
 	$(MODULE_DIR)/libdisplay-dev.so \
 	$(MODULE_DIR)/libled.so \
