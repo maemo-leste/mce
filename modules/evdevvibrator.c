@@ -13,7 +13,6 @@
 #include <linux/input.h>
 #include "mce.h"
 #include "mce-io.h"
-#include "mce-hal.h"
 #include "mce-log.h"
 #include "mce-conf.h"
 #include "mce-dbus.h"

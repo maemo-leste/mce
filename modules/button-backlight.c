@@ -8,7 +8,6 @@
 #include "mce.h"
 #include "mce-io.h"
 #include "mce-lib.h"
-#include "mce-hal.h"
 #include "mce-dbus.h"
 #include "mce-log.h"
 #include "datapipe.h"
