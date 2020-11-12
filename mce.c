@@ -160,6 +160,7 @@ static void signal_handler(const gint signr)
 		break;
 
 	case SIGTERM:
+	case SIGINT:
 		g_main_loop_quit(mainloop);
 		break;
 
@@ -449,6 +450,7 @@ int main(int argc, char **argv)
 	signal(SIGUSR1, signal_handler);
 	signal(SIGHUP, signal_handler);
 	signal(SIGTERM, signal_handler);
+	signal(SIGINT, signal_handler);
 
 	/* Initialise GType system */
 #if !GLIB_CHECK_VERSION(2,35,0)
