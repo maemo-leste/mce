@@ -184,14 +184,6 @@ mcebat_update_from_upowbat(void)
 {
 	mcebat.status = BATTERY_STATUS_OK;
 
-	if (upowbat.state == UP_DEVICE_STATE_EMPTY || 
-		upowbat.voltage < private.min_voltage)
-		mcebat.status = BATTERY_STATUS_EMPTY;
-	else if (upowbat.percentage < private.low_percentage)
-		mcebat.status = BATTERY_STATUS_LOW;
-	else if (upowbat.state == UP_DEVICE_STATE_FULLY_CHARGED)
-		mcebat.status = BATTERY_STATUS_FULL;
-
 	/* Try to guess charger state using battery state property */
 	if (private.charger) {
 		mcebat.charger_connected = upowbat.charger_online;
@@ -200,6 +192,14 @@ mcebat_update_from_upowbat(void)
 								upowbat.state == UP_DEVICE_STATE_FULLY_CHARGED ||
 								upowbat.state == UP_DEVICE_STATE_PENDING_CHARGE;
 	}
+
+	if (upowbat.state == UP_DEVICE_STATE_EMPTY ||
+		upowbat.voltage < private.min_voltage && !mcebat.charger_connected)
+		mcebat.status = BATTERY_STATUS_EMPTY;
+	else if (upowbat.percentage < private.low_percentage)
+		mcebat.status = BATTERY_STATUS_LOW;
+	else if (upowbat.state == UP_DEVICE_STATE_FULLY_CHARGED)
+		mcebat.status = BATTERY_STATUS_FULL;
 }
 
 static inline const char *
@@ -472,6 +472,10 @@ xup_battery_connect_handlers(void)
 					NULL);
 
 	g_signal_connect(private.battery, "notify::state",
+					G_CALLBACK(xup_battery_properties_changed_cb),
+					NULL);
+
+	g_signal_connect(private.battery, "notify::voltage",
 					G_CALLBACK(xup_battery_properties_changed_cb),
 					NULL);
 }
