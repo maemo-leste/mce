@@ -59,7 +59,7 @@ G_MODULE_EXPORT module_info_struct module_info = {
 /** How long we want battery state to be forced after charger state changed */
 #define FORCE_STATE_TIME 10
 
-#define MCE_CONF_BATTERY_SECTION "battery"
+#define MCE_CONF_BATTERY_SECTION "Battery"
 #define MCE_CONF_CRIT_VOLTAGE_KEY "CriticalVoltage"
 #define MCE_CONF_LOW_PERCENT_KEY "LowPercentage"
 
@@ -184,14 +184,6 @@ mcebat_update_from_upowbat(void)
 {
 	mcebat.status = BATTERY_STATUS_OK;
 
-	if (upowbat.state == UP_DEVICE_STATE_EMPTY || 
-		upowbat.voltage < private.min_voltage)
-		mcebat.status = BATTERY_STATUS_EMPTY;
-	else if (upowbat.percentage < private.low_percentage)
-		mcebat.status = BATTERY_STATUS_LOW;
-	else if (upowbat.state == UP_DEVICE_STATE_FULLY_CHARGED)
-		mcebat.status = BATTERY_STATUS_FULL;
-
 	/* Try to guess charger state using battery state property */
 	if (private.charger) {
 		mcebat.charger_connected = upowbat.charger_online;
@@ -200,6 +192,14 @@ mcebat_update_from_upowbat(void)
 								upowbat.state == UP_DEVICE_STATE_FULLY_CHARGED ||
 								upowbat.state == UP_DEVICE_STATE_PENDING_CHARGE;
 	}
+
+	if (upowbat.state == UP_DEVICE_STATE_EMPTY ||
+		upowbat.voltage < private.min_voltage && !mcebat.charger_connected)
+		mcebat.status = BATTERY_STATUS_EMPTY;
+	else if (upowbat.percentage < private.low_percentage)
+		mcebat.status = BATTERY_STATUS_LOW;
+	else if (upowbat.state == UP_DEVICE_STATE_FULLY_CHARGED)
+		mcebat.status = BATTERY_STATUS_FULL;
 }
 
 static inline const char *
@@ -286,6 +286,9 @@ mcebat_update_cb(gpointer user_data)
 											USE_INDATA);
 		}
 #endif /* SUPPORT_BATTERY_LOW_LED_PATTERN */
+
+		if(mcebat.status == BATTERY_STATUS_EMPTY) 
+			mce_log(LL_INFO, "%s: battery is empty", MODULE_NAME);
 
 		/* Battery charge state */
 		execute_datapipe(&battery_status_pipe,
@@ -471,6 +474,10 @@ xup_battery_connect_handlers(void)
 	g_signal_connect(private.battery, "notify::state",
 					G_CALLBACK(xup_battery_properties_changed_cb),
 					NULL);
+
+	g_signal_connect(private.battery, "notify::voltage",
+					G_CALLBACK(xup_battery_properties_changed_cb),
+					NULL);
 }
 
 /**
@@ -630,7 +637,9 @@ const gchar *g_module_check_init(GModule *module)
 	mcebat_init();
 	upowbat_init();
 
-	private.min_voltage = mce_conf_get_int(MCE_CONF_BATTERY_SECTION, MCE_CONF_CRIT_VOLTAGE_KEY, 0, NULL)/1000;
+	private.min_voltage = mce_conf_get_int(MCE_CONF_BATTERY_SECTION, MCE_CONF_CRIT_VOLTAGE_KEY, 0, NULL)/1000.0;
+	if(private.min_voltage > 0.1)
+		mce_log(LL_INFO, "%s: critical voltage set set to %f", MODULE_NAME, private.min_voltage);
 	private.low_percentage = mce_conf_get_int(MCE_CONF_BATTERY_SECTION, MCE_CONF_LOW_PERCENT_KEY, 5, NULL);
 
 	/* Find battery/charger devices and add them to private */
