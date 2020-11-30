@@ -1723,8 +1723,20 @@ static void touchscreen_trigger(gconstpointer const data)
  */
 static void system_state_trigger(gconstpointer data)
 {
-	(void)data;
-	(void)ts_enable_policy();
+	system_state_t system_state = GPOINTER_TO_INT(data);
+
+	switch (system_state) {
+	case MCE_STATE_SHUTDOWN:
+	case MCE_STATE_REBOOT:
+	case MCE_STATE_ACTDEAD:
+		(void)ts_disable_policy();
+		break;
+
+	case MCE_STATE_USER:
+	default:
+		(void)ts_enable_policy();
+		break;
+	}
 }
 
 /**
