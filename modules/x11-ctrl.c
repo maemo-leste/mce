@@ -282,5 +282,6 @@ void g_module_unload(GModule *module)
 	remove_output_trigger_from_datapipe(&display_state_pipe,
 					    display_state_trigger);
 
+	x11_set_all_input_devices_enabled(NULL, true);
 }
 
