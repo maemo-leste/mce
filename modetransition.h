@@ -24,7 +24,11 @@
 
 #include <glib.h>
 
+#define STRING2(x) #x
+#define STRING(x) STRING2(x)
+
 #define MCE_MODE_FILENAME		G_STRINGIFY(MCE_VAR_DIR) "/mode"
+#pragma message STRING(MCE_MODE_FILENAME)
 
 #define SPLASH_DELAY			500		/**< 0.5 seconds */
 #define ACTDEAD_DELAY			1500		/**< 1.5 seconds */
