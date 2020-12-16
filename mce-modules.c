@@ -29,6 +29,51 @@
 /** List of all loaded modules */
 static GSList *modules = NULL;
 
+
+static void mce_modules_load(gchar **modlist)
+{
+	gchar *path = NULL;
+	int i;
+
+	path = mce_conf_get_string(MCE_CONF_MODULES_GROUP,
+				   MCE_CONF_MODULES_PATH,
+				   DEFAULT_MCE_MODULE_PATH,
+				   NULL);
+
+	for (i = 0; modlist[i]; i++) {
+		GModule *module;
+		gchar *tmp = g_module_build_path(path, modlist[i]);
+
+		mce_log(LL_DEBUG,
+			"Loading module: %s from %s",
+			modlist[i], path);
+
+		if ((module = g_module_open(tmp, 0)) != NULL) {
+			gpointer mip = NULL;
+
+			if (g_module_symbol(module,
+						"module_info",
+						&mip) == FALSE) {
+				mce_log(LL_ERR,
+					"Failed to retrieve module "
+					"information for: %s",
+					modlist[i]);
+			}
+
+			/* XXX: check dependencies, conflicts, et al */
+			modules = g_slist_append(modules, module);
+		} else {
+			mce_log(LL_DEBUG,
+				"Failed to load module: %s; skipping",
+				modlist[i]);
+		}
+
+		g_free(tmp);
+	}
+
+	g_free(path);
+}
+
 /**
  * Init function for the mce-modules component
  *
@@ -37,14 +82,9 @@ static GSList *modules = NULL;
 gboolean mce_modules_init(void)
 {
 	gchar **modlist = NULL;
+	gchar **modlist_device = NULL;
+	gchar **modlist_user = NULL;
 	gsize length;
-	gchar *path = NULL;
-
-	/* Get the module path */
-	path = mce_conf_get_string(MCE_CONF_MODULES_GROUP,
-				   MCE_CONF_MODULES_PATH,
-				   DEFAULT_MCE_MODULE_PATH,
-				   NULL);
 
 	/* Get the list modules to load */
 	modlist = mce_conf_get_string_list(MCE_CONF_MODULES_GROUP,
@@ -52,44 +92,26 @@ gboolean mce_modules_init(void)
 					   &length,
 					   NULL);
 
-	if (modlist != NULL) {
-		gint i;
+	modlist_device = mce_conf_get_string_list(MCE_CONF_MODULES_GROUP,
+					   MCE_CONF_MODULES_DEVMODULES,
+					   &length,
+					   NULL);
 
-		for (i = 0; modlist[i]; i++) {
-			GModule *module;
-			gchar *tmp = g_module_build_path(path, modlist[i]);
+	modlist_user = mce_conf_get_string_list(MCE_CONF_MODULES_GROUP,
+					   MCE_CONF_MODULES_USRMODULES,
+					   &length,
+					   NULL);
 
-			mce_log(LL_DEBUG,
-				"Loading module: %s from %s",
-				modlist[i], path);
+	if (modlist)
+		mce_modules_load(modlist);
+	if (modlist_device)
+		mce_modules_load(modlist_device);
+	if (modlist_user)
+		mce_modules_load(modlist_user);
 
-			if ((module = g_module_open(tmp, 0)) != NULL) {
-				gpointer mip = NULL;
-
-				if (g_module_symbol(module,
-						    "module_info",
-						    &mip) == FALSE) {
-					mce_log(LL_ERR,
-						"Failed to retrieve module "
-						"information for: %s",
-						modlist[i]);
-				}
-
-				/* XXX: check dependencies, conflicts, et al */
-				modules = g_slist_append(modules, module);
-			} else {
-				mce_log(LL_DEBUG,
-					"Failed to load module: %s; skipping",
-					modlist[i]);
-			}
-
-			g_free(tmp);
-		}
-
-		g_strfreev(modlist);
-	}
-
-	g_free(path);
+	g_strfreev(modlist);
+	g_strfreev(modlist_device);
+	g_strfreev(modlist_user);
 
 	return TRUE;
 }

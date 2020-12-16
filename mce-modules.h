@@ -30,8 +30,16 @@
 /** Name of configuration key for module path */
 #define MCE_CONF_MODULES_PATH		"ModulePath"
 
-/** Name of configuration key for modules to load */
+/** Name of configuration key for general modules to load */
 #define MCE_CONF_MODULES_MODULES	"Modules"
+
+/** Name of configuration key for device specific modules to load */
+
+#define MCE_CONF_MODULES_DEVMODULES	"ModulesDevice"
+
+/** Name of configuration key for user modules to load */
+
+#define MCE_CONF_MODULES_USRMODULES	"ModulesUser"
 
 /** Default value for module path */
 #define DEFAULT_MCE_MODULE_PATH		"/usr/lib/mce/modules"
