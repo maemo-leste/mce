@@ -1,3 +1,15 @@
+mce (1.8.128.24) unstable; urgency=medium
+
+  * Shutdown cleanly on SIGINT
+  * x11-ctrl: renable input devices on exit
+  * Remove deprecated hal code
+  * Touchscreen idling and detection is improved
+  * led-lysti module
+  * ModulesDevice and ModulesUser added to make it easier to have nested
+    config files
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Sat, 19 Dec 2020 22:48:57 +0100
+
 mce (1.8.128.23) unstable; urgency=medium
 
   * Add iio-accelerometer, led-sw and led-dbus modules (thanks uvos!)
