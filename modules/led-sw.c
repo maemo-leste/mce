@@ -76,11 +76,11 @@ struct led_pattern {
 	uint8_t b;
 	unsigned long onPeriodMs;
 	unsigned long offPeriodMs;
-	
+
 	bool active;
 	bool ledOn;
 	bool foreground;
-	
+
 	unsigned int disableTimer;
 	unsigned int periodTimer;
 };
@@ -130,14 +130,14 @@ static bool init_patterns(void)
 					    patternlist[i], &length, NULL);
 		if (tmp != NULL) {
 			struct led_pattern *pattern;
-			
+
 			if (length != NUMBER_OF_PATTERN_FIELDS) {
 				mce_log(LL_ERR, "%s: Skipping invalid led pattern: %s", MODULE_NAME, patternlist[i]);
 				g_free(tmp);
 				continue;
 			}
-			
-			
+
+
 			pattern = &led_patterns[patterns_count];
 			pattern->name = strdup(patternlist[i]);
 			pattern->priority = ABS(tmp[PATTERN_PRIO_FIELD]);
@@ -154,9 +154,9 @@ static bool init_patterns(void)
 			pattern->ledOn = false;
 			pattern->disableTimer = 0;
 			pattern->periodTimer = 0;
-			
+
 			if (pattern->r == 0 && pattern->g == 0 && pattern->b == 0)
-				mce_log(LL_INFO, "%s: Skipping led pattern with zero brighness: %s", MODULE_NAME, patternlist[i]);
+				mce_log(LL_INFO, "%s: Skipping led pattern with zero brightness: %s", MODULE_NAME, patternlist[i]);
 			else
 				++patterns_count;
 
@@ -165,7 +165,7 @@ static bool init_patterns(void)
 	}
 	mce_log(LL_DEBUG, "%s: found %i patterns", MODULE_NAME, patterns_count);
 	g_strfreev(patternlist);
-	
+
 	return true;
 }
 
@@ -184,7 +184,7 @@ static bool should_run_pattern(const struct led_pattern * const pattern)
 {
 	if (pattern->r == 0 && pattern->g == 0 && pattern->b == 0)
 		return false;
-	else if (pattern->policy == POLICY_PLAY_ALWAYS || 
+	else if (pattern->policy == POLICY_PLAY_ALWAYS ||
 		(pattern->policy == POLICY_PLAY_DISPLAY_ON_ACTDEAD && led_enabled))
 		return true;
 	else if (pattern->policy == POLICY_PLAY_DISPLAY_OFF_OR_ACTDEAD &&
@@ -208,17 +208,17 @@ static bool should_run_pattern(const struct led_pattern * const pattern)
 static gboolean disable_timeout_cb(gpointer data)
 {
 	struct led_pattern *pattern = (struct led_pattern *)data;
-	
+
 	set_led(0, 0, 0);
 	pattern->ledOn = false;
 	pattern->active = false;
-	
+
 	update_patterns();
-	
+
 	return false;
 }
 
-static void cancle_disable_timer(struct led_pattern *pattern)
+static void cancel_disable_timer(struct led_pattern *pattern)
 {
 	if (pattern->disableTimer != 0) {
 		set_led(0, 0, 0);
@@ -230,31 +230,31 @@ static void cancle_disable_timer(struct led_pattern *pattern)
 
 static void setup_disable_timer(struct led_pattern *pattern)
 {
-	cancle_disable_timer(pattern);
-	
+	cancel_disable_timer(pattern);
+
 	if (pattern->timeoutSec > 0)
-		pattern->disableTimer = 
+		pattern->disableTimer =
 			g_timeout_add_seconds(pattern->timeoutSec, &disable_timeout_cb, pattern);
 }
 
 static gboolean period_timeout_cb(gpointer data)
 {
 	struct led_pattern *pattern = (struct led_pattern *)data;
-	
+
 	pattern->ledOn = !pattern->ledOn;
-	
+
 	if (pattern->ledOn)
 		set_led(pattern->r, pattern->g, pattern->b);
 	else
 		set_led(0, 0, 0);
-		
-	pattern->periodTimer = 
+
+	pattern->periodTimer =
 		g_timeout_add(pattern->ledOn ? pattern->onPeriodMs : pattern->offPeriodMs, &period_timeout_cb, pattern);
-		
+
 	 return false;
 }
 
-static void cancle_period_timer(struct led_pattern *pattern)
+static void cancel_period_timer(struct led_pattern *pattern)
 {
 	if (pattern->periodTimer != 0) {
 		set_led(0, 0, 0);
@@ -266,10 +266,10 @@ static void cancle_period_timer(struct led_pattern *pattern)
 
 static void setup_period_timer(struct led_pattern *pattern)
 {
-	cancle_period_timer(pattern);
-	
+	cancel_period_timer(pattern);
+
 	if (pattern->offPeriodMs > 0 && pattern->onPeriodMs > 0)
-		pattern->periodTimer = 
+		pattern->periodTimer =
 			g_timeout_add(pattern->ledOn ? pattern->onPeriodMs : pattern->offPeriodMs, &period_timeout_cb, pattern);
 }
 
@@ -280,7 +280,7 @@ static void update_patterns(void)
 	for (unsigned int i = 0; i < patterns_count; ++i) {
 		if (!led_patterns[i].active || !should_run_pattern(&led_patterns[i]) || prio < led_patterns[i].priority) {
 			if (led_patterns[i].foreground) {
-				cancle_period_timer(&led_patterns[i]);
+				cancel_period_timer(&led_patterns[i]);
 				set_led(0, 0, 0);
 				led_patterns[i].foreground = false;
 				led_patterns[i].ledOn = false;
@@ -289,14 +289,14 @@ static void update_patterns(void)
 		}
 
 		if (pattern_to_run != NULL) {
-			cancle_period_timer(pattern_to_run);
+			cancel_period_timer(pattern_to_run);
 			pattern_to_run->foreground = false;
 		}
 
 		prio = led_patterns[i].priority;
 		pattern_to_run = &led_patterns[i];
 	}
-	
+
 	if (pattern_to_run && pattern_to_run->foreground == false) {
 		set_led(pattern_to_run->r, pattern_to_run->g, pattern_to_run->b);
 		pattern_to_run->ledOn = true;
@@ -314,7 +314,7 @@ static char *led_create_sysfs_path(const gchar *key)
 		return NULL;
 	}
 	path = malloc(strlen(LED_SYSFS_PATH)+strlen(tmp)+strlen(LED_BRIGHTNESS_PATH)+1);
-	if (!path) 
+	if (!path)
 		return NULL;
 	strcpy(path, LED_SYSFS_PATH);
 	strcat(path, tmp);
@@ -364,7 +364,7 @@ static void led_pattern_activate_trigger(gconstpointer data)
 				break;
 			}
 		}
-		
+
 		if (!found)
 			mce_log(LL_WARN, "%s: activate called on non exisiting pattern: %s", MODULE_NAME, name);
 	}
@@ -379,12 +379,12 @@ static void led_pattern_deactivate_trigger(gconstpointer data)
 			found = true;
 			led_patterns[i].active = false;
 			update_patterns();
-			cancle_disable_timer(&led_patterns[i]);
+			cancel_disable_timer(&led_patterns[i]);
 			mce_log(LL_DEBUG, "%s: deactivate called on: %s", MODULE_NAME, name);
 			break;
 		}
 	}
-	
+
 	if (!found)
 		mce_log(LL_WARN, "%s: deactivate called on non exisiting pattern: %s", MODULE_NAME, name);
 }
@@ -415,10 +415,10 @@ const gchar *g_module_check_init(GModule *module)
 		if (!r_sysfs || !g_sysfs || !b_sysfs)
 			return NULL;
 	}
-	
+
 	if (!init_patterns())
 		return NULL;
-	
+
 	led_enabled = datapipe_get_gbool(led_enabled_pipe);
 	system_state = datapipe_get_gint(system_state_pipe);
 	display_state = datapipe_get_gint(system_state_pipe);
@@ -462,7 +462,7 @@ void g_module_unload(GModule *module)
 	    (system_state != MCE_STATE_REBOOT)) {
 		set_led(0, 0, 0);
 	}
-	
+
 	if (r_sysfs)
 		free(r_sysfs);
 	if (g_sysfs)

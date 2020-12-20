@@ -87,7 +87,7 @@ typedef struct {
  * percentage of the full LED brightness it should map to.
  *
  * A lux 'level' will be calculated according to the ranges in the structure.
- * This lux 'level' will then be used to pick a percentage in brighness of the
+ * This lux 'level' will then be used to pick a percentage in brightness of the
  * 'max_brightness' value of the device, and set the 'brightness' of the device
  * to max_brightness * percentage.
  *

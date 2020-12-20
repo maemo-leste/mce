@@ -127,7 +127,7 @@ static bool x11_set_all_input_devices_enabled(Display *dpy, const bool enable)
 			if (devinfo[i].name && strstr(devinfo[i].name, "XTEST") != NULL)
 				continue;
 
-			mce_log(LL_INFO, "%s: disableing %s", MODULE_NAME, devinfo[i].name);
+			mce_log(LL_INFO, "%s: disabling %s", MODULE_NAME, devinfo[i].name);
 
 			if (x11_set_input_device_enabled(dpy, devinfo[i], enable)) {
 				disabledDevices[disabledDevicesCount] = devinfo[i];
