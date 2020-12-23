@@ -1,3 +1,9 @@
+mce (1.8.128.25) unstable; urgency=medium
+
+  * Provide Fremantle-like led-sw default patterns
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Wed, 23 Dec 2020 17:55:30 +0100
+
 mce (1.8.128.24) unstable; urgency=medium
 
   * Shutdown cleanly on SIGINT
