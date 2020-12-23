@@ -34,14 +34,86 @@
 #include <dsme/protocol.h>
 #include <dsme/processwd.h>
 #include <mce/mode-names.h>
+#include <gmodule.h>
 #include "mce.h"
-#include "mce-dsme.h"
 #include "mce-lib.h"
 #include "mce-log.h"
 #include "mce-dbus.h"
 #include "mce-conf.h"
 #include "datapipe.h"
 #include "connectivity.h"
+
+#define MODULE_NAME		"power-dsme"
+
+#define MODULE_PROVIDES	"power"
+
+static const char *const provides[] = { MODULE_PROVIDES, NULL };
+
+G_MODULE_EXPORT module_info_struct module_info = {
+	.name = MODULE_NAME,
+	.provides = provides,
+	.priority = 100
+};
+
+#define TRANSITION_DELAY		1000		/**< 1 second */
+
+#define MCE_CONF_SOFTPOWEROFF_GROUP	"SoftPowerOff"
+
+#define MCE_CONF_SOFTPOWEROFF_CONNECTIVITY_POLICY_CHARGER "ConnectivityPolicyCharger"
+
+#define MCE_CONF_SOFTPOWEROFF_CONNECTIVITY_POLICY_BATTERY "ConnectivityPolicyBattery"
+
+#define MCE_CONF_SOFTPOWEROFF_CONNECTIVITY_POLICY_POWERON "ConnectivityPolicyPowerOn"
+
+#define MCE_CONF_SOFTPOWEROFF_CHARGER_POLICY_CONNECT "ChargerPolicyConnect"
+
+
+#define MCE_IS_USB_MASS_STORAGE_CONNECTED_FLAG_0 "/sys/devices/platform/musb_hdrc/gadget/gadget-lun0/file"
+
+#define MCE_IS_USB_MASS_STORAGE_CONNECTED_FLAG_1 "/sys/devices/platform/musb_hdrc/gadget/gadget-lun1/file"
+
+#define SOFTOFF_CONNECTIVITY_FORCE_OFFLINE_STR		"forceoffline"
+#define SOFTOFF_CONNECTIVITY_SOFT_OFFLINE_STR		"softoffline"
+#define SOFTOFF_CONNECTIVITY_RETAIN_STR			"retain"
+#define SOFTOFF_CHARGER_CONNECT_WAKEUP_STR		"wakeup"
+#define SOFTOFF_CHARGER_CONNECT_IGNORE_STR		"ignore"
+
+/** Soft poweroff connectivity policies */
+enum {
+	/** Policy not set */
+	SOFTOFF_CONNECTIVITY_INVALID = MCE_INVALID_TRANSLATION,
+	/** Retain connectivity */
+	SOFTOFF_CONNECTIVITY_RETAIN = 0,
+	/** Default setting when charger connected */
+	DEFAULT_SOFTOFF_CONNECTIVITY_CHARGER = SOFTOFF_CONNECTIVITY_RETAIN,
+	/** Go to offline mode if no connections are open */
+	SOFTOFF_CONNECTIVITY_SOFT_OFFLINE = 1,
+	/** Go to offline mode */
+	SOFTOFF_CONNECTIVITY_FORCE_OFFLINE = 2,
+	/** Default setting when running on battery */
+	DEFAULT_SOFTOFF_CONNECTIVITY_BATTERY = SOFTOFF_CONNECTIVITY_FORCE_OFFLINE,
+};
+
+/** Soft poweron connectivity policies */
+enum {
+	/** Stay in offline mode */
+	SOFTOFF_CONNECTIVITY_OFFLINE = 0,
+	/** Default setting */
+	DEFAULT_SOFTOFF_CONNECTIVITY_POWERON = SOFTOFF_CONNECTIVITY_OFFLINE,
+	/** Restore previous mode */
+	SOFTOFF_CONNECTIVITY_RESTORE = 1,
+};
+
+/** Soft poweroff charger connect policy */
+enum {
+	/** Stay in offline mode */
+	SOFTOFF_CHARGER_CONNECT_WAKEUP = 0,
+	/** Restore previous mode */
+	SOFTOFF_CHARGER_CONNECT_IGNORE = 1,
+	/** Default setting */
+	DEFAULT_SOFTOFF_CHARGER_CONNECT = SOFTOFF_CHARGER_CONNECT_IGNORE,
+};
+
 
 /** Charger state */
 static gboolean charger_connected = FALSE;
@@ -220,7 +292,7 @@ static void query_system_state(void)
 /**
  * Request powerup
  */
-void request_powerup(void)
+static void request_powerup(void)
 {
 	/* Set up the message */
 	DSM_MSGTYPE_POWERUP_REQ msg = DSME_MSG_INIT(DSM_MSGTYPE_POWERUP_REQ);
@@ -234,7 +306,7 @@ void request_powerup(void)
 /**
  * Request reboot
  */
-void request_reboot(void)
+static void request_reboot(void)
 {
 	/* Set up the message */
 	DSM_MSGTYPE_REBOOT_REQ msg = DSME_MSG_INIT(DSM_MSGTYPE_REBOOT_REQ);
@@ -248,7 +320,7 @@ void request_reboot(void)
 /**
  * Request soft poweron
  */
-void request_soft_poweron(void)
+static void request_soft_poweron(void)
 {
 	/* Disable the soft poweroff LED pattern */
 	execute_datapipe_output_triggers(&led_pattern_deactivate_pipe,
@@ -276,7 +348,7 @@ void request_soft_poweron(void)
 /**
  * Request soft poweroff
  */
-void request_soft_poweroff(void)
+static void request_soft_poweroff(void)
 {
 	gboolean connected;
 	gint policy;
@@ -388,7 +460,7 @@ static gboolean usb_mass_storage_mode(void)
 /**
  * Request normal shutdown
  */
-void request_normal_shutdown(void)
+static void request_normal_shutdown(void)
 {
 	/* Set up the message */
 	DSM_MSGTYPE_SHUTDOWN_REQ msg = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN_REQ);
@@ -681,30 +753,56 @@ EXIT:
 	return status;
 }
 
-/**
- * Init function for the mce-dsme component
- *
- * @param debug_mode TRUE - do not exit if dsme fails
- * @return TRUE on success, FALSE on failure
- */
-gboolean mce_dsme_init(gboolean debug_mode)
+static void system_power_request_trigger(gconstpointer data)
 {
+	power_req_t request = (power_req_t)data;
+	
+	switch (request)
+	{
+		case MCE_POWER_REQ_OFF:
+			request_normal_shutdown();
+			break;
+		case MCE_POWER_REQ_SOFT_OFF:
+			request_soft_poweroff();
+			break;
+		case MCE_POWER_REQ_ON:
+			request_powerup();
+			break;
+		case MCE_POWER_REQ_SOFT_ON:
+			request_soft_poweron();
+			break;
+		case MCE_POWER_REQ_REBOOT:
+			request_reboot();
+			break;
+		case MCE_POWER_REQ_UNDEF:
+		default:
+			break;
+	}
+}
+
+/**
+ * Init function for the power-dsme component
+ *
+ */
+G_MODULE_EXPORT const gchar *g_module_check_init(GModule *module);
+const gchar *g_module_check_init(GModule *module)
+{
+	(void)module;
 	gboolean status = FALSE;
 	gchar *tmp = NULL;
 
 	/* Append triggers/filters to datapipes */
 	append_output_trigger_to_datapipe(&charger_state_pipe,
 					  charger_state_trigger);
+	
+	append_output_trigger_to_datapipe(&system_power_request_pipe,
+					  system_power_request_trigger);
 
 	mce_log(LL_DEBUG,
 		"Connecting to DSME sock");
 
 	if (init_dsmesock() == FALSE) {
-		if (debug_mode == TRUE) {
-			dsme_disabled = TRUE;
-		} else {
-			goto EXIT;
-		}
+		goto EXIT;
 	}
 
 	/* Register with DSME's process watchdog */
@@ -754,7 +852,7 @@ gboolean mce_dsme_init(gboolean debug_mode)
 	status = TRUE;
 
 EXIT:
-	return status;
+	return status ? NULL : "dsme failed to initalize";
 }
 
 /**
@@ -763,8 +861,10 @@ EXIT:
  * @todo D-Bus unregistration
  * @todo trigger unregistration
  */
-void mce_dsme_exit(void)
+G_MODULE_EXPORT void g_module_unload(GModule *module);
+void g_module_unload(GModule *module)
 {
+	(void)module;
 	if (dsme_conn != NULL) {
 		mce_log(LL_DEBUG,
 			"Disabling DSME process watchdog");
@@ -778,7 +878,8 @@ void mce_dsme_exit(void)
 	/* Remove triggers/filters from datapipes */
 	remove_output_trigger_from_datapipe(&charger_state_pipe,
 					    charger_state_trigger);
-
+	remove_output_trigger_from_datapipe(&system_power_request_pipe,
+					    system_power_request_trigger);
 	/* Remove all timer sources */
 	cancel_state_transition_timeout();
 

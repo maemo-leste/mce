@@ -161,6 +161,15 @@ typedef enum {
 	MCE_STATE_BOOT = 9		/**< System is in bootup state */
 } system_state_t;
 
+typedef enum {
+	MCE_POWER_REQ_UNDEF,
+	MCE_POWER_REQ_OFF,
+	MCE_POWER_REQ_SOFT_OFF,
+	MCE_POWER_REQ_ON,
+	MCE_POWER_REQ_SOFT_ON,
+	MCE_POWER_REQ_REBOOT
+} power_req_t;
+
 /** Call state */
 typedef enum {
 	/** Invalid call state */
@@ -300,6 +309,8 @@ datapipe_struct light_sensor_pipe;
 datapipe_struct alarm_ui_state_pipe;
 /** The device state */
 datapipe_struct system_state_pipe;
+/** Pipe to request reboot/shutdown from the system power backend*/
+datapipe_struct system_power_request_pipe;
 datapipe_struct mode_pipe;
 /** The device submode */
 datapipe_struct submode_pipe;

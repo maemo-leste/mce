@@ -48,7 +48,8 @@ MODULES := \
 	$(MODULE_DIR)/libiio-als.so \
 	$(MODULE_DIR)/libbutton-backlight.so \
 	$(MODULE_DIR)/liblock-tklock.so \
-	$(MODULE_DIR)/liblock-devlock.so
+	$(MODULE_DIR)/liblock-devlock.so \
+	$(MODULE_DIR)/libpower-dsme.so
 MODEFILE := mode
 CONFFILE := mce.ini
 USRCONFFILE := 99-user.ini
