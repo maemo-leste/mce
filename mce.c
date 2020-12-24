@@ -499,7 +499,7 @@ int main(int argc, char **argv)
 		       0, GINT_TO_POINTER(MCE_ALARM_UI_INVALID_INT32));
 	setup_datapipe(&submode_pipe, READ_ONLY, DONT_FREE_CACHE,
 		       0, GINT_TO_POINTER(MCE_NORMAL_SUBMODE));
-	setup_datapipe(&display_state_pipe, READ_ONLY, DONT_FREE_CACHE,
+	setup_datapipe(&display_state_pipe, READ_WRITE, DONT_FREE_CACHE,
 		       0, GINT_TO_POINTER(MCE_DISPLAY_UNDEF));
 	setup_datapipe(&display_brightness_pipe, READ_WRITE, DONT_FREE_CACHE,
 		       0, GINT_TO_POINTER(0));
