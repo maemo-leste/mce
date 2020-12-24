@@ -26,6 +26,7 @@ TARGETS := \
 MODULES := \
 	$(MODULE_DIR)/libfilter-brightness-als.so \
 	$(MODULE_DIR)/libfilter-brightness-simple.so \
+	$(MODULE_DIR)/libiio-proximity.so \
 	$(MODULE_DIR)/libkeypad.so \
 	$(MODULE_DIR)/libinactivity.so \
 	$(MODULE_DIR)/libcamera.so \
