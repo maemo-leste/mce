@@ -25,10 +25,8 @@ MODULE_DIR := $(TOPDIR)/modules
 TARGETS := \
 	mce
 MODULES := \
-	$(MODULE_DIR)/libfilter-brightness-als.so \
 	$(MODULE_DIR)/libfilter-brightness-als-iio.so \
 	$(MODULE_DIR)/libfilter-brightness-simple.so \
-	$(MODULE_DIR)/libkeypad.so \
 	$(MODULE_DIR)/libinactivity.so \
 	$(MODULE_DIR)/libinactivity-dev.so \
 	$(MODULE_DIR)/libinactivity-inhibit.so \
@@ -44,7 +42,6 @@ MODULES := \
 	$(MODULE_DIR)/libiio-accelerometer.so \
 	$(MODULE_DIR)/libcallstate.so \
 	$(MODULE_DIR)/libaudiorouting.so \
-	$(MODULE_DIR)/libhomekey.so \
 	$(MODULE_DIR)/libx11-ctrl.so \
 	$(MODULE_DIR)/libiio-als.so \
 	$(MODULE_DIR)/libbutton-backlight.so
