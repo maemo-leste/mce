@@ -341,12 +341,6 @@ static void switch_cb(gpointer data, gsize bytes_read)
 					       MCE_KBD_SLIDE_CLOSED);
 				goto EXIT;
 			}
-			case SW_FRONT_PROXIMITY: {
-				switch_call_cb(ev, proximity_sensor_cb,
-					       MCE_PROXIMITY_SENSOR_CLOSED,
-					       MCE_PROXIMITY_SENSOR_OPEN);
-				goto EXIT;
-			}
 			case SW_CAMERA_LENS_COVER: {
 				switch_call_cb(ev, camera_launch_button_cb,
 					       MCE_LENS_COVER_CLOSED,
