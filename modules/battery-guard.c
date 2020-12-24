@@ -3,7 +3,6 @@
 #include <gmodule.h>
 #include <string.h>
 #include "mce.h"
-#include "homekey.h"
 #include "mce-conf.h"
 #include "mce-log.h"
 #include "datapipe.h"
