@@ -53,7 +53,8 @@ MODULES := \
 	$(MODULE_DIR)/liblock-generic.so \
 	$(MODULE_DIR)/liblock-tklock.so \
 	$(MODULE_DIR)/liblock-devlock.so \
-	$(MODULE_DIR)/libpower-dsme.so
+	$(MODULE_DIR)/libpower-dsme.so \
+	$(MODULE_DIR)/libpower-generic.so
 MODEFILE := mode
 CONFFILE := mce.ini
 USRCONFFILE := 99-user.ini
