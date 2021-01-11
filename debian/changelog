@@ -1,3 +1,9 @@
+mce (1.8.128.26) unstable; urgency=medium
+
+  * Enable alarm subsystem of mce, was not loaded by accident
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Mon, 11 Jan 2021 22:16:52 +0100
+
 mce (1.8.128.25) unstable; urgency=medium
 
   * Provide Fremantle-like led-sw default patterns
