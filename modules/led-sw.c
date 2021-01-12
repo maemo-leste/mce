@@ -368,7 +368,6 @@ static void led_pattern_activate_trigger(gconstpointer data)
 		if (!found)
 			mce_log(LL_WARN, "%s: activate called on non exisiting pattern: %s", MODULE_NAME, name);
 	}
-	}
 }
 
 static void led_pattern_deactivate_trigger(gconstpointer data)
