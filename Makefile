@@ -30,12 +30,12 @@ MODULES := \
 	$(MODULE_DIR)/libfilter-brightness-simple.so \
 	$(MODULE_DIR)/libiio-proximity.so \
 	$(MODULE_DIR)/libkeypad.so \
-	$(MODULE_DIR)/libinactivity-dev.so \
+	$(MODULE_DIR)/libinactivity.so \
 	$(MODULE_DIR)/libinactivity-inhibit.so \
 	$(MODULE_DIR)/libcamera.so \
 	$(MODULE_DIR)/libalarm.so \
 	$(MODULE_DIR)/libbattery-upower.so \
-	$(MODULE_DIR)/libdisplay-dev.so \
+	$(MODULE_DIR)/libdisplay.so \
 	$(MODULE_DIR)/libled-lysti.so \
 	$(MODULE_DIR)/libled-sw.so \
 	$(MODULE_DIR)/libled-dbus.so \
