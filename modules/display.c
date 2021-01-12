@@ -32,7 +32,7 @@
 #include <sys/ioctl.h>
 #include <mce/mode-names.h>
 #include "mce.h"
-#include "display-dev.h"
+#include "display.h"
 #include "mce-io.h"
 #include "mce-lib.h"
 #include "mce-log.h"
@@ -41,7 +41,7 @@
 #include "datapipe.h"
 
 /** Module name */
-#define MODULE_NAME		"display-dev"
+#define MODULE_NAME		"display"
 
 /** Functionality provided by this module */
 static const gchar *const provides[] = { MODULE_NAME, NULL };

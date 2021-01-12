@@ -45,7 +45,7 @@
 #define INACTIVITY_PREVENT_TIMEOUT			60	/* 60 seconds */
 
 /** Module name */
-#define MODULE_NAME		"inactivity-dev"
+#define MODULE_NAME		"inactivity"
 
 /** Functionality provided by this module */
 static const gchar *const provides[] = { MODULE_NAME, NULL };
