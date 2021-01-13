@@ -20,4 +20,6 @@ gboolean mce_rtconf_backend_register(gboolean(*set_int_backend) (const gchar * c
 								      void *user_data, guint * cb_id),
 				     void (*notifier_remove_backend)(guint cb_id));
 
+void mce_rtconf_backend_unregister(void);
+
 #endif				/* _MCE_RTCONF_H_ */
