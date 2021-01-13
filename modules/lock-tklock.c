@@ -36,7 +36,7 @@
 #include "datapipe.h"
 #include "mce-conf.h"
 #include "mce-dbus.h"
-#include "mce-gconf.h"
+#include "mce-rtconf.h"
 #include "event-input.h"
 
 #define MODULE_NAME		"lock-tklock"
@@ -1389,37 +1389,23 @@ EXIT:
 }
 
 /**
- * GConf callback for touchscreen/keypad lock related settings
+ * rtconf callback for touchscreen/keypad lock related settings
  *
  * @param gcc Unused
- * @param id Connection ID from gconf_client_notify_add()
+ * @param id Connection ID from rtconf_client_notify_add()
  * @param entry The modified GConf entry
  * @param data Unused
  */
-static void tklock_gconf_cb(GConfClient *const gcc, const guint id,
-			    GConfEntry *const entry, gpointer const data)
+static void tklock_rtconf_cb(gchar *key, guint cb_id, void *user_data)
 {
-	GConfValue *gcv = gconf_entry_get_value(entry);
+	(void)key;
+	(void)user_data;
 
-	(void)gcc;
-	(void)data;
-
-	/* Key is unset */
-	if (gcv == NULL) {
-		mce_log(LL_DEBUG, "%s: "
-			"GConf Key `%s' has been unset", MODULE_NAME,
-			gconf_entry_get_key(entry));
-		goto EXIT;
-	}
-
-	if (id == tk_autolock_enabled_cb_id) {
-		tk_autolock_enabled = gconf_value_get_bool(gcv) ? 1 : 0;
+	if (cb_id == tk_autolock_enabled_cb_id) {
+		mce_rtconf_get_bool(MCE_GCONF_TK_AUTOLOCK_ENABLED_PATH, &tk_autolock_enabled);
 	} else {
 		mce_log(LL_WARN, "%s: Spurious GConf value received; confused!", MODULE_NAME);
 	}
-
-EXIT:
-	return;
 }
 
 /**
@@ -2276,13 +2262,12 @@ const char *g_module_check_init(GModule * module)
 
 	/* Touchscreen/keypad autolock */
 	/* Since we've set a default, error handling is unnecessary */
-	(void)mce_gconf_get_bool(MCE_GCONF_TK_AUTOLOCK_ENABLED_PATH,
-				 &tk_autolock_enabled);
+	(void)mce_rtconf_get_bool(MCE_GCONF_TK_AUTOLOCK_ENABLED_PATH, &tk_autolock_enabled);
 
 	/* Touchscreen/keypad autolock enabled/disabled */
-	if (mce_gconf_notifier_add(MCE_GCONF_LOCK_PATH,
+	if (mce_rtconf_notifier_add(MCE_GCONF_LOCK_PATH,
 				   MCE_GCONF_TK_AUTOLOCK_ENABLED_PATH,
-				   tklock_gconf_cb,
+				   tklock_rtconf_cb, NULL,
 				   &tk_autolock_enabled_cb_id) == FALSE)
 		goto EXIT;
 

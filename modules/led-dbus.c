@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include "mce-log.h"
 #include "mce-dbus.h"
-#include "mce-gconf.h"
+#include "mce-rtconf.h"
 #include "datapipe.h"
 #include "mce.h"
 #include "mce-conf.h"
@@ -202,46 +202,37 @@ static struct led_pattern *find_pattern_name(const gchar* name)
 	return NULL;
 }
 
-static void led_gconf_cb(GConfClient *const gcc, const guint id,
-			 GConfEntry *const entry, gpointer const data)
+static void led_rtconf_cb(gchar *key, guint cb_id, void *user_data)
 {
-	GConfValue *gcv = gconf_entry_get_value(entry);
-
-	(void)gcc;
-	(void)data;
-
-	/* Key is unset */
-	if (gcv == NULL) {
-		mce_log(LL_DEBUG, "%s: GConf Key `%s' has been unset", MODULE_NAME, gconf_entry_get_key(entry));
-		return;
-	}
+	(void)user_data;
 	
 	static struct led_pattern* pattern = NULL;
 	
-	if ((pattern = find_pattern_id(id))) {
-		pattern->enabled = gconf_value_get_bool(gcv);
-		mce_log(LL_DEBUG, "%s: pattern %s id %u %s", MODULE_NAME, pattern->name, id, pattern->enabled ? "enabled" : "disabled");
-		if (!pattern->enabled)
+	if ((pattern = find_pattern_id(cb_id))) {
+		gboolean tmp;
+		if (mce_rtconf_get_bool(key, &tmp)) { 
+			pattern->enabled = tmp;
+			mce_log(LL_DEBUG, "%s: pattern %s id %u %s", 
+					MODULE_NAME, pattern->name, cb_id, pattern->enabled ? "enabled" : "disabled");
+			if (!pattern->enabled)
 			execute_datapipe(&led_pattern_deactivate_pipe, pattern->name, USE_CACHE, CACHE_INDATA);
+		}
 	} else {
-		mce_log(LL_WARN, "%s: Spurious GConf value received; confused!", MODULE_NAME);
+		mce_log(LL_WARN, "%s: Spurious rtconf value received; confused!", MODULE_NAME);
 	}
-
-	return;
 }
 
 static gboolean pattern_get_enabled_conf(const gchar *const patternname,
 				    guint *gconf_cb_id)
 {
 	gboolean retval = DEFAULT_PATTERN_ENABLED;
-	gchar *path = gconf_concat_dir_and_key(MCE_GCONF_LED_PATH,
-					       patternname);
+	gchar *path = g_strconcat(MCE_GCONF_LED_PATH, "/", patternname, NULL);
 
-	if (!mce_gconf_get_bool(path, &retval))
-		mce_log(LL_INFO, "%s: getting enabled status for %s from gconf failed", MODULE_NAME, patternname);
+	if (!mce_rtconf_get_bool(path, &retval))
+		mce_log(LL_INFO, "%s: getting enabled status for %s from rtconf failed", MODULE_NAME, patternname);
 	
 	mce_log(LL_DEBUG, "%s: %s %s", MODULE_NAME, patternname, retval ? "enabled" : "disabled");
-	mce_gconf_notifier_add(MCE_GCONF_LED_PATH, path, led_gconf_cb, gconf_cb_id);
+	mce_rtconf_notifier_add(MCE_GCONF_LED_PATH, path, led_rtconf_cb, NULL, gconf_cb_id);
 	
 	g_free(path);
 

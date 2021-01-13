@@ -13,7 +13,7 @@
 #include "datapipe.h"
 #include "mce-conf.h"
 #include "button-backlight.h"
-#include "mce-gconf.h"
+#include "mce-rtconf.h"
 
 #define MODULE_NAME		"button-backlight"
 
@@ -164,39 +164,21 @@ static gboolean get_keyboard_status_dbus_cb(DBusMessage *message)
 }
 
 /**
- * GConf callback for ALS settings
+ * rtconf callback for ALS settings
  *
  * @param gcc Unused
- * @param id Connection ID from gconf_client_notify_add()
- * @param entry The modified GConf entry
+ * @param cb_id Connection ID from gconf_client_notify_add()
  * @param data Unused
  */
-static void als_gconf_cb(GConfClient *const gcc, const guint id,
-			 GConfEntry *const entry, gpointer const data)
+static void als_rtconf_cb(gchar *key, guint cb_id, void *user_data)
 {
-	GConfValue *gcv = gconf_entry_get_value(entry);
+	(void)key;
+	(void)user_data;
 
-	(void)gcc;
-	(void)data;
-
-	/* Key is unset */
-	if (gcv == NULL) {
-		mce_log(LL_DEBUG,
-			"GConf Key `%s' has been unset",
-			gconf_entry_get_key(entry));
-		goto EXIT;
-	}
-
-	if (id == als_enabled_gconf_cb_id) {
-		gint tmp = gconf_value_get_bool(gcv);
-
-		als_enabled = tmp;
-	} else {
+	if (cb_id == als_enabled_gconf_cb_id)
+		mce_rtconf_get_bool(MCE_GCONF_DISPLAY_ALS_ENABLED_PATH, &als_enabled);
+	else
 		mce_log(LL_WARN, "%s: Spurious GConf value received; confused!", MODULE_NAME);
-	}
-
-EXIT:
-	return;
 }
 
 static void als_trigger(gconstpointer data)
@@ -316,11 +298,11 @@ const gchar *g_module_check_init(GModule *module)
 	append_output_trigger_to_datapipe(&display_state_pipe, display_state_trigger);
 	append_output_trigger_to_datapipe(&light_sensor_pipe, als_trigger);
 
-	mce_gconf_get_bool(MCE_GCONF_DISPLAY_ALS_ENABLED_PATH, &als_enabled);
+	mce_rtconf_get_bool(MCE_GCONF_DISPLAY_ALS_ENABLED_PATH, &als_enabled);
 	
-	if (mce_gconf_notifier_add(MCE_GCONF_DISPLAY_PATH,
+	if (mce_rtconf_notifier_add(MCE_GCONF_DISPLAY_PATH,
 				MCE_GCONF_DISPLAY_ALS_ENABLED_PATH,
-				als_gconf_cb,
+				als_rtconf_cb, NULL,
 				&als_enabled_gconf_cb_id) == FALSE)
 		return NULL;
 
