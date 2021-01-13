@@ -111,3 +111,12 @@ gboolean mce_rtconf_backend_register(gboolean(*set_int_backend) (const gchar * c
 	}
 	return FALSE;
 }
+
+void mce_rtconf_backend_unregister(void)
+{
+	mce_rtconf_set_int_backend = NULL;
+	mce_rtconf_get_int_backend = NULL;
+	mce_rtconf_get_bool_backend = NULL;
+	mce_rtconf_notifier_add_backend = NULL;
+	mce_rtconf_notifier_remove_backend = NULL;
+}
