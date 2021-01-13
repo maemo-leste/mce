@@ -4,7 +4,6 @@
 #include "mce.h"
 #include "mce-log.h"
 #include "mce-dbus.h"
-#include "mce-gconf.h"
 #include "datapipe.h"
 
 /** Module name */

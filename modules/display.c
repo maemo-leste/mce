@@ -37,7 +37,7 @@
 #include "mce-lib.h"
 #include "mce-log.h"
 #include "mce-dbus.h"
-#include "mce-gconf.h"
+#include "mce-rtconf.h"
 #include "datapipe.h"
 
 /** Module name */
@@ -362,44 +362,26 @@ static void setup_blank_timeout(void)
 }
 
 /**
- * GConf callback for display related settings
+ * rtconf callback for display related settings
  *
- * @param gcc Unused
- * @param id Connection ID from gconf_client_notify_add()
- * @param entry The modified GConf entry
- * @param data Unused
+ * @param key Unused
+ * @param cb_id Connection ID from gconf_client_notify_add()
+ * @param user_data Unused
  */
-static void display_gconf_cb(GConfClient *const gcc, const guint id,
-			     GConfEntry *const entry, gpointer const data)
+static void display_rtconf_cb(gchar *key, guint cb_id, void *user_data)
 {
-	GConfValue *gcv = gconf_entry_get_value(entry);
+	(void)key;
+	(void)user_data;
 
-	(void)gcc;
-	(void)data;
-
-	/* Key is unset */
-	if (gcv == NULL) {
-		mce_log(LL_DEBUG,
-			"GConf Key `%s' has been unset",
-			gconf_entry_get_key(entry));
-		goto EXIT;
-	}
-
-	if (id == disp_brightness_gconf_cb_id) {
-		gint tmp = gconf_value_get_int(gcv);
-
-		(void)execute_datapipe(&display_brightness_pipe,
-				       GINT_TO_POINTER(tmp),
-				       USE_INDATA, CACHE_INDATA);
-	} else if (id == disp_blank_timeout_gconf_cb_id) {
-		disp_blank_timeout = gconf_value_get_int(gcv);
+	if (cb_id == disp_brightness_gconf_cb_id) {
+		gint tmp;
+		if (mce_rtconf_get_int(MCE_GCONF_DISPLAY_BRIGHTNESS_PATH, &tmp))
+			execute_datapipe(&display_brightness_pipe, GINT_TO_POINTER(tmp), USE_INDATA, CACHE_INDATA);
+	} else if (cb_id == disp_blank_timeout_gconf_cb_id) {
+		mce_rtconf_get_int(MCE_GCONF_DISPLAY_BLANK_TIMEOUT_PATH, &disp_blank_timeout);
 	} else {
-		mce_log(LL_WARN,
-			"Spurious GConf value received; confused!");
+		mce_log(LL_WARN, "%s: Spurious rtconf value received; confused!", MODULE_NAME);
 	}
-
-EXIT:
-	return;
 }
 
 /**
@@ -782,7 +764,7 @@ const gchar *g_module_check_init(GModule *module)
 
 	/* Display brightness */
 	/* Since we've set a default, error handling is unnecessary */
-	(void)mce_gconf_get_int(MCE_GCONF_DISPLAY_BRIGHTNESS_PATH,
+	(void)mce_rtconf_get_int(MCE_GCONF_DISPLAY_BRIGHTNESS_PATH,
 				&disp_brightness);
 
 	/* Use the current brightness as cached brightness on startup,
@@ -801,20 +783,20 @@ const gchar *g_module_check_init(GModule *module)
 			       GINT_TO_POINTER(disp_brightness),
 			       USE_INDATA, CACHE_INDATA);
 
-	if (mce_gconf_notifier_add(MCE_GCONF_DISPLAY_PATH,
+	if (mce_rtconf_notifier_add(MCE_GCONF_DISPLAY_PATH,
 				   MCE_GCONF_DISPLAY_BRIGHTNESS_PATH,
-				   display_gconf_cb,
+				   display_rtconf_cb, NULL,
 				   &disp_brightness_gconf_cb_id) == FALSE)
 		goto EXIT;
 
 	/* Display blank */
 	/* Since we've set a default, error handling is unnecessary */
-	(void)mce_gconf_get_int(MCE_GCONF_DISPLAY_BLANK_TIMEOUT_PATH,
+	(void)mce_rtconf_get_int(MCE_GCONF_DISPLAY_BLANK_TIMEOUT_PATH,
 				&disp_blank_timeout);
 
-	if (mce_gconf_notifier_add(MCE_GCONF_DISPLAY_PATH,
+	if (mce_rtconf_notifier_add(MCE_GCONF_DISPLAY_PATH,
 				   MCE_GCONF_DISPLAY_BLANK_TIMEOUT_PATH,
-				   display_gconf_cb,
+				   display_rtconf_cb, NULL,
 				   &disp_blank_timeout_gconf_cb_id) == FALSE)
 		goto EXIT;
 	

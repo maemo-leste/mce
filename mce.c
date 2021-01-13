@@ -33,7 +33,6 @@
 #include "mce-log.h"
 #include "mce-conf.h"
 #include "mce-dbus.h"
-#include "mce-gconf.h"
 #include "mce-modules.h"
 #include "event-input.h"
 #include "event-switches.h"
@@ -468,16 +467,6 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	/* Initialise GConf
-	 * pre-requisite: g_type_init()
-	 */
-	if (mce_gconf_init() == FALSE) {
-		mce_log(LL_CRIT,
-			"Cannot connect to default GConf engine");
-		mce_log_close();
-		exit(EXIT_FAILURE);
-	}
-
 	/* Setup all datapipes */
 	setup_datapipe(&system_state_pipe, READ_WRITE, DONT_FREE_CACHE,
 		       0, GINT_TO_POINTER(MCE_STATE_USER));
@@ -559,15 +548,15 @@ int main(int argc, char **argv)
 		status = EXIT_FAILURE;
 		goto EXIT;
 	}
-
+	
 	/* Initialise mode management
-	 * pre-requisite: mce_gconf_init()
-	 * pre-requisite: mce_dbus_init()
-	 */
+	* pre-requisite: mce_dbus_init()
+	*/
 	if (mce_mode_init() == FALSE) {
 		status = EXIT_FAILURE;
 		goto EXIT;
 	}
+
 
 	/* Initialise powerkey driver */
 	if (mce_powerkey_init() == FALSE) {
@@ -654,7 +643,6 @@ EXIT:
 	free_datapipe(&system_state_pipe);
 
 	/* Call the exit function for all subsystems */
-	mce_gconf_exit();
 	mce_dbus_exit();
 	mce_conf_exit();
 
