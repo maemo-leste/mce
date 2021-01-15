@@ -38,7 +38,7 @@
 #define MCE_GCONF_BLANKING_INHIBIT_MODE_PATH	MCE_GCONF_DISPLAY_PATH "/inhibit_blank_mode"
 
 /**
- * inactiveity prevent timeout, in seconds;
+ * inactivity prevent timeout, in seconds;
  * Don't alter this, since this is part of the defined behaviour
  * for blanking inhibit that applications rely on
  */
@@ -95,7 +95,7 @@ static gint inactivity_timeout = DEFAULT_TIMEOUT;
  * @param timed_inhibit TRUE for timed inhibiting,
  *                      FALSE for triggered inhibiting
  */
-static bool inactiveity_inhibited(void)
+static bool inactivity_inhibited(void)
 {
 	bool blanking_inhibited = false;
 	system_state_t system_state = datapipe_get_gint(system_state_pipe);
@@ -199,7 +199,7 @@ static gboolean inactivity_timeout_cb(gpointer data)
 
 	inactivity_timeout_cb_id = 0;
 	
-	if(inactiveity_inhibited())
+	if(inactivity_inhibited())
 		return TRUE;
 
 	(void)execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(TRUE),
@@ -225,7 +225,7 @@ static void cancel_inactivity_timeout(void)
  */
 static void setup_inactivity_timeout(void)
 {
-	mce_log(LL_DEBUG, "%s: device inactiveity timeout %i", MODULE_NAME, inactivity_timeout);
+	mce_log(LL_DEBUG, "%s: device inactivity timeout %i", MODULE_NAME, inactivity_timeout);
 
 	cancel_inactivity_timeout();
 
@@ -327,7 +327,7 @@ static gpointer display_state_filter(gpointer data)
  * @param entry The modified GConf entry
  * @param data Unused
  */
-static void inactiveity_gconf_cb(GConfClient *const gcc, const guint id,
+static void inactivity_gconf_cb(GConfClient *const gcc, const guint id,
 			     GConfEntry *const entry, gpointer const data)
 {
 	GConfValue *gcv = gconf_entry_get_value(entry);
@@ -383,7 +383,7 @@ const gchar *g_module_check_init(GModule *module)
 
 	if (mce_gconf_notifier_add(MCE_GCONF_DISPLAY_PATH,
 				   MCE_GCONF_DISPLAY_DIM_TIMEOUT_PATH,
-				   inactiveity_gconf_cb,
+				   inactivity_gconf_cb,
 				   &inactivity_timeout_gconf_cb_id) == FALSE)
 		goto EXIT;
 	
@@ -392,7 +392,7 @@ const gchar *g_module_check_init(GModule *module)
 
 	if (mce_gconf_notifier_add(MCE_GCONF_DISPLAY_PATH,
 				   MCE_GCONF_BLANKING_INHIBIT_MODE_PATH,
-				   inactiveity_gconf_cb,
+				   inactivity_gconf_cb,
 				   &inactivity_inhibit_gconf_cb_id) == FALSE)
 		goto EXIT;
 
