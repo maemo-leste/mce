@@ -34,16 +34,14 @@ static alarm_ui_state_t alarm_ui_state;
 static bool iio_prox_claim_policy(void)
 {
 	return (call_state == CALL_STATE_RINGING) ||
-			(call_state == CALL_STATE_ACTIVE) ||
-			(alarm_ui_state == MCE_ALARM_UI_VISIBLE_INT32) ||
-			(alarm_ui_state == MCE_ALARM_UI_RINGING_INT32);
+	    (call_state == CALL_STATE_ACTIVE) ||
+	    (alarm_ui_state == MCE_ALARM_UI_VISIBLE_INT32) || (alarm_ui_state == MCE_ALARM_UI_RINGING_INT32);
 }
 
 static bool iio_prox_get_value(GDBusProxy * proxy)
 {
 	GVariant *v;
 	v = g_dbus_proxy_get_cached_property(proxy, "ProximityNear");
-	/*todo: Handle units other than lux? */
 	bool prox = g_variant_get_boolean(v);
 
 	mce_log(LL_DEBUG, "%s: proximity %s", MODULE_NAME, prox ? "near" : "far");
@@ -71,12 +69,13 @@ static bool iio_prox_claim_sensor(bool claim)
 			g_clear_pointer(&ret, g_variant_unref);
 
 			bool prox = iio_prox_get_value(iio_proxy);
-			execute_datapipe(&proximity_sensor_pipe, GINT_TO_POINTER(prox ? COVER_CLOSED : COVER_OPEN), USE_INDATA, CACHE_INDATA);
+			execute_datapipe(&proximity_sensor_pipe, GINT_TO_POINTER(prox ? COVER_CLOSED : COVER_OPEN),
+					 USE_INDATA, CACHE_INDATA);
 		} else if (!claim && claimed) {
 			mce_log(LL_DEBUG, "%s: Release proximity sensor", MODULE_NAME);
 			ret =
-			    g_dbus_proxy_call_sync(iio_proxy, "ReleaseProximity", NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL,
-						   &error);
+			    g_dbus_proxy_call_sync(iio_proxy, "ReleaseProximity", NULL, G_DBUS_CALL_FLAGS_NONE, -1,
+						   NULL, &error);
 			if (!ret && !g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
 				mce_log(LL_WARN, "%s: failed to relese proximity sensor %s", MODULE_NAME,
 					error->message);
@@ -84,38 +83,39 @@ static bool iio_prox_claim_sensor(bool claim)
 				return false;
 			}
 			g_clear_pointer(&ret, g_variant_unref);
-			
+
 			execute_datapipe(&proximity_sensor_pipe, GINT_TO_POINTER(COVER_OPEN), USE_INDATA, CACHE_INDATA);
 		}
 		claimed = claim;
 	} else {
 		claimed = false;
 	}
-	
+
 	return true;
 }
 
 static void iio_prox_properties_changed(GDBusProxy * proxy,
-				       GVariant * changed_properties, GStrv invalidated_properties, gpointer user_data)
+					GVariant * changed_properties, GStrv invalidated_properties, gpointer user_data)
 {
 	GVariantDict dict;
-	
+
 	(void)proxy;
 	(void)invalidated_properties;
 	(void)user_data;
-	
+
 	g_variant_dict_init(&dict, changed_properties);
 
 	if (g_variant_dict_contains(&dict, "ProximityNear")) {
 		bool prox = iio_prox_get_value(iio_proxy);
-		execute_datapipe(&proximity_sensor_pipe, GINT_TO_POINTER(prox ? COVER_CLOSED : COVER_OPEN), USE_INDATA, CACHE_INDATA);
+		execute_datapipe(&proximity_sensor_pipe, GINT_TO_POINTER(prox ? COVER_CLOSED : COVER_OPEN), USE_INDATA,
+				 CACHE_INDATA);
 	}
 
 	g_variant_dict_clear(&dict);
 }
 
 static void iio_sensors_appeared(GDBusConnection * connection, const gchar * name, const gchar * name_owner,
-				     gpointer user_data)
+				 gpointer user_data)
 {
 	(void)name;
 	(void)name_owner;
@@ -190,11 +190,10 @@ void g_module_unload(GModule * module)
 
 	remove_output_trigger_from_datapipe(&alarm_ui_state_pipe, alarm_ui_state_trigger);
 	remove_output_trigger_from_datapipe(&call_state_pipe, call_state_trigger);
-	
+
 	g_bus_unwatch_name(watch_id);
 	if (iio_proxy) {
 		g_clear_object(&iio_proxy);
 		iio_proxy = NULL;
 	}
-
 }
