@@ -1,3 +1,11 @@
+mce (1.8.128.27) unstable; urgency=medium
+
+  * Rename display-dev to display, drop legacy display and inactivity code
+  * Add iio-proximity; breaks proximity on the Nokia N900 at the moment
+  * Fix compiler warning by making display pipe writable
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Fri, 15 Jan 2021 23:25:24 +0100
+
 mce (1.8.128.26) unstable; urgency=medium
 
   * Enable alarm subsystem of mce, was not loaded by accident
