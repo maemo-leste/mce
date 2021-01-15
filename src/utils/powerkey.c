@@ -23,8 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <linux/input.h>
-#include <systemui/dbus-names.h>
-#include <systemui/powerkeymenu-dbus-names.h>
+#include "systemui/dbus-names.h"
+#include "systemui/powerkeymenu-dbus-names.h"
 #include "mce.h"
 #include "powerkey.h"
 #include "mce-log.h"

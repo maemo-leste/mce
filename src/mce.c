@@ -36,10 +36,13 @@
 #include "mce-modules.h"
 #include "event-input.h"
 #include "event-switches.h"
-#include "connectivity.h"
 #include "datapipe.h"
 #include "modetransition.h"
 #include "powerkey.h"
+
+#ifdef ENABLE_CONIC_SUPPORT
+#include "connectivity.h"
+#endif
 
 #ifdef ENABLE_SYSTEMD_SUPPORT
 #include <systemd/sd-daemon.h>
@@ -54,6 +57,75 @@ extern int optind;			/**< Used by getopt */
 extern char *optarg;			/**< Used by getopt */
 
 static const gchar *progname;	/**< Used to store the name of the program */
+
+/** State of device; read only */
+datapipe_struct device_inactive_pipe;
+/** LED pattern to activate; read only */
+datapipe_struct led_pattern_activate_pipe;
+/** LED pattern to deactivate; read only */
+datapipe_struct led_pattern_deactivate_pipe;
+/** LED enabled / disabled */
+datapipe_struct led_enabled_pipe;
+datapipe_struct vibrator_pattern_activate_pipe;
+datapipe_struct vibrator_pattern_deactivate_pipe;
+/** State of display; read only */
+datapipe_struct display_state_pipe;
+/**
+ * Display brightness;
+ * bits 0-7 is brightness in percent (0-100)
+ * upper 8 bits is high brightness boost (0-2)
+ */
+datapipe_struct display_brightness_pipe;
+/** A key has been pressed */
+datapipe_struct keypress_pipe;
+/** Touchscreen activity took place */
+datapipe_struct touchscreen_pipe;
+/** Touchscreen suspended or not */
+datapipe_struct touchscreen_suspend_pipe;
+/** The lock-key has been pressed; read only */
+datapipe_struct lockkey_pipe;
+/** Keyboard open/closed; read only */
+datapipe_struct keyboard_slide_pipe;
+/** Lid cover open/closed; read only */
+datapipe_struct lid_cover_pipe;
+/** Lens cover open/closed; read only */
+datapipe_struct lens_cover_pipe;
+/** Proximity sensor; read only */
+datapipe_struct proximity_sensor_pipe;
+/** Ambient light sensor, data in mlux */
+datapipe_struct light_sensor_pipe;
+/** The alarm UI state */
+datapipe_struct alarm_ui_state_pipe;
+/** The device state */
+datapipe_struct system_state_pipe;
+/** Pipe to request reboot/shutdown from the system power backend*/
+datapipe_struct system_power_request_pipe;
+datapipe_struct mode_pipe;
+/** The device submode */
+datapipe_struct submode_pipe;
+/** The call state */
+datapipe_struct call_state_pipe;
+/** The call type */
+datapipe_struct call_type_pipe;
+datapipe_struct device_lock_pipe;
+datapipe_struct device_lock_inhibit_pipe;
+/** The touchscreen/keypad lock state */
+datapipe_struct tk_lock_pipe;
+/** Charger state; read only */
+datapipe_struct charger_state_pipe;
+/** Battery status; read only */
+datapipe_struct battery_status_pipe;
+/** Camera button; read only */
+datapipe_struct camera_button_pipe;
+/** The inactivity timeout; read only */
+datapipe_struct inactivity_timeout_pipe;
+/** Audio routing state; read only */
+datapipe_struct audio_route_pipe;
+/** USB cable has been connected/disconnected; read only */
+datapipe_struct usb_cable_pipe;
+datapipe_struct tvout_pipe;
+
+GMainLoop *mainloop;
 
 /**
  * Display usage information
@@ -75,7 +147,6 @@ static void usage(void)
 		  "system bus for D-Bus\n"
 		  "      --quiet         decrease debug message verbosity\n"
 		  "      --verbose       increase debug message verbosity\n"
-		  "      --debug-mode    run even if dsme fails\n"
 		  "      --help          display this help and exit\n"
 		  "      --version       output version information and exit\n"
 		  "\n"
@@ -452,6 +523,8 @@ int main(int argc, char **argv)
 	mainloop = g_main_loop_new(NULL, FALSE);
 
 	/* Initialise subsystems */
+	
+	mce_log(LL_INFO, "Starting MCE");
 
 	/* Get configuration options */
 	/* ignore errors; this way the defaults will be used if
@@ -486,8 +559,6 @@ int main(int argc, char **argv)
 		       0, GINT_TO_POINTER(MCE_DISPLAY_UNDEF));
 	setup_datapipe(&display_brightness_pipe, READ_WRITE, DONT_FREE_CACHE,
 		       0, GINT_TO_POINTER(0));
-	setup_datapipe(&led_brightness_pipe, READ_WRITE, DONT_FREE_CACHE,
-		       0, GINT_TO_POINTER(0));
 	setup_datapipe(&led_pattern_activate_pipe, READ_WRITE, DONT_FREE_CACHE,
 		       0, NULL);
 	setup_datapipe(&led_pattern_deactivate_pipe, READ_ONLY, FREE_CACHE,
@@ -498,8 +569,6 @@ int main(int argc, char **argv)
 		       0, NULL);
 	setup_datapipe(&vibrator_pattern_deactivate_pipe, READ_ONLY, FREE_CACHE,
 		       0, NULL);
-	setup_datapipe(&key_backlight_pipe, READ_WRITE, DONT_FREE_CACHE,
-		       0, GINT_TO_POINTER(0));
 	setup_datapipe(&keypress_pipe, READ_WRITE, FREE_CACHE,
 		       sizeof (struct input_event), NULL);
 	setup_datapipe(&touchscreen_pipe, READ_ONLY, DONT_FREE_CACHE,
@@ -544,16 +613,19 @@ int main(int argc, char **argv)
 	/* Initialise connectivity monitoring
 	 * pre-requisite: g_type_init()
 	 */
+#ifdef ENABLE_CONIC_SUPPORT
 	if (mce_connectivity_init() == FALSE) {
 		status = EXIT_FAILURE;
 		goto EXIT;
 	}
+#endif
 	
 	/* Initialise mode management
 	* pre-requisite: mce_dbus_init()
 	*/
 	if (mce_mode_init() == FALSE) {
 		status = EXIT_FAILURE;
+		mce_log(LL_CRIT, "Failed to initialise mce-mode");
 		goto EXIT;
 	}
 
@@ -561,23 +633,27 @@ int main(int argc, char **argv)
 	/* Initialise powerkey driver */
 	if (mce_powerkey_init() == FALSE) {
 		status = EXIT_FAILURE;
+		mce_log(LL_CRIT, "Failed to initialise mce-powerkey");
 		goto EXIT;
 	}
 
 	if (mce_input_init() == FALSE) {
 		status = EXIT_FAILURE;
+		mce_log(LL_CRIT, "Failed to initialise mce-input");
 		goto EXIT;
 	}
 
 	/* Initialise switch driver */
 	if (mce_switches_init() == FALSE) {
 		status = EXIT_FAILURE;
+		mce_log(LL_CRIT, "Failed to initialise mce-switches");
 		goto EXIT;
 	}
 
 	/* Load all modules */
 	if (mce_modules_init() == FALSE) {
 		status = EXIT_FAILURE;
+		mce_log(LL_CRIT, "Failed to initialise mce-modules");
 		goto EXIT;
 	}
 
@@ -606,7 +682,10 @@ EXIT:
 	mce_input_exit();
 	mce_powerkey_exit();
 	mce_mode_exit();
+
+#ifdef ENABLE_CONIC_SUPPORT
 	mce_connectivity_exit();
+#endif
 
 	/* Free all datapipes */
 	free_datapipe(&tvout_pipe);
@@ -627,12 +706,10 @@ EXIT:
 	free_datapipe(&touchscreen_suspend_pipe);
 	free_datapipe(&touchscreen_pipe);
 	free_datapipe(&keypress_pipe);
-	free_datapipe(&key_backlight_pipe);
 	free_datapipe(&vibrator_pattern_deactivate_pipe);
 	free_datapipe(&vibrator_pattern_activate_pipe);
 	free_datapipe(&led_pattern_deactivate_pipe);
 	free_datapipe(&led_pattern_activate_pipe);
-	free_datapipe(&led_brightness_pipe);
 	free_datapipe(&display_brightness_pipe);
 	free_datapipe(&display_state_pipe);
 	free_datapipe(&submode_pipe);
