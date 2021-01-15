@@ -26,7 +26,6 @@
 #include <gmodule.h>
 #include <glib/gstdio.h>
 #include <unistd.h>
-#include <cal.h>
 #include <stdlib.h>
 #include "mce.h"
 #include "filter-brightness-als-iio.h"

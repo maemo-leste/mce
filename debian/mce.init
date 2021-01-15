@@ -17,11 +17,11 @@ start_pre() {
 }
 
 start() {
-	/usr/sbin/dsmetool -n -1 -t "/sbin/mce --force-syslog"
+	/usr/sbin/dsmetool -n -1 -t "/usr/bin/mce --force-syslog"
 }
 
 stop() {
 	eend "Stopping mce"
-	/usr/sbin/dsmetool -k "/sbin/mce --force-syslog"
+	/usr/sbin/dsmetool -k "/usr/bin/mce --force-syslog"
 }
 

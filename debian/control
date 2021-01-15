@@ -1,9 +1,9 @@
 Source: mce
 Section: misc
 Priority: optional
-Maintainer: David Weinehall <david.weinehall@nokia.com>
-Uploaders: Philippe De Swert <philippe.de-swert@nokia.com>, Pekka Lundström <pekka.lundstrom@nokia.com>
+Maintainer: Carl Philipp Klemm <carl@uvos.xyz>
 Build-Depends:
+ cmake,
  debhelper (>= 10),
  mce-dev (>= 1.8.19),
  pkg-config,
@@ -34,14 +34,8 @@ Depends:
  dbus,
  ${shlibs:Depends},
  ${misc:Depends}
-Recommends: dsme (>= 0.30.11)
-Conflicts:
- osso-systemui-tklock (<< 0.1.8.12),
- osso-applet-display (<< 1.4.2),
- libcodelockui1 (<< 1:1.5.5),
- hildon-desktop (<< 1:2.2.48-1),
- osso-systemui-alarm (<< 0.2.1.24),
- osso-systemui-devlock (<< 0.2.0.3),
+Recommends:
+ dsme (>= 0.30.11)
 Description: the Mode Control Entity for Nokia Internet Tablets
  This package contains the Mode Control Entity which provides
  mode management features.  This is a daemon that is the backend
