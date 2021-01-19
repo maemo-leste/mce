@@ -1,3 +1,9 @@
+mce (1.8.128.28) unstable; urgency=medium
+
+  * Load display module even if there is not brightness control on the system
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Tue, 19 Jan 2021 14:35:24 +0200
+
 mce (1.8.128.27) unstable; urgency=medium
 
   * Rename display-dev to display, drop legacy display and inactivity code
