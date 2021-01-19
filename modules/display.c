@@ -753,10 +753,12 @@ const gchar *g_module_check_init(GModule *module)
 	(void)module;
 	
 	if (!get_display()) {
-		mce_log(LL_ERR, "%s: Could not find display backlight", MODULE_NAME);
-		goto EXIT;
+		/* TODO - do not provide brightness interface if we can't
+		 control it. Be very careful when implementing the change as
+		 there might be mission critical applications that rely on it.
+		 */
+		mce_log(LL_WARN, "%s: Could not find display backlight", MODULE_NAME);
 	}
-		
 
 	/* Append triggers/filters to datapipes */
 	append_output_trigger_to_datapipe(&display_brightness_pipe,
