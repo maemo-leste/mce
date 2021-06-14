@@ -1,3 +1,9 @@
+mce (1.8.128.30) unstable; urgency=medium
+
+  * Automatically load rtconf-gconf
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Mon, 14 Jun 2021 23:16:17 +0200
+
 mce (1.8.128.29) unstable; urgency=medium
 
   * Make tklock and devlock modules
