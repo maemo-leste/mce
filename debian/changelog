@@ -1,3 +1,13 @@
+mce (1.8.128.29) unstable; urgency=medium
+
+  * Make tklock and devlock modules
+  * Add battery-guard module
+  * Add lock-generic module (disabled atm)
+  * Add power-generic module (disabled atm)
+  * Add rtconf module for generic backends (gconf, gsettings, ...)
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Mon, 14 Jun 2021 23:00:43 +0200
+
 mce (1.8.128.28) unstable; urgency=medium
 
   * Load display module even if there is not brightness control on the system
