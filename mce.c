@@ -33,7 +33,6 @@
 #include "mce-log.h"
 #include "mce-conf.h"
 #include "mce-dbus.h"
-#include "mce-dsme.h"
 #include "mce-modules.h"
 #include "event-input.h"
 #include "event-switches.h"
