@@ -569,11 +569,6 @@ int main(int argc, char **argv)
 		goto EXIT;
 	}
 
-	if (mce_devlock_init() == FALSE) {
-		status = EXIT_FAILURE;
-		goto EXIT;
-	}
-
 	/* Initialise powerkey driver */
 	if (mce_powerkey_init() == FALSE) {
 		status = EXIT_FAILURE;
