@@ -4,24 +4,27 @@ description="This init script starts the mode control software used on the Maemo
 name="Mode Control Entity."
 
 depend() {
-	need dsme dbus dbus-user
+        need dbus dbus-user
+        after dsme
 }
 
 start_pre() {
-	ebegin "Starting mce"
-	RUNDIR=/var/run/mce
-	test -d $RUNDIR || (rm -f $RUNDIR; mkdir $RUNDIR)
-	/usr/sbin/waitdbus system
-	. /tmp/session_bus_address.user
-	/usr/sbin/waitdbus session
+        ebegin "Starting mce"
+        RUNDIR=/var/run/mce
+        test -d $RUNDIR || (rm -f $RUNDIR; mkdir $RUNDIR)
+        /usr/sbin/waitdbus system
+        . /tmp/session_bus_address.user
+        /usr/sbin/waitdbus session
 }
 
 start() {
-	/usr/sbin/dsmetool -n -1 -t "/sbin/mce --force-syslog"
+        start-stop-daemon --start --oknodo --background --exec /sbin/mce --make-pidfile --pidfile /var/run/mce.pid --retry 5 -- --force-syslog
+        eend $?
 }
 
 stop() {
-	eend "Stopping mce"
-	/usr/sbin/dsmetool -k "/sbin/mce --force-syslog"
+        eend "Stopping mce"
+        start-stop-daemon --stop --oknodo --pidfile /var/run/mce.pid --retry=TERM/30/KILL/5
+        eend $?
 }
 
