@@ -1,3 +1,9 @@
+mce (1.8.128.31) unstable; urgency=medium
+
+  * modules/inactivity: Support 0 as timeout value to prevent screen blanking.
+
+ -- Ivan J. <parazyd@dyne.org>  Sat, 19 Jun 2021 16:55:04 +0200
+
 mce (1.8.128.30) unstable; urgency=medium
 
   * Automatically load rtconf-gconf
