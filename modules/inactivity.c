@@ -230,11 +230,12 @@ static void setup_inactivity_timeout(void)
 	cancel_inactivity_timeout();
 
 	/* Sanitise timeout */
-	if (inactivity_timeout <= 0)
+	if (inactivity_timeout < 0)
 		inactivity_timeout = 30;
 
-	/* Setup new timeout */
-	inactivity_timeout_cb_id = g_timeout_add_seconds(inactivity_timeout, inactivity_timeout_cb, NULL);
+	/* Setup new timeout if it's > 0 */
+	if (inactivity_timeout > 0)
+		inactivity_timeout_cb_id = g_timeout_add_seconds(inactivity_timeout, inactivity_timeout_cb, NULL);
 }
 
 /**
