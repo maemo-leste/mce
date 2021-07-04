@@ -1,3 +1,11 @@
+mce (1.9.0) unstable; urgency=medium
+
+  * Switch build system to cmake
+  * Allow building without maemo dependences
+  * Allow building without x11 dependences
+
+ -- Carl Klemm <carl@uvos.org>  Sat, 5 Jul 2021 00:55:04 +0200
+
 mce (1.8.128.31) unstable; urgency=medium
 
   * modules/inactivity: Support 0 as timeout value to prevent screen blanking.
