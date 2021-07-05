@@ -40,7 +40,9 @@
 #include "mce-log.h"
 #include "mce-dbus.h"
 #include "datapipe.h"
+#ifdef ENABLE_CONIC_SUPPORT
 #include "connectivity.h"
+#endif
 
 static const mce_translation_t device_mode_translation[] = {
 	{
@@ -411,6 +413,7 @@ gboolean mce_set_device_mode_int32(const device_mode_t mode)
 		break;
 
 	case MCE_FLIGHT_MODE_CONFIRM_INT32:
+#ifdef ENABLE_CONIC_SUPPORT
 		if (get_connectivity_status() == TRUE) {
 			transition = MODECHANGE_TO_FLIGHTMODE;
 			result = mode_confirm(transition, TRUE);
@@ -421,7 +424,7 @@ gboolean mce_set_device_mode_int32(const device_mode_t mode)
 		} else {
 			result = set_raw_device_mode(mode);
 		}
-
+#endif
 		break;
 
 	default:

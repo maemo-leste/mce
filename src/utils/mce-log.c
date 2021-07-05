@@ -19,7 +19,6 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with mce.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifdef OSSOLOG_COMPILE
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -119,4 +118,3 @@ void mce_log_close(void)
 	if (logtype == MCE_LOG_SYSLOG)
 		closelog();
 }
-#endif /* OSSOLOG_COMPILE */

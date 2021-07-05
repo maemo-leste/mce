@@ -41,19 +41,20 @@ static size_t mce_conf_file_count = 0;
 static struct mce_conf_file *mce_conf_find_key_in_files(const gchar *group, const gchar *key) 
 {
 	GError *error = NULL;
-
-	for (size_t i = mce_conf_file_count; i > 0; --i) {
-		if (g_key_file_has_key(conf_files[i-1].keyfile, group, key, &error) && 
-			error == NULL) {
-			g_clear_error(&error);
-			return &(conf_files[i-1]);
+	
+	if (conf_files) {
+		for (size_t i = mce_conf_file_count; i > 0; --i) {
+			if (g_key_file_has_key(conf_files[i-1].keyfile, group, key, &error) && 
+				error == NULL) {
+				g_clear_error(&error);
+				return &(conf_files[i-1]);
+			}
+			else {
+				g_clear_error(&error);
+				error = NULL;
+			}
 		}
-		else {
-			g_clear_error(&error);
-			error = NULL;
-		}
-	}
-
+ 	}
 	return NULL;
 }
 

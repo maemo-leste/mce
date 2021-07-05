@@ -94,7 +94,7 @@ typedef struct {
 } module_info_struct;
 
 /** The GMainLoop used by MCE */
-GMainLoop *mainloop;
+extern GMainLoop *mainloop;
 
 /** Used for invalid translations and values */
 #define MCE_INVALID_TRANSLATION		-1
@@ -266,81 +266,75 @@ typedef enum {
 	USB_CABLE_CONNECTED = 1		/**< Cable is connected */
 } usb_cable_state_t;
 
-datapipe_struct led_brightness_pipe;
 /** State of device; read only */
-datapipe_struct device_inactive_pipe;
+extern datapipe_struct device_inactive_pipe;
 /** LED pattern to activate; read only */
-datapipe_struct led_pattern_activate_pipe;
+extern datapipe_struct led_pattern_activate_pipe;
 /** LED pattern to deactivate; read only */
-datapipe_struct led_pattern_deactivate_pipe;
+extern datapipe_struct led_pattern_deactivate_pipe;
 /** LED enabled / disabled */
-datapipe_struct led_enabled_pipe;
-datapipe_struct vibrator_pattern_activate_pipe;
-datapipe_struct vibrator_pattern_deactivate_pipe;
+extern datapipe_struct led_enabled_pipe;
+extern datapipe_struct vibrator_pattern_activate_pipe;
+extern datapipe_struct vibrator_pattern_deactivate_pipe;
 /** State of display; read only */
-datapipe_struct display_state_pipe;
+extern datapipe_struct display_state_pipe;
 /**
  * Display brightness;
  * bits 0-7 is brightness in percent (0-100)
  * upper 8 bits is high brightness boost (0-2)
  */
-datapipe_struct display_brightness_pipe;
-/** Key backlight */
-datapipe_struct key_backlight_pipe;
+extern datapipe_struct display_brightness_pipe;
 /** A key has been pressed */
-datapipe_struct keypress_pipe;
+extern datapipe_struct keypress_pipe;
 /** Touchscreen activity took place */
-datapipe_struct touchscreen_pipe;
+extern datapipe_struct touchscreen_pipe;
 /** Touchscreen suspended or not */
-datapipe_struct touchscreen_suspend_pipe;
+extern datapipe_struct touchscreen_suspend_pipe;
 /** The lock-key has been pressed; read only */
-datapipe_struct lockkey_pipe;
+extern datapipe_struct lockkey_pipe;
 /** Keyboard open/closed; read only */
-datapipe_struct keyboard_slide_pipe;
+extern datapipe_struct keyboard_slide_pipe;
 /** Lid cover open/closed; read only */
-datapipe_struct lid_cover_pipe;
+extern datapipe_struct lid_cover_pipe;
 /** Lens cover open/closed; read only */
-datapipe_struct lens_cover_pipe;
+extern datapipe_struct lens_cover_pipe;
 /** Proximity sensor; read only */
-datapipe_struct proximity_sensor_pipe;
+extern datapipe_struct proximity_sensor_pipe;
 /** Ambient light sensor, data in mlux */
-datapipe_struct light_sensor_pipe;
+extern datapipe_struct light_sensor_pipe;
 /** The alarm UI state */
-datapipe_struct alarm_ui_state_pipe;
+extern datapipe_struct alarm_ui_state_pipe;
 /** The device state */
-datapipe_struct system_state_pipe;
+extern datapipe_struct system_state_pipe;
 /** Pipe to request reboot/shutdown from the system power backend*/
-datapipe_struct system_power_request_pipe;
-datapipe_struct mode_pipe;
+extern datapipe_struct system_power_request_pipe;
+extern datapipe_struct mode_pipe;
 /** The device submode */
-datapipe_struct submode_pipe;
+extern datapipe_struct submode_pipe;
 /** The call state */
-datapipe_struct call_state_pipe;
+extern datapipe_struct call_state_pipe;
 /** The call type */
-datapipe_struct call_type_pipe;
-datapipe_struct device_lock_pipe;
-datapipe_struct device_lock_inhibit_pipe;
+extern datapipe_struct call_type_pipe;
+extern datapipe_struct device_lock_pipe;
+extern datapipe_struct device_lock_inhibit_pipe;
 /** The touchscreen/keypad lock state */
-datapipe_struct tk_lock_pipe;
+extern datapipe_struct tk_lock_pipe;
 /** Charger state; read only */
-datapipe_struct charger_state_pipe;
+extern datapipe_struct charger_state_pipe;
 /** Battery status; read only */
-datapipe_struct battery_status_pipe;
+extern datapipe_struct battery_status_pipe;
 /** Camera button; read only */
-datapipe_struct camera_button_pipe;
+extern datapipe_struct camera_button_pipe;
 /** The inactivity timeout; read only */
-datapipe_struct inactivity_timeout_pipe;
+extern datapipe_struct inactivity_timeout_pipe;
 /** Audio routing state; read only */
-datapipe_struct audio_route_pipe;
+extern datapipe_struct audio_route_pipe;
 /** USB cable has been connected/disconnected; read only */
-datapipe_struct usb_cable_pipe;
+extern datapipe_struct usb_cable_pipe;
+extern datapipe_struct tvout_pipe;
 
-/* XXX: use HAL */
-/** Does the device have a flicker key? */
 extern gboolean has_flicker_key;
 extern guint16 power_keycode;
-
-datapipe_struct tvout_pipe;
 
 /**
  * Default inactivity timeout, in seconds;
