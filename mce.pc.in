@@ -1,0 +1,7 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+includedir=${prefix}/include/mce
+
+Name: mce
+Description: Mode Control Entity
+Version: @PROJECT_VERSION@
+Cflags: -I${includedir}

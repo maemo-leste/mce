@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 
-project(mce LANGUAGES C)
+project(mce LANGUAGES C VERSION 1.9)
 
 set(MCE_CONF_DIR /etc/mce)
 set(MCE_CONF_OVR_DIR mce.ini.d)
@@ -99,10 +99,14 @@ else()
 	message("GConf support disabled")
 endif(DEFINED GCONF_LIBRARIES)
 
+configure_file(mce.pc.in "${CMAKE_CURRENT_BINARY_DIR}/mce.pc"  @ONLY)
+
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/mce.pc" DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 install(DIRECTORY config/mce.ini.d DESTINATION ${MCE_CONF_DIR})
 install(FILES config/mce.ini config/rtconf.ini  DESTINATION ${MCE_CONF_DIR})
 install(FILES config/mode DESTINATION ${MCE_VAR_DIR})
 install(FILES config/mce.conf DESTINATION ${DBUS_CONF_DIR})
+install(DIRECTORY src/include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
 
 if(DEFINED SYSTEMUI_LIBRARIES)
 	message("SystemUI support enabled")
@@ -110,4 +114,4 @@ if(DEFINED SYSTEMUI_LIBRARIES)
 	message("SystemUI support enabled")
 else()
 	message("SystemUI support disabled")
-endif(DEFINED GCONF_LIBRARIES)
+endif(DEFINED SYSTEMUI_LIBRARIES)
