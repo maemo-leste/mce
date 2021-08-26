@@ -568,25 +568,6 @@ static void display_state_trigger(gconstpointer data)
 }
 
 /**
- * Handle led brightness change
- *
- * @param data The LED brightness stored in a pointer
- */
-static void led_brightness_trigger(gconstpointer data)
-{
-	gint led_brightness = GPOINTER_TO_INT(data);
-
-	switch (get_led_type()) {
-	case LED_TYPE_LYSTI:
-		lysti_set_brightness(led_brightness);
-		break;
-
-	default:
-		break;
-	}
-}
-
-/**
  * Handle LED pattern activate requests
  *
  * @param data The pattern name
@@ -738,9 +719,7 @@ static gboolean init_lysti_patterns(void)
 	}
 
 	/* Set the LED brightness */
-	execute_datapipe(&led_brightness_pipe,
-			 GINT_TO_POINTER(DEFAULT_LYSTI_RGB_LED_CURRENT),
-			 USE_INDATA, CACHE_INDATA);
+	lysti_set_brightness(DEFAULT_LYSTI_RGB_LED_CURRENT);
 
 	status = TRUE;
 
@@ -797,8 +776,6 @@ const gchar *g_module_check_init(GModule *module)
 					  system_state_trigger);
 	append_output_trigger_to_datapipe(&display_state_pipe,
 					  display_state_trigger);
-	append_output_trigger_to_datapipe(&led_brightness_pipe,
-					  led_brightness_trigger);
 	append_output_trigger_to_datapipe(&led_pattern_activate_pipe,
 					  led_pattern_activate_trigger);
 	append_output_trigger_to_datapipe(&led_pattern_deactivate_pipe,
@@ -834,8 +811,6 @@ void g_module_unload(GModule *module)
 					    led_pattern_deactivate_trigger);
 	remove_output_trigger_from_datapipe(&led_pattern_activate_pipe,
 					    led_pattern_activate_trigger);
-	remove_output_trigger_from_datapipe(&led_brightness_pipe,
-					    led_brightness_trigger);
 	remove_output_trigger_from_datapipe(&display_state_pipe,
 					    display_state_trigger);
 	remove_output_trigger_from_datapipe(&system_state_pipe,

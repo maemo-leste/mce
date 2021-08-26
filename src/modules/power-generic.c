@@ -34,11 +34,11 @@ static void system_power_request_trigger(gconstpointer data)
 		case MCE_POWER_REQ_OFF:
 		case MCE_POWER_REQ_SOFT_OFF:
 			execute_datapipe(&system_state_pipe, GINT_TO_POINTER(MCE_STATE_SHUTDOWN), USE_INDATA, CACHE_INDATA);
-			system("poweroff");
+			(void)system("poweroff");
 			break;
 		case MCE_POWER_REQ_REBOOT:
 			execute_datapipe(&system_state_pipe, GINT_TO_POINTER(MCE_STATE_SHUTDOWN), USE_INDATA, CACHE_INDATA);
-			system("reboot");
+			(void)system("reboot");
 			break;
 		case MCE_POWER_REQ_UNDEF:
 		default:

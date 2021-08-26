@@ -1,7 +1,0 @@
-sbin
-etc/mce
-etc/dbus-1/system.d
-etc/gconf/schemas
-var/lib/mce
-var/run/mce
-usr/lib/mce
