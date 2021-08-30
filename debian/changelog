@@ -1,3 +1,9 @@
+mce (1.9.1) unstable; urgency=medium
+
+  * Remove headers from mce deb archive
+
+ -- Carl Klemm <carl@uvos.org>  Sat, 30 Aug 2021 18:55:04 +0200
+
 mce (1.9.0) unstable; urgency=medium
 
   * Switch build system to cmake
