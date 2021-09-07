@@ -171,3 +171,8 @@ if(DEFINED DSME_LIBRARIES)
 else()
 	message("No dsme support found, dsme support will not be built")
 endif(DEFINED DSME_LIBRARIES)
+
+add_library(quirks-mapphone SHARED quirks-mapphone.c)
+target_link_libraries(quirks-mapphone ${COMMON_LIBRARIES})
+target_include_directories(quirks-mapphone PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
+install(TARGETS quirks-mapphone DESTINATION ${MCE_MODULE_DIR})
