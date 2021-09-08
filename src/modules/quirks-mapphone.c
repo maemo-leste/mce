@@ -54,6 +54,8 @@ static void display_state_trigger(gconstpointer data)
 		if(write(fd, msg, strlen(msg)) < 0)
 			mce_log(LL_WARN, "%s: can not set modem to screen off state", MODULE_NAME);
 	}
+	
+	close(fd);
 }
 
 static gboolean inactivity_timeout_cb(gpointer data)
