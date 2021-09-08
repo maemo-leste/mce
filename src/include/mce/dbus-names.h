@@ -489,6 +489,13 @@
  */
 #define  MCE_KEYBOARD_STATUS_GET		"get_keyboard_status"
 
+/**
+ * Query the keyboard slide status
+ *
+ * @since v1.8.19
+ */
+#define  MCE_KEYBOARD_SLIDE_GET		"get_keyboard_slide"
+
 /*@}*/
 
 #endif /* _MCE_DBUS_NAMES_H_ */

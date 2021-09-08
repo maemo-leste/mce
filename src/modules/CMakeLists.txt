@@ -25,6 +25,8 @@ if(DEFINED UPOWER_LIBRARIES)
 	target_link_libraries(battery-upower ${COMMON_LIBRARIES})
 	target_include_directories(battery-upower PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
 	install(TARGETS battery-upower DESTINATION ${MCE_MODULE_DIR})
+else()
+	message("No upower found, upower support will not be built")
 endif(DEFINED UPOWER_LIBRARIES)
 
 
@@ -171,6 +173,11 @@ if(DEFINED DSME_LIBRARIES)
 else()
 	message("No dsme support found, dsme support will not be built")
 endif(DEFINED DSME_LIBRARIES)
+
+add_library(state-dbus SHARED state-dbus.c)
+target_link_libraries(state-dbus ${COMMON_LIBRARIES})
+target_include_directories(state-dbus PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
+install(TARGETS state-dbus DESTINATION ${MCE_MODULE_DIR})
 
 add_library(quirks-mapphone SHARED quirks-mapphone.c)
 target_link_libraries(quirks-mapphone ${COMMON_LIBRARIES})
