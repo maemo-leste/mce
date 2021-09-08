@@ -6,6 +6,7 @@
  * <p>
  * @author David Weinehall <david.weinehall@nokia.com>
  * @author Jonathan Wilson <jfwfreo@tpgi.com.au>
+ * @author Carl Philipp Klemm <carl@uvos.xyz>
  *
  * mce is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License
