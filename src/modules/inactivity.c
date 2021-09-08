@@ -148,7 +148,7 @@ static gboolean send_inactivity_status(DBusMessage *const method_call)
 				     DBUS_TYPE_BOOLEAN, &device_inactive,
 				     DBUS_TYPE_INVALID) == FALSE) {
 		mce_log(LL_CRIT,
-			"Failed to append %sargument to D-Bus message "
+			"Failed to append %s argument to D-Bus message "
 			"for %s.%s",
 			method_call ? "reply " : "",
 			method_call ? MCE_REQUEST_IF :
