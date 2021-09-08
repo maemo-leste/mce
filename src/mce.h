@@ -333,7 +333,6 @@ extern datapipe_struct audio_route_pipe;
 extern datapipe_struct usb_cable_pipe;
 extern datapipe_struct tvout_pipe;
 
-extern gboolean has_flicker_key;
 extern guint16 power_keycode;
 
 /**

@@ -538,7 +538,7 @@ static gboolean open_tklock_ui(const dbus_uint32_t mode,
 	const gchar *const cb_path = MCE_REQUEST_PATH;
 	const gchar *const cb_interface = MCE_REQUEST_IF;
 	const gchar *const cb_method = MCE_TKLOCK_CB_REQ;
-	dbus_bool_t flicker_key = has_flicker_key;
+	dbus_bool_t flicker_key = FALSE;
 	tklock_ui_state_t new_tklock_ui_state;
 	DBusMessage *reply = NULL;
 	gboolean status = FALSE;
