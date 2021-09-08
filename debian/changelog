@@ -1,3 +1,9 @@
+mce (1.9.3) unstable; urgency=medium
+
+  * fix tlock module not linking
+
+ -- Carl Klemm <carl@uvos.org>  Sat, 8 Sep 2021 21:31:00 +0200
+
 mce (1.9.2) unstable; urgency=medium
 
   * Add state-dbus module (to eventually replace ke-recv)
