@@ -26,8 +26,6 @@
 
 #include <linux/input.h>	/* KEY_POWER */
 
-#include "event-switches.h"
-
 /**
  * List of drivers that provide touchscreen events
  */

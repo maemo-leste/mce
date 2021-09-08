@@ -35,7 +35,6 @@
 #include "mce-io.h"
 #include "mce-log.h"
 #include "datapipe.h"
-#include "event-switches.h"
 #include "event-input-utils.h"
 
 guint16 power_keycode = POWER_BUTTON;
@@ -309,13 +308,6 @@ EXIT:
 	return;
 }
 
-static void switch_call_cb(struct input_event *ev, iomon_cb callback,
-			   const char *active, const char *inactive)
-{
-	callback((gpointer)(ev->value ? active : inactive),
-		 ev->value ? strlen(active) : strlen(inactive));
-}
-
 /**
  * I/O monitor callback for switch
  *
@@ -325,28 +317,26 @@ static void switch_call_cb(struct input_event *ev, iomon_cb callback,
 static void switch_cb(gpointer data, gsize bytes_read)
 {
 	struct input_event *ev;
+	gboolean activity_needed = FALSE;
 
 	ev = data;
 
 	/* Don't process invalid reads */
 	if (bytes_read != sizeof (struct input_event)) {
-		goto EXIT;
+		return;
 	}
 
 	if (ev->type == EV_SW) {
 		switch (ev->code) {
 			case SW_KEYPAD_SLIDE: {
-				switch_call_cb(ev, kbd_slide_cb,
-					       MCE_KBD_SLIDE_OPEN,
-					       MCE_KBD_SLIDE_CLOSED);
-				goto EXIT;
+				execute_datapipe(&keyboard_slide_pipe, GINT_TO_POINTER(ev->value),
+								 USE_INDATA, CACHE_INDATA);
+				activity_needed = TRUE;
 			}
 			case SW_CAMERA_LENS_COVER: {
-				switch_call_cb(ev, camera_launch_button_cb,
-					       MCE_LENS_COVER_CLOSED,
-					       MCE_LENS_COVER_OPEN);
-
-				goto EXIT;
+				execute_datapipe(&camera_button_pipe, GINT_TO_POINTER(ev->value),
+								 USE_INDATA, CACHE_INDATA);
+				activity_needed = TRUE;
 			}
 			default:
 				break;
@@ -354,30 +344,26 @@ static void switch_cb(gpointer data, gsize bytes_read)
 	} else if (ev->type == EV_KEY) {
 		switch (ev->code) {
 			case KEY_SCREENLOCK: {
-				switch_call_cb(ev, lockkey_cb,
-					       MCE_FLICKER_KEY_ACTIVE,
-					       MCE_FLICKER_KEY_INACTIVE);
-				goto EXIT;
+				execute_datapipe(&lockkey_pipe, GINT_TO_POINTER(ev->value),
+								 USE_INDATA, CACHE_INDATA);
+				activity_needed = TRUE;
 			}
 			case KEY_CAMERA: {
-				switch_call_cb(ev, camera_launch_button_cb,
-					       MCE_CAM_LAUNCH_ACTIVE,
-					       MCE_CAM_LAUNCH_INACTIVE);
-				goto EXIT;
+				execute_datapipe(&camera_button_pipe, GINT_TO_POINTER(ev->value),
+								 USE_INDATA, CACHE_INDATA);
+				activity_needed = TRUE;
 			}
 			case KEY_CAMERA_FOCUS: {
-				switch_call_cb(ev, generic_activity_cb,
-					       MCE_CAM_FOCUS_ACTIVE,
-					       MCE_CAM_FOCUS_INACTIVE);
-				goto EXIT;
+				activity_needed = TRUE;
 			}
 		default:
 			break;
 		}
 	}
-
-EXIT:
-	return;
+	
+	if (activity_needed)
+		execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE),
+			       USE_INDATA, CACHE_INDATA);
 }
 
 /**

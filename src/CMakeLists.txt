@@ -1,8 +1,7 @@
 set(MCE_SRC_FILES 	mce.c 
 					utils/datapipe.c
 					utils/event-input.c 
-					utils/event-input-utils.c 
-					utils/event-switches.c 
+					utils/event-input-utils.c
 					utils/mce-conf.c 
 					utils/mce-dbus.c 
 					utils/mce-io.c 

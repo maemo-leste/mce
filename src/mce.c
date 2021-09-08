@@ -35,7 +35,6 @@
 #include "mce-dbus.h"
 #include "mce-modules.h"
 #include "event-input.h"
-#include "event-switches.h"
 #include "datapipe.h"
 #include "modetransition.h"
 #include "powerkey.h"
@@ -642,13 +641,6 @@ int main(int argc, char **argv)
 		goto EXIT;
 	}
 
-	/* Initialise switch driver */
-	if (mce_switches_init() == FALSE) {
-		status = EXIT_FAILURE;
-		mce_log(LL_CRIT, "Failed to initialise mce-switches");
-		goto EXIT;
-	}
-
 	/* Load all modules */
 	if (mce_modules_init() == FALSE) {
 		status = EXIT_FAILURE;
@@ -677,7 +669,6 @@ EXIT:
 	mce_modules_exit();
 
 	/* Call the exit function for all components */
-	mce_switches_exit();
 	mce_input_exit();
 	mce_powerkey_exit();
 	mce_mode_exit();
