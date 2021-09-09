@@ -1,3 +1,11 @@
+mce (1.9.4) unstable; urgency=medium
+
+  * Various error checking bits for mce-modules
+  * fix battery-upower link flags so that it can accually be loaded
+  * fix compiler warnings
+
+ -- Carl Klemm <carl@uvos.org>  Sat, 9 Sep 2021 23:31:00 +0200
+
 mce (1.9.3) unstable; urgency=medium
 
   * fix tlock module not linking
