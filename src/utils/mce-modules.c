@@ -29,6 +29,52 @@
 /** List of all loaded modules */
 static GSList *modules = NULL;
 
+static gboolean mce_modules_check_provides(module_info_struct *new_module_info)
+{
+	for (GSList *module = modules; module; module = module->next) {
+		gpointer mip = NULL;
+		module_info_struct *module_info;
+		if (g_module_symbol(module->data, "module_info", &mip) == FALSE)
+			continue;
+		module_info = (module_info_struct*)mip;
+		for (int i = 0; new_module_info->provides[i]; ++i) {
+			for (int j = 0; module_info->provides[j]; ++j) {
+				if (g_strcmp0(new_module_info->provides[i], module_info->provides[j]) == 0) {
+					mce_log(LL_WARN, "Module %s has the same provides as module %s, and will not be loaded.",
+							new_module_info->name, module_info->name);
+					return FALSE;
+				}
+			}
+		}
+	}
+	return TRUE;
+}
+
+static gboolean mce_modules_check_essential(void)
+{
+	gboolean foundRtconf = FALSE;
+	
+	for (GSList *module = modules; module; module = module->next) {
+		gpointer mip = NULL;
+		module_info_struct *module_info;
+		if (g_module_symbol(module->data, "module_info", (void**)&mip) == FALSE)
+			continue;
+		module_info = (module_info_struct*)mip;
+		for (int j = 0; module_info->provides[j]; ++j) {
+			if (g_strcmp0("rtconf", module_info->provides[j]) == 0) {
+				foundRtconf = TRUE;
+				break;
+			}
+		}
+	}
+	
+	if (!foundRtconf) {
+		mce_log(LL_ERR, "Could not find nessecary rtconf module aborting.");
+		return FALSE;
+	}
+	
+	return TRUE;
+}
 
 static void mce_modules_load(gchar **modlist)
 {
@@ -44,28 +90,25 @@ static void mce_modules_load(gchar **modlist)
 		GModule *module;
 		gchar *tmp = g_module_build_path(path, modlist[i]);
 
-		mce_log(LL_DEBUG,
-			"Loading module: %s from %s",
-			modlist[i], path);
+		mce_log(LL_DEBUG, "Loading module: %s from %s", modlist[i], path);
 
 		if ((module = g_module_open(tmp, 0)) != NULL) {
 			gpointer mip = NULL;
+			gboolean blockLoad = FALSE;
 
-			if (g_module_symbol(module,
-						"module_info",
-						&mip) == FALSE) {
-				mce_log(LL_ERR,
-					"Failed to retrieve module "
-					"information for: %s",
-					modlist[i]);
+			if (g_module_symbol(module, "module_info", &mip) == FALSE) {
+				mce_log(LL_ERR, "Failed to retrieve module information for: %s", modlist[i]);
+				g_module_close(module);
+				blockLoad = TRUE;
+			} else if (!mce_modules_check_provides((module_info_struct*)mip)) {
+				g_module_close(module);
+				blockLoad = TRUE;
 			}
 
-			/* XXX: check dependencies, conflicts, et al */
-			modules = g_slist_append(modules, module);
+			if (!blockLoad)
+				modules = g_slist_append(modules, module);
 		} else {
-			mce_log(LL_DEBUG,
-				"Failed to load module: %s; skipping",
-				modlist[i]);
+			mce_log(LL_WARN, "Failed to load module: %s; skipping", modlist[i]);
 		}
 
 		g_free(tmp);
@@ -113,7 +156,7 @@ gboolean mce_modules_init(void)
 	g_strfreev(modlist_device);
 	g_strfreev(modlist_user);
 
-	return TRUE;
+	return mce_modules_check_essential();
 }
 
 /**
