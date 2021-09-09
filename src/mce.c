@@ -362,7 +362,10 @@ static gboolean daemonize(void)
 	}
 
 	sprintf(str, "%d\n", getpid());
-	(void)write(i, str, strlen(str));
+	while (write(i, str, strlen(str)) < 0) {
+		if (errno != EAGAIN)
+			break;
+	}
 	close(i);
 
 	/* Ignore TTY signals */

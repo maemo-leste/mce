@@ -332,11 +332,13 @@ static void switch_cb(gpointer data, gsize bytes_read)
 				execute_datapipe(&keyboard_slide_pipe, GINT_TO_POINTER(ev->value),
 								 USE_INDATA, CACHE_INDATA);
 				activity_needed = TRUE;
+				break;
 			}
 			case SW_CAMERA_LENS_COVER: {
 				execute_datapipe(&camera_button_pipe, GINT_TO_POINTER(ev->value),
 								 USE_INDATA, CACHE_INDATA);
 				activity_needed = TRUE;
+				break;
 			}
 			default:
 				break;
@@ -347,14 +349,17 @@ static void switch_cb(gpointer data, gsize bytes_read)
 				execute_datapipe(&lockkey_pipe, GINT_TO_POINTER(ev->value),
 								 USE_INDATA, CACHE_INDATA);
 				activity_needed = TRUE;
+				break;
 			}
 			case KEY_CAMERA: {
 				execute_datapipe(&camera_button_pipe, GINT_TO_POINTER(ev->value),
 								 USE_INDATA, CACHE_INDATA);
 				activity_needed = TRUE;
+				break;
 			}
 			case KEY_CAMERA_FOCUS: {
 				activity_needed = TRUE;
+				break;
 			}
 		default:
 			break;
