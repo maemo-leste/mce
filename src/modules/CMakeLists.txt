@@ -1,6 +1,6 @@
 set(MODULE_INCLUDE_DIRS .. ../utils ../include)
 
-pkg_search_module(UPOWER upower)
+pkg_search_module(UPOWER upower-glib)
 pkg_search_module(DSME dsme)
 pkg_search_module(DEVLOCK libdevlock1)
 find_package(X11)
@@ -22,8 +22,8 @@ install(TARGETS battery-guard DESTINATION ${MCE_MODULE_DIR})
 
 if(DEFINED UPOWER_LIBRARIES)
 	add_library(battery-upower SHARED battery-upower.c)
-	target_link_libraries(battery-upower ${COMMON_LIBRARIES})
-	target_include_directories(battery-upower PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
+	target_link_libraries(battery-upower ${COMMON_LIBRARIES} ${UPOWER_LIBRARIES})
+	target_include_directories(battery-upower PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS} ${UPOWER_INCLUDE_DIRS})
 	install(TARGETS battery-upower DESTINATION ${MCE_MODULE_DIR})
 else()
 	message("No upower found, upower support will not be built")
