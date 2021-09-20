@@ -20,13 +20,14 @@ typedef enum {
 	ALS_PROFILE_ECONOMY,			/**< Economy profile */
 	ALS_PROFILE_NORMAL,			/**< Normal profile */
 	ALS_PROFILE_BRIGHT,			/**< Bright profile */
-	ALS_PROFILE_MAXIMUM			/**< Maximum profile */
+	ALS_PROFILE_MAXIMUM,			/**< Maximum profile */
+	ALS_PROFILE_COUNT
 } als_profile_t;
 
 
 /* Profiles based on physicly sensible values taken from https://en.wikipedia.org/wiki/Daylight*/
 
-als_profile_struct display_als_profiles_generic[] = {
+const als_profile_struct display_als_profiles_generic[ALS_PROFILE_COUNT] = {
 	{
 		{
 			{ 25, 50000 },

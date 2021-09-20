@@ -27,11 +27,13 @@
 #include <glib/gstdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "mce.h"
 #include "filter-brightness-als-iio.h"
 #include "mce-io.h"
 #include "mce-log.h"
 #include "mce-rtconf.h"
+#include "mce-conf.h"
 #include "datapipe.h"
 
 /** Module name */
@@ -61,12 +63,14 @@ G_MODULE_EXPORT module_info_struct module_info = {
 	.priority = 100
 };
 
+#define MCE_CONF_BRIGHNESS_GROUP			"DisplayBrightness"
+
 /** GConf callback ID for ALS enabled */
 static guint als_enabled_gconf_cb_id = 0;
 
 static gboolean als_enabled = TRUE;
 static gint als_lux = -1;
-static als_profile_struct *display_als_profiles = display_als_profiles_generic;
+static als_profile_struct display_als_profiles[ALS_PROFILE_COUNT];
 
 /** Display state */
 static display_state_t display_state = MCE_DISPLAY_UNDEF;
@@ -161,9 +165,9 @@ static gpointer display_brightness_filter(gpointer data)
 static void als_trigger(gconstpointer data)
 {
 	(void)data;
-	
+
 	int new_als_lux = datapipe_get_gint(light_sensor_pipe);
-	
+
 	if(new_als_lux < 0)
 		return;
 
@@ -183,6 +187,21 @@ static void display_state_trigger(gconstpointer data)
 	display_state = GPOINTER_TO_INT(data);
 }
 
+static bool als_load_profile(const char* key, als_profile_struct *profile)
+{
+	gsize length;
+	gint *profilelist = mce_conf_get_int_list(MCE_CONF_BRIGHNESS_GROUP, key, &length, NULL);
+
+	if (profilelist == NULL || length != 6) {
+		mce_log(LL_WARN, "%s: Failed to load brightness profile %s%s using defaults", MODULE_NAME, key,
+				profilelist != NULL && length != 6 ? " due to there being less or more than 6 values" : " ");
+		return false;
+	}
+
+	memcpy(profile->value, profilelist, 6*sizeof(*profilelist));
+	return true;
+}
+
 /**
  * Init function for the ALS filter
  *
@@ -196,6 +215,14 @@ const gchar *g_module_check_init(GModule *module)
 {
 	(void)module;
 
+	memcpy(display_als_profiles, display_als_profiles_generic, sizeof(display_als_profiles));
+
+	als_load_profile("Minimum", &display_als_profiles[ALS_PROFILE_MINIMUM]);
+	als_load_profile("Economy", &display_als_profiles[ALS_PROFILE_ECONOMY]);
+	als_load_profile("Normal", &display_als_profiles[ALS_PROFILE_NORMAL]);
+	als_load_profile("Bright", &display_als_profiles[ALS_PROFILE_BRIGHT]);
+	als_load_profile("Maximum", &display_als_profiles[ALS_PROFILE_MAXIMUM]);
+
 	/* Append triggers/filters to datapipes */
 	append_filter_to_datapipe(&display_brightness_pipe, display_brightness_filter);
 	append_output_trigger_to_datapipe(&display_state_pipe, display_state_trigger);
@@ -204,8 +231,6 @@ const gchar *g_module_check_init(GModule *module)
 	/* ALS enabled */
 	/* Since we've set a default, error handling is unnecessary */
 	(void)mce_rtconf_get_bool(MCE_GCONF_DISPLAY_ALS_ENABLED_PATH, &als_enabled);
-	
-	
 
 	if (mce_rtconf_notifier_add(MCE_GCONF_DISPLAY_PATH,
 				   MCE_GCONF_DISPLAY_ALS_ENABLED_PATH,
