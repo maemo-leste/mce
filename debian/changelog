@@ -1,3 +1,9 @@
+mce (1.9.5) unstable; urgency=medium
+
+  * Dehardcode als profile brightness values
+
+ -- Carl Klemm <carl@uvos.org>  Sat, 20 Sep 2021 23:31:00 +0200
+
 mce (1.9.4) unstable; urgency=medium
 
   * Various error checking bits for mce-modules
