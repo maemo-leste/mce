@@ -75,6 +75,9 @@ static als_profile_struct display_als_profiles[ALS_PROFILE_COUNT];
 /** Display state */
 static display_state_t display_state = MCE_DISPLAY_UNDEF;
 
+static bool no_lowering;
+static int no_lower_percent = -1;
+
 
 /**
  * rtconf callback for ALS settings
@@ -135,8 +138,14 @@ static gpointer display_brightness_filter(gpointer data)
 {
 	/** Display ALS level */
 	static gint display_als_level = -1;
+	static gint last_profile = -1;
 	gint raw = GPOINTER_TO_INT(data) - 1;
-	
+
+	if (raw != last_profile) {
+		last_profile = raw;
+		no_lower_percent = -1;
+	}
+
 	/* If the display is off, don't update its brightness */
 	if (display_state == MCE_DISPLAY_OFF)
 		return GINT_TO_POINTER(0);
@@ -157,6 +166,10 @@ static gpointer display_brightness_filter(gpointer data)
 	} else {
 		percentage = (raw + 1) * 20;
 	}
+
+	if (no_lowering && percentage < no_lower_percent)
+		percentage = no_lower_percent;
+	no_lower_percent = percentage;
 
 	return GINT_TO_POINTER(percentage);
 }
@@ -184,7 +197,10 @@ static void als_trigger(gconstpointer data)
  */
 static void display_state_trigger(gconstpointer data)
 {
-	display_state = GPOINTER_TO_INT(data);
+	if (display_state != GPOINTER_TO_INT(data)) {
+		no_lower_percent = -1;
+		display_state = GPOINTER_TO_INT(data);
+	}
 }
 
 static bool als_load_profile(const char* key, als_profile_struct *profile)
@@ -194,7 +210,7 @@ static bool als_load_profile(const char* key, als_profile_struct *profile)
 
 	if (profilelist == NULL || length != 6) {
 		mce_log(LL_WARN, "%s: Failed to load brightness profile %s%s using defaults", MODULE_NAME, key,
-				profilelist != NULL && length != 6 ? " due to there being less or more than 6 values" : " ");
+				profilelist != NULL && length != 6 ? " due to there being less or more than 6 values" : "");
 		return false;
 	}
 
@@ -223,6 +239,8 @@ const gchar *g_module_check_init(GModule *module)
 	als_load_profile("Normal", &display_als_profiles[ALS_PROFILE_NORMAL]);
 	als_load_profile("Bright", &display_als_profiles[ALS_PROFILE_BRIGHT]);
 	als_load_profile("Maximum", &display_als_profiles[ALS_PROFILE_MAXIMUM]);
+
+	no_lowering = mce_conf_get_bool(MCE_CONF_BRIGHNESS_GROUP, "NoAlsLowering", true, NULL);
 
 	/* Append triggers/filters to datapipes */
 	append_filter_to_datapipe(&display_brightness_pipe, display_brightness_filter);
