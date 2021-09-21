@@ -199,6 +199,7 @@ static bool als_load_profile(const char* key, als_profile_struct *profile)
 	}
 
 	memcpy(profile->value, profilelist, 6*sizeof(*profilelist));
+	g_free(profilelist);
 	return true;
 }
 
