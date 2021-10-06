@@ -39,6 +39,7 @@
 #include "mce-log.h"
 #include "mce-dbus.h"
 #include "mce-rtconf.h"
+#include "mce-conf.h"
 #include "datapipe.h"
 
 /** Module name */
@@ -62,8 +63,6 @@ static guint disp_brightness_gconf_cb_id = 0;
 
 /** Display blanking timeout setting */
 static gint disp_blank_timeout = DEFAULT_BLANK_TIMEOUT;
-/** GConf callback ID for display blanking timeout setting */
-static guint disp_blank_timeout_gconf_cb_id = 0;
 
 /** Cached brightness */
 static gint cached_brightness = -1;
@@ -72,6 +71,8 @@ static gint cached_brightness = -1;
 static gint target_brightness = -1;
 
 static gint set_brightness = -1;
+
+static gint set_brightness_unfiltered = -1;
 
 /** Fadeout step length */
 static gint brightness_fade_steplength = 2;
@@ -90,52 +91,7 @@ static gboolean hw_display_fading = FALSE;
 
 static gboolean is_tvout_state_changed = FALSE;
 
-
-/**
- * Call the FBIOBLANK ioctl
- *
- * @param value The ioctl value to pass to the backlight
- * @return TRUE on success, FALSE on failure
- */
-static gboolean backlight_ioctl(int value)
-{
-	static int old_value = FB_BLANK_UNBLANK;
-	static int fd = -1;
-	gboolean status = FALSE;
-
-	if (fd == -1) {
-		if ((fd = open(FB_DEVICE, O_RDWR)) == -1) {
-			mce_log(LL_CRIT, "cannot open `%s'", FB_DEVICE);
-			goto EXIT;
-		}
-
-		old_value = !value; /* force ioctl() */
-	}
-
-	if (value != old_value) {
-		if (ioctl(fd, FBIOBLANK, value) == -1) {
-			mce_log(LL_CRIT,
-				"ioctl() FBIOBLANK (%d) failed on `%s'; %s",
-				value, FB_DEVICE, g_strerror(errno));
-			close(fd);
-			fd = -1;
-
-			/* Reset errno,
-			 * to avoid false positives down the line
-			 */
-			errno = 0;
-
-			goto EXIT;
-		}
-
-		old_value = value;
-	}
-
-	status = TRUE;
-
-EXIT:
-	return status;
-}
+static gboolean display_brightness_dbus_signal(void);
 
 /**
  * Timeout callback for the brightness fade
@@ -150,10 +106,6 @@ static gboolean brightness_fade_timeout_cb(gpointer data)
 
 	(void)data;
 
-	if ((cached_brightness <= 0) && (target_brightness != 0)) {
-		backlight_ioctl(FB_BLANK_UNBLANK);
-	}
-
 	if ((cached_brightness == -1) ||
 	    (ABS(cached_brightness -
 		 target_brightness) < brightness_fade_steplength)) {
@@ -167,10 +119,6 @@ static gboolean brightness_fade_timeout_cb(gpointer data)
 
 	mce_write_number_string_to_file(brightness_file,
 					cached_brightness);
-
-	if (cached_brightness == 0) {
-		backlight_ioctl(FB_BLANK_POWERDOWN);
-	}
 
 	if (retval == FALSE)
 		 brightness_fade_timeout_cb_id = 0;
@@ -219,7 +167,6 @@ static void update_brightness_fade(gint new_brightness)
 		cancel_brightness_fade_timeout();
 		cached_brightness = new_brightness;
 		target_brightness = new_brightness;
-		backlight_ioctl(FB_BLANK_UNBLANK);
 		mce_write_number_string_to_file(brightness_file,
 						new_brightness);
 		goto EXIT;
@@ -250,7 +197,6 @@ static void display_blank(void)
 	cached_brightness = 0;
 	target_brightness = 0;
 	mce_write_number_string_to_file(brightness_file, 0);
-	backlight_ioctl(FB_BLANK_POWERDOWN);
 }
 
 /**
@@ -258,10 +204,6 @@ static void display_blank(void)
  */
 static void display_dim(void)
 {
-	if (cached_brightness == 0) {
-		backlight_ioctl(FB_BLANK_UNBLANK);
-	}
-
 	update_brightness_fade((maximum_display_brightness *
 			        DEFAULT_DIM_BRIGHTNESS) / 100);
 }
@@ -275,7 +217,6 @@ static void display_unblank(void)
 	if (cached_brightness == 0) {
 		cached_brightness = set_brightness;
 		target_brightness = set_brightness;
-		backlight_ioctl(FB_BLANK_UNBLANK);
 		mce_write_number_string_to_file(brightness_file,
 						set_brightness);
 	} else {
@@ -376,10 +317,11 @@ static void display_rtconf_cb(gchar *key, guint cb_id, void *user_data)
 
 	if (cb_id == disp_brightness_gconf_cb_id) {
 		gint tmp;
-		if (mce_rtconf_get_int(MCE_GCONF_DISPLAY_BRIGHTNESS_PATH, &tmp))
+		if (mce_rtconf_get_int(MCE_GCONF_DISPLAY_BRIGHTNESS_PATH, &tmp)) {
 			execute_datapipe(&display_brightness_pipe, GINT_TO_POINTER(tmp), USE_INDATA, CACHE_INDATA);
-	} else if (cb_id == disp_blank_timeout_gconf_cb_id) {
-		mce_rtconf_get_int(MCE_GCONF_DISPLAY_BLANK_TIMEOUT_PATH, &disp_blank_timeout);
+			set_brightness_unfiltered = tmp;
+			display_brightness_dbus_signal();
+		}
 	} else {
 		mce_log(LL_WARN, "%s: Spurious rtconf value received; confused!", MODULE_NAME);
 	}
@@ -571,6 +513,101 @@ static gboolean display_off_req_dbus_cb(DBusMessage *const msg)
 	if (no_reply == FALSE) {
 		DBusMessage *reply = dbus_new_method_reply(msg);
 
+		status = dbus_send_message(reply);
+	} else {
+		status = TRUE;
+	}
+
+	return status;
+}
+
+static gboolean display_brightness_dbus_signal(void)
+{
+	DBusMessage *msg = NULL;
+	gboolean status = FALSE;
+
+	mce_log(LL_DEBUG,
+		"%s: Sending display brightness state: %i", MODULE_NAME,
+		set_brightness_unfiltered);
+
+	msg = dbus_new_signal(MCE_SIGNAL_PATH, MCE_SIGNAL_IF,
+					MCE_DISPLAY_BRIGTNESS_SIG);
+
+	dbus_int32_t tmp = set_brightness_unfiltered;
+	/* Append the inactivity status */
+	if (dbus_message_append_args(msg,
+					 DBUS_TYPE_INT32, &tmp,
+					 DBUS_TYPE_INVALID) == FALSE) {
+		mce_log(LL_CRIT, "%s: "
+			"Failed to append reply argument to D-Bus message "
+			"for %s.%s", MODULE_NAME,
+						 MCE_SIGNAL_IF,
+						 MCE_DISPLAY_BRIGTNESS_SIG);
+		dbus_message_unref(msg);
+		return status;
+	}
+
+	/* Send the message */
+	status = dbus_send_message(msg);
+
+	return status;
+}
+
+static gboolean display_brightness_set_dbus_cb(DBusMessage *const msg)
+{
+	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
+	gboolean status = FALSE;
+	DBusError error;
+
+	dbus_error_init(&error);
+
+	mce_log(LL_DEBUG, "%s: Received display brightness set request", MODULE_NAME);
+
+	dbus_int32_t brightness;
+	if (dbus_message_get_args(msg, &error,
+				  DBUS_TYPE_INT32, &brightness,
+				  DBUS_TYPE_INVALID) == FALSE) {
+		mce_log(LL_CRIT,
+			"Failed to get argument from %s.%s: %s",
+			MCE_REQUEST_IF, MCE_DISPLAY_BRIGTNESS_SET,
+			error.message);
+		dbus_error_free(&error);
+		return FALSE;
+	}
+
+	set_brightness_unfiltered = brightness;
+	execute_datapipe(&display_brightness_pipe, GINT_TO_POINTER(brightness), USE_INDATA, CACHE_INDATA);
+	mce_rtconf_set_int(MCE_GCONF_DISPLAY_BRIGHTNESS_PATH, set_brightness_unfiltered);
+	display_brightness_dbus_signal();
+
+	if (no_reply == FALSE) {
+		DBusMessage *reply = dbus_new_method_reply(msg);
+
+		status = dbus_send_message(reply);
+	} else {
+		status = TRUE;
+	}
+
+	return status;
+}
+
+static gboolean display_brightness_get_dbus_cb(DBusMessage *const msg)
+{
+	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
+	gboolean status = FALSE;
+
+	mce_log(LL_DEBUG,
+		"Received display brightness get request");
+
+	if (no_reply == FALSE) {
+		DBusMessage *reply = dbus_new_method_reply(msg);
+		dbus_int32_t tmp = set_brightness_unfiltered;
+		if (dbus_message_append_args(reply,
+							 DBUS_TYPE_INT32, &tmp,
+							 DBUS_TYPE_INVALID)) {
+			mce_log(LL_ERR, "%s: Faild to append dbus arguments", MODULE_NAME);
+			return FALSE;
+		}
 		status = dbus_send_message(reply);
 	} else {
 		status = TRUE;
@@ -794,14 +831,8 @@ const gchar *g_module_check_init(GModule *module)
 
 	/* Display blank */
 	/* Since we've set a default, error handling is unnecessary */
-	(void)mce_rtconf_get_int(MCE_GCONF_DISPLAY_BLANK_TIMEOUT_PATH,
-				&disp_blank_timeout);
-
-	if (mce_rtconf_notifier_add(MCE_GCONF_DISPLAY_PATH,
-				   MCE_GCONF_DISPLAY_BLANK_TIMEOUT_PATH,
-				   display_rtconf_cb, NULL,
-				   &disp_blank_timeout_gconf_cb_id) == FALSE)
-		goto EXIT;
+	disp_blank_timeout = mce_conf_get_int(MCE_CONF_DISPLAY_GROUP, MCE_CONF_DISPLAY_BLANK_KEY,
+				DEFAULT_BLANK_TIMEOUT, NULL);
 	
 	/* get_display_status */
 	if (mce_dbus_handler_add(MCE_REQUEST_IF,
@@ -833,6 +864,20 @@ const gchar *g_module_check_init(GModule *module)
 				 NULL,
 				 DBUS_MESSAGE_TYPE_METHOD_CALL,
 				 display_off_req_dbus_cb) == NULL)
+		goto EXIT;
+
+	if (mce_dbus_handler_add(MCE_REQUEST_IF,
+				 MCE_DISPLAY_BRIGTNESS_SET,
+				 NULL,
+				 DBUS_MESSAGE_TYPE_METHOD_CALL,
+				 display_brightness_set_dbus_cb) == NULL)
+		goto EXIT;
+
+	if (mce_dbus_handler_add(MCE_REQUEST_IF,
+				 MCE_DISPLAY_BRIGTNESS_GET,
+				 NULL,
+				 DBUS_MESSAGE_TYPE_METHOD_CALL,
+				 display_brightness_get_dbus_cb) == NULL)
 		goto EXIT;
 
 	/* Request display on to get the state machine in sync */

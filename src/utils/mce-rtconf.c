@@ -8,6 +8,7 @@
 gboolean(*mce_rtconf_set_int_backend) (const gchar * const key, const gint value);
 gboolean(*mce_rtconf_get_int_backend) (const gchar * const key, gint * value);
 gboolean(*mce_rtconf_get_bool_backend) (const gchar * const key, gboolean * value);
+gboolean(*mce_rtconf_set_bool_backend) (const gchar * const key, const gboolean value);
 gboolean(*mce_rtconf_notifier_add_backend) (const gchar * path, const gchar * key,
 					    const mce_rtconf_callback callback, void *user_data, guint * cb_id);
 void (*mce_rtconf_notifier_remove_backend)(guint cb_id);
@@ -39,6 +40,22 @@ gboolean mce_rtconf_get_bool(const gchar * const key, gboolean * value)
 {
 	if (mce_rtconf_get_bool_backend)
 		return mce_rtconf_get_bool_backend(key, value);
+
+	mce_log(LL_WARN, "%s: %s used without backend", MODULE_NAME, __func__);
+	return FALSE;
+}
+
+/**
+ * Set a boolean from the specified GConf key
+ *
+ * @param key The GConf key to set the value of
+ * @param value The value to set the key to
+ * @return TRUE on success, FALSE on failure
+ */
+gboolean mce_rtconf_set_bool(const gchar * const key, const gboolean value)
+{
+	if (mce_rtconf_set_bool_backend)
+		return mce_rtconf_set_bool_backend(key, value);
 
 	mce_log(LL_WARN, "%s: %s used without backend", MODULE_NAME, __func__);
 	return FALSE;
@@ -96,6 +113,7 @@ void mce_rtconf_notifier_remove(guint cb_id)
 gboolean mce_rtconf_backend_register(gboolean(*set_int_backend) (const gchar * const key, const gint value),
 				     gboolean(*get_int_backend) (const gchar * const key, gint * value),
 				     gboolean(*get_bool_backend) (const gchar * const key, gboolean * value),
+					 gboolean(*set_bool_backend) (const gchar * const key, const gboolean value),
 				     gboolean(*notifier_add_backend) (const gchar * path, const gchar * key,
 								      const mce_rtconf_callback callback,
 								      void *user_data, guint * cb_id),
@@ -105,6 +123,7 @@ gboolean mce_rtconf_backend_register(gboolean(*set_int_backend) (const gchar * c
 		mce_rtconf_set_int_backend = set_int_backend;
 		mce_rtconf_get_int_backend = get_int_backend;
 		mce_rtconf_get_bool_backend = get_bool_backend;
+		mce_rtconf_set_bool_backend = set_bool_backend;
 		mce_rtconf_notifier_add_backend = notifier_add_backend;
 		mce_rtconf_notifier_remove_backend = notifier_remove_backend;
 		return TRUE;
@@ -117,6 +136,7 @@ void mce_rtconf_backend_unregister(void)
 	mce_rtconf_set_int_backend = NULL;
 	mce_rtconf_get_int_backend = NULL;
 	mce_rtconf_get_bool_backend = NULL;
+	mce_rtconf_set_bool_backend = NULL;
 	mce_rtconf_notifier_add_backend = NULL;
 	mce_rtconf_notifier_remove_backend = NULL;
 }

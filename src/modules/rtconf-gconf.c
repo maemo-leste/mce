@@ -94,6 +94,26 @@ static gboolean mce_gconf_get_bool(const gchar * const key, gboolean * value)
 	return status;
 }
 
+static gboolean mce_gconf_set_bool(const gchar * const key, const gboolean value)
+{
+	gboolean status = FALSE;
+	GError *error = NULL;
+
+	gconf_client_set_bool(gconf_client, key, value, &error);
+
+	if (error) {
+		mce_log(LL_WARN,
+			"%s: Could not set %s from GConf; %s", MODULE_NAME, key, error->message);
+	}
+	else {
+		status = TRUE;
+	}
+
+	g_clear_error(&error);
+
+	return status;
+}
+
 /**
  * Return an integer from the specified GConf key
  *
@@ -226,9 +246,10 @@ const gchar *g_module_check_init(GModule * module)
 		return "Could not get default GConf client";
 	}
 
-	if (!mce_rtconf_backend_register(mce_gconf_set_int,
-					 mce_gconf_get_int,
-					 mce_gconf_get_bool, mce_gconf_notifier_add, mce_gconf_notifier_remove)) {
+	if (!mce_rtconf_backend_register(mce_gconf_set_int, mce_gconf_get_int,
+					 mce_gconf_get_bool, mce_gconf_set_bool,
+					 mce_gconf_notifier_add,
+					 mce_gconf_notifier_remove)) {
 		mce_log(LL_WARN, "Could not set GConf as rtconf backend");
 		return "Could not set GConf as rtconf backend";
 	}

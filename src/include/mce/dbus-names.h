@@ -104,6 +104,54 @@
 #define MCE_DISPLAY_STATUS_GET		"get_display_status"
 
 /**
+ * Query the display brightness
+ *
+ * @since v1.9.6
+ * @return @c dbus_int32_t @c with the display brightness
+ */
+#define MCE_DISPLAY_BRIGTNESS_GET		"get_display_brightness"
+
+/**
+ * Set the display brightness
+ *
+ * @since v1.9.6
+ * @param brighess @c dbus_int32_t @c display brightness to set
+ */
+#define MCE_DISPLAY_BRIGTNESS_SET		"set_display_brightness"
+
+/**
+ * Query the display timeout
+ *
+ * @since v1.9.6
+ * @return @c dbus_int32_t @c with the display timeout
+ */
+#define MCE_DISPLAY_TIMEOUT_GET		"get_display_timeout"
+
+/**
+ * Set the display timeout
+ *
+ * @since v1.9.6
+ * @param brighess @c dbus_int32_t @c display timeout to set
+ */
+#define MCE_DISPLAY_TIMEOUT_SET		"set_display_timeout"
+
+/**
+ * Query the display timeout mode
+ *
+ * @since v1.9.6
+ * @return @c dbus_int32_t @c with the display timeout mode
+ */
+#define MCE_DISPLAY_TIMEOUT_MODE_GET		"get_inhibit_timout_mode"
+
+/**
+ * Set the display timeout mode
+ *
+ * @since v1.9.6
+ * @param brighess @c dbus_int32_t @c display timeout mode to set
+ */
+#define MCE_DISPLAY_TIMEOUT_MODE_SET		"set_inhibit_timout_mode"
+
+/**
  * Query CABC mode
  *
  * @since v1.8.13
@@ -374,6 +422,32 @@
  */
 #define MCE_DEVICE_ORIENTATION_SIG	"sig_device_orientation_ind"
 
+/**
+ * Nofiy that the display brightness has been changed
+ * Only fires when the display brightness is set by an external source
+ * Als changes to brightness are not reported
+ *
+ * @since v1.9.6
+ * @return @c dbus_int32_t @c with the display brightness
+ */
+#define MCE_DISPLAY_BRIGTNESS_SIG		"sig_display_brightness"
+
+/**
+ * Nofiy that the display timeout has been changed
+ *
+ * @since v1.9.6
+ * @return @c dbus_int32_t @c with the display timout in seconds
+ */
+#define MCE_DISPLAY_TIMEOUT_SIG		"sig_display_timeout"
+
+/**
+ * Nofiy that the display timeout mode has been changed
+ *
+ * @since v1.9.6
+ * @return @c dbus_int32_t @c with the display timout in seconds
+ */
+#define MCE_DISPLAY_TIMEOUT_MODE_SIG		"sig_display_timeout_mode"
+
 /*@}*/
 
 /**
@@ -401,6 +475,44 @@
  *                (see @ref /etc/mce/mce.ini for valid pattern names)
  */
 #define MCE_DEACTIVATE_LED_PATTERN	"req_led_pattern_deactivate"
+
+/**
+ * Disables a pre-defined LED pattern overiding req_led_pattern_activate
+ * and preventing the pattern from activateing until req_led_pattern_enable
+ * is called.
+ *
+ * @since v1.9.6
+ * @param pattern @c gchar @c * with the pattern name
+ *                (see @ref /etc/mce/mce.ini for valid pattern names)
+ */
+#define MCE_DISABLE_LED_PATTERN			"req_led_pattern_disable"
+
+/**
+ * Re-enables a pattern disabled by req_led_pattern_disable
+ *
+ * @since v1.9.6
+ * @param pattern @c gchar @c * with the pattern name
+ *                (see @ref /etc/mce/mce.ini for valid pattern names)
+ */
+#define MCE_ENABLE_LED_PATTERN			"req_led_pattern_enable"
+
+/**
+ * Get patterns available
+ *
+ * @since v1.9.6
+ * @return pattern names as dbus (ao) @c char @c * @c array
+ */
+#define MCE_LED_PATTERNS			"get_led_patterns"
+
+/**
+ * Check if pattern is disabled
+ *
+ * @since v1.9.6
+ * @param pattern @c gchar @c * with the pattern name
+ *                (see @ref /etc/mce/mce.ini for valid pattern names)
+ * @return @c dbus_bool_t
+ */
+#define MCE_LED_PATTERN_DISABLED			"get_led_pattern_disabled"
 
 /**
  * Enable LED; this does not affect the LED pattern stack

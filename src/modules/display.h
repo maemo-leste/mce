@@ -29,16 +29,14 @@
 /** Generic maximum brightness file */
 #define DISPLAY_GENERIC_MAX_BRIGHTNESS_FILE	"/max_brightness"
 
-/** Path to the framebuffer device */
-#define FB_DEVICE				"/dev/fb0"
+#define MCE_CONF_DISPLAY_GROUP "Dsiplay"
+#define MCE_CONF_DISPLAY_BLANK_KEY "DimToBlankTimeout"
 
 /** Path to the GConf settings for the display */
 #ifndef MCE_GCONF_DISPLAY_PATH
 #define MCE_GCONF_DISPLAY_PATH			"/system/osso/dsm/display"
 #endif /* MCE_GCONF_DISPLAY_PATH */
 #define MCE_GCONF_DISPLAY_BRIGHTNESS_PATH	MCE_GCONF_DISPLAY_PATH "/display_brightness"
-#define MCE_GCONF_DISPLAY_BLANK_TIMEOUT_PATH	MCE_GCONF_DISPLAY_PATH "/display_blank_timeout"
-#define MCE_GCONF_BLANKING_INHIBIT_MODE_PATH	MCE_GCONF_DISPLAY_PATH "/inhibit_blank_mode"
 
 #define DEFAULT_DISP_BRIGHTNESS			3	/* 60% */
 #define DEFAULT_BLANK_TIMEOUT			3	/* 3 seconds */

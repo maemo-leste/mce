@@ -320,6 +320,192 @@ static gpointer display_state_filter(gpointer data)
 	return data;
 }
 
+static gboolean inactivity_timeout_dbus_signal(void)
+{
+	DBusMessage *msg = NULL;
+	gboolean status = FALSE;
+
+	mce_log(LL_DEBUG,
+		"%s: Sending display brightness state: %i", MODULE_NAME,
+		inactivity_timeout);
+
+	msg = dbus_new_signal(MCE_SIGNAL_PATH, MCE_SIGNAL_IF,
+					MCE_DISPLAY_TIMEOUT_SIG);
+
+	dbus_int32_t tmp = inactivity_timeout;
+	/* Append the inactivity status */
+	if (dbus_message_append_args(msg,
+					 DBUS_TYPE_INT32, &tmp,
+					 DBUS_TYPE_INVALID) == FALSE) {
+		mce_log(LL_CRIT, "%s: "
+			"Failed to append reply argument to D-Bus message "
+			"for %s.%s", MODULE_NAME,
+						 MCE_SIGNAL_IF,
+						 MCE_DISPLAY_TIMEOUT_SIG);
+		dbus_message_unref(msg);
+		return status;
+	}
+
+	/* Send the message */
+	status = dbus_send_message(msg);
+
+	return status;
+}
+
+static gboolean inactivity_timeout_set_dbus_cb(DBusMessage *const msg)
+{
+	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
+	DBusError error;
+	gboolean status = FALSE;
+
+	dbus_error_init(&error);
+
+	mce_log(LL_DEBUG, "%s: Received inactivity timeout set request", MODULE_NAME);
+
+	dbus_int32_t tmp;
+	if (dbus_message_get_args(msg, &error,
+				  DBUS_TYPE_INT32, &tmp,
+				  DBUS_TYPE_INVALID) == FALSE) {
+		mce_log(LL_CRIT,
+			"Failed to get argument from %s.%s: %s",
+			MCE_REQUEST_IF, MCE_DISPLAY_TIMEOUT_SET,
+			error.message);
+		dbus_error_free(&error);
+		return FALSE;
+	}
+
+	inactivity_timeout = tmp;
+	inactivity_timeout_dbus_signal();
+	mce_rtconf_set_int(MCE_GCONF_DISPLAY_DIM_TIMEOUT_PATH, inactivity_timeout);
+	mce_log(LL_DEBUG, "%s: inactivity_timeout set to %i", MODULE_NAME, inactivity_timeout);
+
+	if (no_reply == FALSE) {
+		DBusMessage *reply = dbus_new_method_reply(msg);
+
+		status = dbus_send_message(reply);
+	} else {
+		status = TRUE;
+	}
+
+	return status;
+}
+
+static gboolean inactivity_timeout_get_dbus_cb(DBusMessage *const msg)
+{
+	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
+	gboolean status = FALSE;
+
+	mce_log(LL_DEBUG, "%s: Received inactivity timeout get request", MODULE_NAME);
+
+	if (no_reply == FALSE) {
+		DBusMessage *reply = dbus_new_method_reply(msg);
+		dbus_int32_t tmp = inactivity_timeout;
+		if (dbus_message_append_args(reply,
+							 DBUS_TYPE_INT32, &tmp,
+							 DBUS_TYPE_INVALID)) {
+			mce_log(LL_ERR, "%s: Faild to append dbus arguments", MODULE_NAME);
+			return FALSE;
+		}
+		status = dbus_send_message(reply);
+	} else {
+		status = TRUE;
+	}
+
+	return status;
+}
+
+static gboolean inactivity_mode_dbus_signal(void)
+{
+	DBusMessage *msg = NULL;
+	gboolean status = FALSE;
+
+	mce_log(LL_DEBUG,
+		"%s: Sending display timeout mode state: %i", MODULE_NAME,
+		inactivity_inhibit_mode);
+
+	msg = dbus_new_signal(MCE_SIGNAL_PATH, MCE_SIGNAL_IF,
+					MCE_DISPLAY_TIMEOUT_MODE_SIG);
+
+	dbus_int32_t tmp = inactivity_inhibit_mode;
+	/* Append the inactivity status */
+	if (dbus_message_append_args(msg,
+					 DBUS_TYPE_INT32, &tmp,
+					 DBUS_TYPE_INVALID) == FALSE) {
+		mce_log(LL_CRIT, "%s: "
+			"Failed to append reply argument to D-Bus message "
+			"for %s.%s", MODULE_NAME,
+						 MCE_SIGNAL_IF,
+						 MCE_DISPLAY_TIMEOUT_MODE_SIG);
+		dbus_message_unref(msg);
+		return status;
+	}
+
+	/* Send the message */
+	status = dbus_send_message(msg);
+
+	return status;
+}
+
+static gboolean inactivity_mode_set_dbus_cb(DBusMessage *const msg)
+{
+	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
+	gboolean status = FALSE;
+	DBusError error;
+
+	dbus_error_init(&error);
+
+	mce_log(LL_DEBUG, "%s: Received inactivity mode set request", MODULE_NAME);
+
+	dbus_int32_t tmp;
+	if (dbus_message_get_args(msg, &error,
+				  DBUS_TYPE_INT32, &tmp,
+				  DBUS_TYPE_INVALID) == FALSE) {
+		mce_log(LL_CRIT,
+			"%s: Failed to get argument from %s.%s: %s",
+			MODULE_NAME ,MCE_REQUEST_IF, MCE_DISPLAY_TIMEOUT_MODE_SET,
+			error.message);
+		dbus_error_free(&error);
+		return FALSE;
+	}
+
+	inactivity_inhibit_mode = tmp;
+	inactivity_mode_dbus_signal();
+	mce_rtconf_set_int(MCE_GCONF_BLANKING_INHIBIT_MODE_PATH, inactivity_inhibit_mode);
+	mce_log(LL_DEBUG, "%s: inactivity_inhibit_mode set to %i", MODULE_NAME, inactivity_inhibit_mode);
+
+	if (no_reply == FALSE) {
+		DBusMessage *reply = dbus_new_method_reply(msg);
+		status = dbus_send_message(reply);
+	} else {
+		status = TRUE;
+	}
+
+	return status;
+}
+
+static gboolean inactivity_mode_get_dbus_cb(DBusMessage *const msg)
+{
+	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
+	gboolean status = FALSE;
+
+	mce_log(LL_DEBUG, "%s: Received inactivity mode get request", MODULE_NAME);
+
+	if (no_reply == FALSE) {
+		DBusMessage *reply = dbus_new_method_reply(msg);
+		dbus_int32_t tmp = inactivity_inhibit_mode;
+		if (dbus_message_append_args(reply,
+							 DBUS_TYPE_INT32, &tmp,
+							 DBUS_TYPE_INVALID)) {
+			mce_log(LL_ERR, "%s: Faild to append dbus arguments", MODULE_NAME);
+			return FALSE;
+		}
+		status = dbus_send_message(reply);
+	} else {
+		status = TRUE;
+	}
+
+	return status;
+}
 
 /**
  * rtconf callback for display related settings
@@ -329,7 +515,6 @@ static gpointer display_state_filter(gpointer data)
  * @param user_data Unused
  */
 static void inactiveity_rtconf_cb(gchar *key, guint cb_id, void *user_data)
-
 {
 	(void)key;
 	(void)user_data;
@@ -337,8 +522,10 @@ static void inactiveity_rtconf_cb(gchar *key, guint cb_id, void *user_data)
 	if (cb_id == inactivity_timeout_gconf_cb_id) {
 		mce_rtconf_get_int(MCE_GCONF_DISPLAY_DIM_TIMEOUT_PATH, &inactivity_timeout);
 		mce_log(LL_DEBUG, "%s: inactivity_timeout set to %i", MODULE_NAME, inactivity_timeout);
+		inactivity_timeout_dbus_signal();
 	} else if (cb_id == inactivity_inhibit_gconf_cb_id) {
 		mce_rtconf_get_int(MCE_GCONF_BLANKING_INHIBIT_MODE_PATH, &inactivity_inhibit_mode);
+		inactivity_mode_dbus_signal();
 	} else {
 		mce_log(LL_WARN, "%s: Spurious rtconf value received; confused!", MODULE_NAME);
 	}
@@ -374,7 +561,7 @@ const gchar *g_module_check_init(GModule *module)
 				   inactiveity_rtconf_cb, NULL,
 				   &inactivity_timeout_gconf_cb_id) == FALSE)
 		goto EXIT;
-	
+
 	mce_rtconf_get_int(MCE_GCONF_BLANKING_INHIBIT_MODE_PATH,
 				&inactivity_inhibit_mode);
 
@@ -390,6 +577,41 @@ const gchar *g_module_check_init(GModule *module)
 				 NULL,
 				 DBUS_MESSAGE_TYPE_METHOD_CALL,
 				 inactivity_status_get_dbus_cb) == NULL)
+		goto EXIT;
+
+	if (mce_dbus_handler_add(MCE_REQUEST_IF,
+				 MCE_INACTIVITY_STATUS_GET,
+				 NULL,
+				 DBUS_MESSAGE_TYPE_METHOD_CALL,
+				 inactivity_status_get_dbus_cb) == NULL)
+		goto EXIT;
+
+	if (mce_dbus_handler_add(MCE_REQUEST_IF,
+				 MCE_DISPLAY_TIMEOUT_SET,
+				 NULL,
+				 DBUS_MESSAGE_TYPE_METHOD_CALL,
+				 inactivity_timeout_set_dbus_cb) == NULL)
+		goto EXIT;
+
+	if (mce_dbus_handler_add(MCE_REQUEST_IF,
+				 MCE_DISPLAY_TIMEOUT_GET,
+				 NULL,
+				 DBUS_MESSAGE_TYPE_METHOD_CALL,
+				 inactivity_timeout_get_dbus_cb) == NULL)
+		goto EXIT;
+
+	if (mce_dbus_handler_add(MCE_REQUEST_IF,
+				 MCE_DISPLAY_TIMEOUT_MODE_SET,
+				 NULL,
+				 DBUS_MESSAGE_TYPE_METHOD_CALL,
+				 inactivity_mode_set_dbus_cb) == NULL)
+		goto EXIT;
+
+	if (mce_dbus_handler_add(MCE_REQUEST_IF,
+				 MCE_DISPLAY_TIMEOUT_MODE_GET,
+				 NULL,
+				 DBUS_MESSAGE_TYPE_METHOD_CALL,
+				 inactivity_mode_get_dbus_cb) == NULL)
 		goto EXIT;
 
 	setup_inactivity_timeout();

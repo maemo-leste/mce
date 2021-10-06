@@ -45,6 +45,13 @@ static gboolean rtconf_ini_get_bool(const gchar * const key, gboolean * value)
 	return TRUE;
 }
 
+static gboolean rtconf_ini_set_bool(const gchar * const key, const gboolean value)
+{
+	(void)key;
+	(void)value;
+	return TRUE;
+}
+
 static gboolean rtconf_ini_get_int(const gchar * const key, gint * value)
 {
 	if(!keyfile)
@@ -89,7 +96,8 @@ const gchar *g_module_check_init(GModule * module)
 		mce_log(LL_WARN, "%s: %s not available", MODULE_NAME, RTCONF_INI_KEY_FILE_PATH);
 	} else if (!mce_rtconf_backend_register(rtconf_ini_set_int,
 									 rtconf_ini_get_int,
-									 rtconf_ini_get_bool, 
+									 rtconf_ini_get_bool,
+									 rtconf_ini_set_bool,
 									 rtconf_ini_notifier_add, 
 									 rtconf_ini_notifier_remove)) {
 		mce_log(LL_WARN, "Could not set rtconf-ini as rtconf backend");
