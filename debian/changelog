@@ -1,3 +1,11 @@
+mce (1.9.6) unstable; urgency=medium
+
+  * Optionally dissallow the reducing of display brightness by als
+    while the display is on
+  * Make all rtconf values accessable via dbus
+
+ -- Carl Klemm <carl@uvos.org>  Sat, 06 Oct 2021 11:11:11 +0200
+
 mce (1.9.5) unstable; urgency=medium
 
   * Dehardcode als profile brightness values
