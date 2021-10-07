@@ -1,3 +1,9 @@
+mce (1.9.7) unstable; urgency=medium
+
+  * fix usage of led_pattern_activate_pipe in battery-upower and led-dbus
+
+-- Carl Klemm <carl@uvos.org>  Sat, 07 Oct 2021 10:21:23 +0200
+
 mce (1.9.6) unstable; urgency=medium
 
   * Optionally dissallow the reducing of display brightness by als
