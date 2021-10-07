@@ -243,7 +243,7 @@ mcebat_update_cb(gpointer user_data)
 		/* Charging led pattern */
 		if (mcebat.charger_connected) {
 			gchar *pattern = g_strdup(MCE_LED_PATTERN_BATTERY_CHARGING);
-			execute_datapipe(&led_pattern_activate_pipe, pattern, USE_CACHE, DONT_CACHE_INDATA);
+			execute_datapipe(&led_pattern_activate_pipe, pattern, USE_INDATA, DONT_CACHE_INDATA);
 			g_free(pattern);
 		}
 		else {

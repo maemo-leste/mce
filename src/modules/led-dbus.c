@@ -98,7 +98,7 @@ static gboolean led_activate_pattern_dbus_cb(DBusMessage *const msg)
 		return FALSE;
 	}
 
-	execute_datapipe(&led_pattern_activate_pipe, pattern, USE_INDATA, CACHE_INDATA);
+	execute_datapipe(&led_pattern_activate_pipe, pattern, USE_INDATA, DONT_CACHE_INDATA);
 
 	if (no_reply == FALSE) {
 		DBusMessage *reply = dbus_new_method_reply(msg);
