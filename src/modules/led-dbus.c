@@ -323,7 +323,7 @@ static gboolean led_get_pattern_disabled_dbus_cb(DBusMessage *const msg)
 		dbus_bool_t enabled = false;
 		if(pattern)
 			enabled = pattern->enabled;
-		if (dbus_message_append_args(reply,
+		if (!dbus_message_append_args(reply,
 							 DBUS_TYPE_BOOLEAN, &enabled,
 							 DBUS_TYPE_INVALID)) {
 			mce_log(LL_ERR, "%s: Faild to append dbus arguments", MODULE_NAME);

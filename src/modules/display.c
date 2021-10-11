@@ -602,10 +602,10 @@ static gboolean display_brightness_get_dbus_cb(DBusMessage *const msg)
 	if (no_reply == FALSE) {
 		DBusMessage *reply = dbus_new_method_reply(msg);
 		dbus_int32_t tmp = set_brightness_unfiltered;
-		if (dbus_message_append_args(reply,
+		if (!dbus_message_append_args(reply,
 							 DBUS_TYPE_INT32, &tmp,
 							 DBUS_TYPE_INVALID)) {
-			mce_log(LL_ERR, "%s: Faild to append dbus arguments", MODULE_NAME);
+			mce_log(LL_ERR, "%s: Failed to append dbus arguments", MODULE_NAME);
 			return FALSE;
 		}
 		status = dbus_send_message(reply);
