@@ -807,6 +807,8 @@ const gchar *g_module_check_init(GModule *module)
 	(void)mce_rtconf_get_int(MCE_GCONF_DISPLAY_BRIGHTNESS_PATH,
 				&disp_brightness);
 
+	set_brightness_unfiltered = disp_brightness;
+
 	/* Use the current brightness as cached brightness on startup,
 	 * and fade from that value
 	 */
