@@ -25,6 +25,19 @@
 #ifndef _MCE_DBUS_NAMES_H_
 #define _MCE_DBUS_NAMES_H_
 
+
+/**
+ * @name D-Bus Interface Constants
+ */
+
+/*@{*/
+
+#define MCE_DISPLAY_BRIGHTNESS_LEVELS	5
+
+#define MCE_DISPLAY_BRIGHTNESS_STEP		1
+
+/*@}*/
+
 /**
  * @name D-Bus Daemon
  */
