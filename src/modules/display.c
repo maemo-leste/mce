@@ -58,6 +58,8 @@ G_MODULE_EXPORT module_info_struct module_info = {
 	.priority = 250
 };
 
+static gint dim_brightness;
+
 /** GConf callback ID for display brightness setting */
 static guint disp_brightness_gconf_cb_id = 0;
 
@@ -204,8 +206,7 @@ static void display_blank(void)
  */
 static void display_dim(void)
 {
-	update_brightness_fade((maximum_display_brightness *
-			        DEFAULT_DIM_BRIGHTNESS) / 100);
+	update_brightness_fade((maximum_display_brightness * dim_brightness) / 100);
 }
 
 /**
@@ -779,6 +780,8 @@ const gchar *g_module_check_init(GModule *module)
 		 */
 		mce_log(LL_WARN, "%s: Could not find display backlight", MODULE_NAME);
 	}
+
+	dim_brightness = mce_conf_get_int("DisplayBrightness", "Dim", DEFAULT_DIM_BRIGHTNESS, NULL);
 
 	/* Append triggers/filters to datapipes */
 	append_output_trigger_to_datapipe(&display_brightness_pipe,

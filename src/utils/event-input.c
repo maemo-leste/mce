@@ -36,8 +36,10 @@
 #include "mce-log.h"
 #include "datapipe.h"
 #include "event-input-utils.h"
+#include "powerkey.h"
+#include "mce-conf.h"
 
-guint16 power_keycode = POWER_BUTTON;
+guint16 power_keycode;
 
 /** ID for touchscreen I/O monitor timeout source */
 static guint touchscreen_io_monitor_timeout_cb_id = 0;
@@ -271,10 +273,6 @@ static void keypress_cb(gpointer data, gsize bytes_read)
 	/* Ignore non-keypress events */
 	if (ev->type != EV_KEY) {
 		goto EXIT;
-	}
-
-	if (ev->code == power_keycode) {
-		ev->code = POWER_BUTTON;
 	}
 
 	mce_log(LL_DEBUG, "Got keyboard event: %i,%i",ev->type, ev->code);
@@ -745,6 +743,8 @@ gboolean mce_input_init(void)
 #if !GLIB_CHECK_VERSION(2,35,0)
 	g_type_init ();
 #endif
+
+	power_keycode = mce_conf_get_int(MCE_CONF_POWERKEY_GROUP, MCE_CONF_POWERKEY_KEYCODE, KEY_POWER, NULL);
 
 	/* Retrieve a GFile pointer to the directory to monitor */
 	dev_input_gfp = g_file_new_for_path(DEV_INPUT_PATH);

@@ -212,8 +212,6 @@ static const gchar *const driver_blacklist[] = {
 	NULL
 };
 
-#define POWER_BUTTON			KEY_POWER
-
 #define MONITORING_DELAY		1
 
 

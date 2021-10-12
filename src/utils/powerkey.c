@@ -564,6 +564,8 @@ static void powerkey_trigger(gconstpointer const data)
 
 	evp = data;
 	ev = *evp;
+	
+	mce_log(LL_DEBUG, "pressed %u %u", ev->code, power_keycode);
 
 	if ((ev != NULL) && (ev->code == power_keycode)) {
 		/* If set, the [power] key was pressed */

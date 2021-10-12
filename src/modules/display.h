@@ -29,7 +29,7 @@
 /** Generic maximum brightness file */
 #define DISPLAY_GENERIC_MAX_BRIGHTNESS_FILE	"/max_brightness"
 
-#define MCE_CONF_DISPLAY_GROUP "Dsiplay"
+#define MCE_CONF_DISPLAY_GROUP "Display"
 #define MCE_CONF_DISPLAY_BLANK_KEY "DimToBlankTimeout"
 
 /** Path to the GConf settings for the display */
@@ -48,7 +48,7 @@
  * used if the maximum brightness cannot be read from SysFS
  */
 #define DEFAULT_MAXIMUM_DISPLAY_BRIGHTNESS	127
-#define DEFAULT_DIM_BRIGHTNESS			3
+#define DEFAULT_DIM_BRIGHTNESS			10
 #define DEFAULT_ENABLE_POWER_SAVING		TRUE
 
 #endif /* _DISPLAY_H_ */

@@ -59,6 +59,9 @@ typedef enum {
 /** Name of Powerkey configuration group */
 #define MCE_CONF_POWERKEY_GROUP		"PowerKey"
 
+/** Name of configuration key for the powerkey keycode */
+#define MCE_CONF_POWERKEY_KEYCODE	"KeyCode"
+
 /** Name of configuration key for medium [power] press delay */
 #define MCE_CONF_POWERKEY_MEDIUM_DELAY	"PowerKeyMediumDelay"
 
