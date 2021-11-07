@@ -216,7 +216,7 @@ static bool x11_set_dpms_display_level(Display *dpy, const bool state)
 			XSync(dpy, false);
 		}
 	} else {
-		mce_log(LL_WARN, "%s: Dsiplay dose not support DPMS", MODULE_NAME);
+		mce_log(LL_WARN, "%s: Display dose not support DPMS", MODULE_NAME);
 		if (ownsDisplay)
 			XCloseDisplay(dpy);
 		return false;
