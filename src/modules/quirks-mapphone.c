@@ -33,7 +33,7 @@ static bool cpu_offlineing;
 static void display_state_trigger(gconstpointer data)
 {
 	(void)data;
-	display_state_t display_state_tmp = datapipe_get_gint(display_state_pipe);
+	display_state_t display_state_tmp = GPOINTER_TO_INT(data);
 	
 	if(display_state_tmp == display_state)
 		return;
@@ -123,6 +123,8 @@ void g_module_unload(GModule * module)
 	(void)module;
 
 	remove_output_trigger_from_datapipe(&display_state_pipe, display_state_trigger);
+
+	display_state_trigger(MCE_DISPLAY_ON);
 
 	g_source_remove(kick_timeout_cb_id);
 }
