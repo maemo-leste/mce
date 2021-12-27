@@ -12,6 +12,7 @@
 #include "mce.h"
 #include "mce-log.h"
 #include "datapipe.h"
+#include "mce-conf.h"
 
 #define MODULE_NAME		"quirks-mapphone"
 
@@ -27,6 +28,7 @@ G_MODULE_EXPORT module_info_struct module_info = {
 
 static guint kick_timeout_cb_id = 0;
 static display_state_t display_state;
+static bool cpu_offlineing;
 
 static void display_state_trigger(gconstpointer data)
 {
@@ -38,24 +40,42 @@ static void display_state_trigger(gconstpointer data)
 	display_state = display_state_tmp;
 
 	int fd = open("/dev/gsmtty1", O_WRONLY);	
-	if (fd < 0) {
+	if(fd < 0) {
 		mce_log(LL_WARN, "%s: can not open gsmtty1", MODULE_NAME);
-		return;
-	}
-	
-	if (display_state == MCE_DISPLAY_ON) {
-		const char * const msg = "U1234AT+SCRN=1\r";
-		mce_log(LL_DEBUG, "%s: Setting modem state to SCRN=1", MODULE_NAME);
-		if(write(fd, msg, strlen(msg)) < 0)
-			mce_log(LL_WARN, "%s: can not set modem to screen on state", MODULE_NAME);
 	} else {
-		const char * const msg = "U1234AT+SCRN=0\r";
-		mce_log(LL_DEBUG, "%s: Setting modem state to SCRN=0", MODULE_NAME);
-		if(write(fd, msg, strlen(msg)) < 0)
-			mce_log(LL_WARN, "%s: can not set modem to screen off state", MODULE_NAME);
+		if (display_state == MCE_DISPLAY_ON) {
+			const char * const msg = "U1234AT+SCRN=1\r";
+			mce_log(LL_DEBUG, "%s: Setting modem state to SCRN=1", MODULE_NAME);
+			if(write(fd, msg, strlen(msg)) < 0)
+				mce_log(LL_WARN, "%s: can not set modem to screen on state", MODULE_NAME);
+		} else {
+			const char * const msg = "U1234AT+SCRN=0\r";
+			mce_log(LL_DEBUG, "%s: Setting modem state to SCRN=0", MODULE_NAME);
+			if(write(fd, msg, strlen(msg)) < 0)
+				mce_log(LL_WARN, "%s: can not set modem to screen off state", MODULE_NAME);
+		}
+		close(fd);
 	}
 	
-	close(fd);
+	if(cpu_offlineing) {
+		fd = open("/sys/devices/system/cpu/cpu1/online", O_WRONLY);
+		if(fd < 0) {
+			mce_log(LL_WARN, "%s: can not open /sys/devices/system/cpu/cpu1/online", MODULE_NAME);
+		} else {
+			if (display_state == MCE_DISPLAY_ON) {
+				const char * const msg = "1";
+				mce_log(LL_DEBUG, "%s: Turning on cpu1", MODULE_NAME);
+				if(write(fd, msg, strlen(msg)) < 0)
+					mce_log(LL_WARN, "%s: can not turn on cpu1", MODULE_NAME);
+			} else {
+				const char * const msg = "0";
+				mce_log(LL_DEBUG, "%s: Turning off cpu1", MODULE_NAME);
+				if(write(fd, msg, strlen(msg)) < 0)
+					mce_log(LL_WARN, "%s: can not turn off cpu1", MODULE_NAME);
+			}
+			close(fd);
+		}
+	}
 }
 
 static gboolean inactivity_timeout_cb(gpointer data)
@@ -91,6 +111,8 @@ const char *g_module_check_init(GModule * module)
 
 	kick_timeout_cb_id = g_timeout_add_seconds(600, inactivity_timeout_cb, NULL);
 	inactivity_timeout_cb(NULL);
+
+	cpu_offlineing = mce_conf_get_bool("QuirksMapphone", "OfflineCpu", true, NULL);
 
 	return NULL;
 }
