@@ -183,3 +183,8 @@ add_library(quirks-mapphone SHARED quirks-mapphone.c)
 target_link_libraries(quirks-mapphone ${COMMON_LIBRARIES})
 target_include_directories(quirks-mapphone PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
 install(TARGETS quirks-mapphone DESTINATION ${MCE_MODULE_DIR})
+
+add_library(volkey-dbus SHARED volkey-dbus.c)
+target_link_libraries(volkey-dbus ${COMMON_LIBRARIES})
+target_include_directories(volkey-dbus PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
+install(TARGETS volkey-dbus DESTINATION ${MCE_MODULE_DIR})

@@ -404,18 +404,18 @@
 #define MCE_CALL_STATE_SIG		"sig_call_state_ind"
 
 /**
- * Notify everyone that the home button was pressed (short press)
+ * Notify everyone that the volume up button was pressed
  *
- * @since v0.3
+ * @since v1.9.11
  */
-#define MCE_HOME_KEY_SIG		"sig_home_key_pressed_ind"
+#define MCE_VOL_UP_KEY_SIG		"sig_vol_up_pressed_ind"
 
 /**
- * Notify everyone that the home button was pressed (long press)
+ * Notify everyone that the volume down was pressed
  *
- * @since v0.3
+ * @since v1.9.11
  */
-#define MCE_HOME_KEY_LONG_SIG		"sig_home_key_pressed_long_ind"
+#define MCE_VOL_DOWN_KEY_SIG		"sig_vol_down_pressed_ind"
 
 /**
  * Notify everyone that the device orientation has changed
