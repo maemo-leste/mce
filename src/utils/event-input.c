@@ -315,7 +315,7 @@ EXIT:
 static void switch_cb(gpointer data, gsize bytes_read)
 {
 	struct input_event *ev;
-	gboolean activity_needed = FALSE;
+	gboolean handled = FALSE;
 
 	ev = data;
 
@@ -329,13 +329,13 @@ static void switch_cb(gpointer data, gsize bytes_read)
 			case SW_KEYPAD_SLIDE: {
 				execute_datapipe(&keyboard_slide_pipe, GINT_TO_POINTER(ev->value),
 								 USE_INDATA, CACHE_INDATA);
-				activity_needed = TRUE;
+				handled = TRUE;
 				break;
 			}
 			case SW_CAMERA_LENS_COVER: {
 				execute_datapipe(&camera_button_pipe, GINT_TO_POINTER(ev->value),
 								 USE_INDATA, CACHE_INDATA);
-				activity_needed = TRUE;
+				handled = TRUE;
 				break;
 			}
 			default:
@@ -346,17 +346,17 @@ static void switch_cb(gpointer data, gsize bytes_read)
 			case KEY_SCREENLOCK: {
 				execute_datapipe(&lockkey_pipe, GINT_TO_POINTER(ev->value),
 								 USE_INDATA, CACHE_INDATA);
-				activity_needed = TRUE;
+				handled = TRUE;
 				break;
 			}
 			case KEY_CAMERA: {
 				execute_datapipe(&camera_button_pipe, GINT_TO_POINTER(ev->value),
 								 USE_INDATA, CACHE_INDATA);
-				activity_needed = TRUE;
+				handled = TRUE;
 				break;
 			}
 			case KEY_CAMERA_FOCUS: {
-				activity_needed = TRUE;
+				handled = TRUE;
 				break;
 			}
 		default:
@@ -364,9 +364,11 @@ static void switch_cb(gpointer data, gsize bytes_read)
 		}
 	}
 	
-	if (activity_needed)
-		execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE),
-			       USE_INDATA, CACHE_INDATA);
+	if (!handled && (ev->value == 1 || ev->value == 0))
+		(void)execute_datapipe(&keypress_pipe, &ev, USE_INDATA, DONT_CACHE_INDATA);
+
+	execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE),
+				USE_INDATA, CACHE_INDATA);
 }
 
 /**
