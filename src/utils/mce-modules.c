@@ -108,7 +108,7 @@ static void mce_modules_load(gchar **modlist)
 			if (!blockLoad)
 				modules = g_slist_append(modules, module);
 		} else {
-			mce_log(LL_WARN, "Failed to load module: %s; skipping", modlist[i]);
+			mce_log(LL_WARN, "Failed to load module %s: %s; skipping", modlist[i], g_module_error());
 		}
 
 		g_free(tmp);
