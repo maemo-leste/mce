@@ -21,6 +21,7 @@
 #include <glib.h>
 #include <gmodule.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <linux/input.h>
 #include "mce.h"
 #include "mce-log.h"
@@ -28,7 +29,7 @@
 #include "datapipe.h"
 
 /** Module name */
-#define MODULE_NAME		"volkey-dbus"
+#define MODULE_NAME		"key-dbus"
 
 /** Functionality provided by this module */
 static const gchar *const provides[] = { MODULE_NAME, NULL };
@@ -43,27 +44,23 @@ G_MODULE_EXPORT module_info_struct module_info = {
 	.priority = 100
 };
 
-static gboolean send_vol_key(bool volup, bool state)
+static gboolean send_key(uint16_t code, int32_t value)
 {
 	DBusMessage *msg = NULL;
 	gboolean status = FALSE;
-	
-	dbus_bool_t state_b = state;
 
-	mce_log(LL_DEBUG,
-		"%s: Sending volume button: %s is %s", MODULE_NAME,
-		volup ? "up" : "down", state ? "pressed" : "released");
+	mce_log(LL_DEBUG, "%s: Sending key code: %u value: %i", MODULE_NAME, code, value);
 
-	msg = dbus_new_signal(MCE_SIGNAL_PATH, MCE_SIGNAL_IF,
-					volup ? MCE_VOL_UP_KEY_SIG : MCE_VOL_DOWN_KEY_SIG);
+	msg = dbus_new_signal(MCE_SIGNAL_PATH, MCE_SIGNAL_IF, MCE_KEY_SIG);
 
 	/* Append the inactivity status */
 	if (dbus_message_append_args(msg,
-				     DBUS_TYPE_BOOLEAN, &state_b,
+				     DBUS_TYPE_UINT16, &code,
+                     DBUS_TYPE_INT32, &value,
 				     DBUS_TYPE_INVALID) == FALSE) {
 		mce_log(LL_CRIT,
 			"Failed to append argument to D-Bus message for %s.%s",
-			MCE_SIGNAL_IF, volup ? MCE_VOL_UP_KEY_SIG : MCE_VOL_DOWN_KEY_SIG);
+			MCE_SIGNAL_IF, MCE_KEY_SIG);
 		dbus_message_unref(msg);
 		return status;
 	}
@@ -80,7 +77,7 @@ static void keypress_trigger(gconstpointer data)
 		*((const struct input_event * const *)data);
 
 	if(ev->code == KEY_VOLUMEDOWN || ev->code == KEY_VOLUMEUP) {
-		send_vol_key(ev->code == KEY_VOLUMEUP, ev->value == 1);
+		send_key(ev->code, ev->value);
 	}
 }
 

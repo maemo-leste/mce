@@ -404,18 +404,11 @@
 #define MCE_CALL_STATE_SIG		"sig_call_state_ind"
 
 /**
- * Notify everyone that the volume up button was pressed
+ * Notify everyone of a key event
  *
  * @since v1.9.11
  */
-#define MCE_VOL_UP_KEY_SIG		"sig_vol_up_pressed_ind"
-
-/**
- * Notify everyone that the volume down was pressed
- *
- * @since v1.9.11
- */
-#define MCE_VOL_DOWN_KEY_SIG		"sig_vol_down_pressed_ind"
+#define MCE_KEY_SIG		"sig_key_event_ind"
 
 /**
  * Notify everyone that the device orientation has changed
