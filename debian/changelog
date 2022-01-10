@@ -1,3 +1,9 @@
+mce (1.9.11) unstable; urgency=medium
+
+  * Add key-dbus module
+
+ -- Carl Klemm <carl@uvos.org>  Mon, 10 Jan 2022 14:11:23 +0200
+
 mce (1.9.10) unstable; urgency=medium
 
   * Turn off cpu1 on mapphones when the display is off.
