@@ -23,8 +23,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <linux/input.h>
+#include <sys/time.h>
 #include <systemui/dbus-names.h>
 #include <systemui/powerkeymenu-dbus-names.h>
+#include <stdbool.h>
 #include "mce.h"
 #include "powerkey.h"
 #include "mce-log.h"
@@ -32,21 +34,14 @@
 #include "mce-dbus.h"
 #include "datapipe.h"
 
-/**
- * The ID of the timeout used when determining
- * whether the key press was short or long
- */
-static guint powerkey_timeout_cb_id = 0;
-
-/**
- * The ID of the timeout used when determining
- * whether the key press was a double press
- */
-static guint doublepress_timeout_cb_id = 0;
-
 static gboolean initialised = FALSE;
 
+static submode_t timeing_submode = MCE_INVALID_SUBMODE;
 static submode_t power_trigger_submode = MCE_INVALID_SUBMODE;
+
+static unsigned int longpress_timer_id;
+
+static bool handle_release = false;
 
 /** Time in milliseconds before the key press is considered medium */
 static gint mediumdelay = DEFAULT_POWER_MEDIUM_DELAY;
@@ -61,8 +56,7 @@ static poweraction_t longpressaction = DEFAULT_POWERKEY_LONG_ACTION;
 /** Action to perform on a double key press */
 static poweraction_t doublepressaction = DEFAULT_POWERKEY_DOUBLE_ACTION;
 
-static void cancel_powerkey_timeout(void);
-
+static struct timeval mode_time;
 
 static gboolean can_show_menu(void)
 {
@@ -154,42 +148,6 @@ EXIT:
 	return status;
 }
 
-/**
- * Timeout callback for double key press
- *
- * @param data Unused
- * @return Always returns FALSE, to disable the timeout
- */
-static gboolean doublepress_timeout_cb(gpointer data)
-{
-	(void)data;
-
-	doublepress_timeout_cb_id = 0;
-
-	return FALSE;
-}
-
-/**
- * Cancel doublepress timeout
- */
-static void cancel_doublepress_timeout(void)
-{
-	/* Remove the timeout source for the [power] double key press handler */
-	if (doublepress_timeout_cb_id != 0) {
-		g_source_remove(doublepress_timeout_cb_id);
-		doublepress_timeout_cb_id = 0;
-	}
-}
-
-static void setup_doublepress_timeout(void)
-{
-	cancel_doublepress_timeout();
-
-	/* Setup new timeout */
-	doublepress_timeout_cb_id =
-		g_timeout_add(doublepressdelay, doublepress_timeout_cb, NULL);
-}
-
 static void generic_powerkey_handler(poweraction_t action)
 {
 	submode_t submode = mce_get_submode_int32();
@@ -259,35 +217,6 @@ static void generic_powerkey_handler(poweraction_t action)
 }
 
 /**
- * Logic for short key press
- *
- * @return TRUE on success, FALSE on failure
- */
-static gboolean handle_shortpress(void)
-{
-	system_state_t system_state = datapipe_get_gint(system_state_pipe);
-	gboolean status = FALSE;
-
-	cancel_powerkey_timeout();
-
-	if (doublepress_timeout_cb_id == 0) {
-		setup_doublepress_timeout();
-
-		if (system_state == MCE_STATE_USER) {
-			generic_powerkey_handler(shortpressaction);
-		}
-	} else {
-		cancel_doublepress_timeout();
-		generic_powerkey_handler(doublepressaction);
-	}
-
-	status = TRUE;
-
-//EXIT:
-	return status;
-}
-
-/**
  * Logic for long key press
  *
  * @return TRUE on success, FALSE on failure
@@ -297,8 +226,6 @@ static gboolean handle_longpress(void)
 	system_state_t state = datapipe_get_gint(system_state_pipe);
 	submode_t submode = mce_get_submode_int32();
 	gboolean status = TRUE;
-
-	powerkey_timeout_cb_id = 0;
 
 	/* Ignore keypress if the alarm UI is visible */
 	if ( can_show_menu() )
@@ -350,55 +277,6 @@ EXIT:
 }
 
 /**
- * Timeout callback for long key press
- *
- * @param data Unused
- * @return Always returns FALSE, to disable the timeout
- */
-static gboolean powerkey_timeout_cb(gpointer data)
-{
-        system_state_t system_state = datapipe_get_gint(system_state_pipe);
-	submode_t submode = mce_get_submode_int32();
-
-	(void)data;
-
-	powerkey_timeout_cb_id = 0;
-
-	if ((system_state == MCE_STATE_ACTDEAD) ||
-	    ((submode & MCE_SOFTOFF_SUBMODE) != 0)) {
-		execute_datapipe_output_triggers(&vibrator_pattern_deactivate_pipe, MCE_VIBRATOR_PATTERN_POWER_KEY_PRESS, USE_INDATA);
-	}
-
-	handle_longpress();
-
-	return FALSE;
-}
-
-/**
- * Cancel powerkey timeout
- */
-static void cancel_powerkey_timeout(void)
-{
-	/* Remove the timeout source for the [power] long key press handler */
-	if (powerkey_timeout_cb_id != 0) {
-		g_source_remove(powerkey_timeout_cb_id);
-		powerkey_timeout_cb_id = 0;
-	}
-}
-
-/**
- * Setup powerkey timeout
- */
-static void setup_powerkey_timeout(gint powerkeydelay)
-{
-	cancel_powerkey_timeout();
-
-	/* Setup new timeout */
-	powerkey_timeout_cb_id =
-		g_timeout_add(powerkeydelay, powerkey_timeout_cb, NULL);
-}
-
-/**
  * D-Bus callback for powerkey event triggering
  *
  * @param msg D-Bus message
@@ -433,7 +311,7 @@ static gboolean trigger_powerkey_event_req_dbus_cb(DBusMessage *const msg)
 	if (result == TRUE) {
 		handle_longpress();
 	} else {
-		handle_shortpress();
+		generic_powerkey_handler(shortpressaction);
 	}
 
 	if (no_reply == FALSE) {
@@ -538,12 +416,49 @@ EXIT:
 static void device_mode_trigger(gconstpointer data)
 {
 	submode_t submode = datapipe_get_gint(submode_pipe);
-
+	
+	int ret = gettimeofday(&mode_time, NULL);
+	if (ret < 0)
+		timerclear(&mode_time);
 	(void)data;
 
 	if ((submode & MCE_DEVMENU_SUBMODE) != 0) {
 		(void)device_menu(TRUE);
 	}
+}
+
+static gboolean doublepress_cb(gpointer data)
+{
+	struct timeval *time = data;
+
+	if (timercmp(time, &mode_time, <)) {
+		mce_log(LL_DEBUG, "powerkey: doublepress igored in cb due to mode change");
+		g_free(time);
+		return G_SOURCE_REMOVE;
+	}
+
+	generic_powerkey_handler(doublepressaction);
+
+	g_free(time);
+	return G_SOURCE_REMOVE;
+}
+
+static gboolean longpress_cb(gpointer data)
+{
+	struct timeval *time = data;
+
+	if (timercmp(time, &mode_time, <)) {
+		mce_log(LL_DEBUG, "powerkey: longpress igored in cb due to mode change");
+		g_free(time);
+		return G_SOURCE_REMOVE;
+	}
+
+	handle_longpress();
+
+	handle_release = false;
+
+	g_free(time);
+	return G_SOURCE_REMOVE;
 }
 
 /**
@@ -557,6 +472,8 @@ static void powerkey_trigger(gconstpointer const data)
 	submode_t submode = mce_get_submode_int32();
 	struct input_event const *const *evp;
 	struct input_event const *ev;
+	static struct timeval press_time = {0};
+	static int longpress_delay = DEFAULT_POWER_LONG_DELAY;
 
 	/* Don't dereference until we know it's safe */
 	if (data == NULL)
@@ -564,18 +481,16 @@ static void powerkey_trigger(gconstpointer const data)
 
 	evp = data;
 	ev = *evp;
-	
-	mce_log(LL_DEBUG, "pressed %u %u", ev->code, power_keycode);
 
 	if ((ev != NULL) && (ev->code == power_keycode)) {
-		/* If set, the [power] key was pressed */
 		if (ev->value == 1) {
-			mce_log(LL_DEBUG, "[power] pressed");
-
 			power_trigger_submode = mce_get_submode_int32();
-			if (!(power_trigger_submode & MCE_EVEATER_SUBMODE))
-			{
-				/* Setup new timeout */
+			mce_log(LL_DEBUG, "[power] pressed");
+			if (!(power_trigger_submode & MCE_EVEATER_SUBMODE)) {
+				struct timeval double_delay_timeval = {doublepressdelay/1000, (doublepressdelay % 1000)*1000};
+				struct timeval diff;
+				timersub(&ev->time, &press_time, &diff);
+
 				if ((system_state == MCE_STATE_ACTDEAD) ||
 				    ((submode & MCE_SOFTOFF_SUBMODE) != 0)) {
 					execute_datapipe_output_triggers(&led_pattern_activate_pipe, MCE_LED_PATTERN_POWER_ON, USE_INDATA);
@@ -583,33 +498,98 @@ static void powerkey_trigger(gconstpointer const data)
 					/* Shorter delay for startup
 					 * than for shutdown
 					*/
-					setup_powerkey_timeout(mediumdelay);
+					longpress_delay = mediumdelay;
 				} else {
-					setup_powerkey_timeout(longdelay);
+					longpress_delay = longdelay;
 				}
-			}
-		} else if (ev->value == 0) {
-			mce_log(LL_DEBUG, "[power] released");
-			mce_log(LL_DEBUG, "powerkey_trigger: mce_get_submode_int32() = %d",mce_get_submode_int32());
-			if (!(power_trigger_submode & MCE_EVEATER_SUBMODE))
-			{
-				mce_log(LL_DEBUG, "powerkey_trigger: MCE_EVEATER_SUBMODE != mce_get_submode_int32() ==  %d",mce_get_submode_int32());
-			/* Short key press */
-				if (powerkey_timeout_cb_id != 0) {
-					handle_shortpress();
-	
-					if ((system_state == MCE_STATE_ACTDEAD) ||
-					    ((submode & MCE_SOFTOFF_SUBMODE) != 0)) {
-						execute_datapipe_output_triggers(&led_pattern_deactivate_pipe, MCE_LED_PATTERN_POWER_ON, USE_INDATA);
-						execute_datapipe_output_triggers(&vibrator_pattern_deactivate_pipe, MCE_VIBRATOR_PATTERN_POWER_KEY_PRESS, USE_INDATA);
+				if (timercmp(&diff, &double_delay_timeval, <)) {
+					if (longpress_timer_id != 0) {
+						g_source_remove(longpress_timer_id);
+						longpress_timer_id = 0;
+					}
+					if (!timercmp(&ev->time, &mode_time, <)) {
+						struct timeval *ev_time = g_malloc0(sizeof(*ev_time));
+						*ev_time = ev->time;
+						mce_log(LL_DEBUG, "powerkey: doublepress activated, submode: %d", mce_get_submode_int32());
+						g_idle_add(doublepress_cb, ev_time);
+					}
+					else {
+						mce_log(LL_DEBUG, "powerkey: doublepress igored due to mode change");
+					}
+					handle_release = false;
+				} else {
+					if (!timercmp(&ev->time, &mode_time, <)) {
+						struct timeval *ev_time = g_malloc0(sizeof(*ev_time));
+						*ev_time = ev->time;
+						longpress_timer_id = g_timeout_add(longpress_delay, longpress_cb, ev_time);
+						handle_release = true;
+					} else {
+						mce_log(LL_DEBUG, "powerkey: singlepress igored due to mode change");
+						handle_release = false;
 					}
 				}
+				press_time = ev->time;
 			}
+		} else if (ev->value == 0) {
+			mce_log(LL_DEBUG, "powerkey: [power] released");
+			if (longpress_timer_id != 0) {
+					g_source_remove(longpress_timer_id);
+					longpress_timer_id = 0;
+			}
+			if (!(power_trigger_submode & MCE_EVEATER_SUBMODE) && handle_release) {
+				struct timeval long_delay_timeval = {longpress_delay/1000, (longpress_delay % 1000)*1000};
+				struct timeval diff;
+				timersub(&ev->time, &press_time, &diff);
+				if (!timercmp(&ev->time, &mode_time, <)) {
+					if (longpress_timer_id != 0) {
+							g_source_remove(longpress_timer_id);
+							longpress_timer_id = 0;
+					}
+					if (timercmp(&diff, &long_delay_timeval, >)) {
+						handle_longpress();
+						mce_log(LL_DEBUG, "powerkey: longpress activated, submode: %d",mce_get_submode_int32());
+					} else {
+						generic_powerkey_handler(shortpressaction);
+						mce_log(LL_DEBUG, "powerkey: shortpress activated, submode: %d",mce_get_submode_int32());
+						if ((system_state == MCE_STATE_ACTDEAD) ||
+							((submode & MCE_SOFTOFF_SUBMODE) != 0)) {
+							execute_datapipe_output_triggers(&led_pattern_deactivate_pipe, MCE_LED_PATTERN_POWER_ON, USE_INDATA);
+							execute_datapipe_output_triggers(&vibrator_pattern_deactivate_pipe, MCE_VIBRATOR_PATTERN_POWER_KEY_PRESS, USE_INDATA);
+						}
+					}
+				} else {
+					mce_log(LL_DEBUG, "powerkey: release ignored due to mode change");
+				}
+				if ((system_state == MCE_STATE_ACTDEAD) || ((submode & MCE_SOFTOFF_SUBMODE) != 0)) {
+						execute_datapipe_output_triggers(&vibrator_pattern_deactivate_pipe, MCE_VIBRATOR_PATTERN_POWER_KEY_PRESS, USE_INDATA);
+				}
+			}
+			handle_release = false;
 		}
 	}
 
 EXIT:
 	return;
+}
+
+static void submode_trigger(gconstpointer data)
+{
+	submode_t new_submode =  GPOINTER_TO_INT(data);
+	if (timeing_submode == MCE_INVALID_SUBMODE) {
+		timeing_submode = new_submode;
+		return;
+	}
+
+	if ((new_submode & MCE_TKLOCK_SUBMODE) != (timeing_submode & MCE_TKLOCK_SUBMODE) ||
+		(new_submode & MCE_DEVLOCK_SUBMODE) != (timeing_submode & MCE_DEVLOCK_SUBMODE) ||
+		(new_submode & MCE_MODECHG_SUBMODE) != (timeing_submode & MCE_MODECHG_SUBMODE) ||
+		(new_submode & MCE_EVEATER_SUBMODE) != (timeing_submode & MCE_EVEATER_SUBMODE) ||
+		(new_submode & MCE_EVEATER_SUBMODE) != (timeing_submode & MCE_VISUAL_TKLOCK_SUBMODE)) {
+		int ret = gettimeofday(&mode_time, NULL);
+		if (ret < 0)
+			timerclear(&mode_time);
+	}
+	timeing_submode = new_submode;
 }
 
 static void call_state_trigger(gconstpointer data)
@@ -624,7 +604,6 @@ static void call_state_trigger(gconstpointer data)
 		(void)device_menu(FALSE);
 		mce_rem_submode_int32(MCE_DEVMENU_SUBMODE);
 	}
-	;
 }
 
 /**
@@ -682,8 +661,10 @@ gboolean mce_powerkey_init(void)
 					 powerkey_trigger);
 	append_output_trigger_to_datapipe(&mode_pipe,
 					  device_mode_trigger);
-  append_output_trigger_to_datapipe(&call_state_pipe,
+	append_output_trigger_to_datapipe(&call_state_pipe,
             call_state_trigger);
+	append_output_trigger_to_datapipe(&submode_pipe,
+            submode_trigger);
 
 	initialised = 1;
 
@@ -738,6 +719,8 @@ gboolean mce_powerkey_init(void)
 				  "",
 				  NULL);
 
+	timeing_submode = mce_get_submode_int32();
+
 	/* Since we've set a default, error handling is unnecessary */
 	(void)parse_action(tmp, &doublepressaction);
 	g_free(tmp);
@@ -756,16 +739,15 @@ EXIT:
 void mce_powerkey_exit(void)
 {
 	/* Remove triggers/filters from datapipes */
-  remove_output_trigger_from_datapipe(&call_state_pipe,
-              call_state_trigger);
+	remove_output_trigger_from_datapipe(&call_state_pipe,
+					    call_state_trigger);
 	remove_output_trigger_from_datapipe(&mode_pipe,
 					    device_mode_trigger);
 	remove_input_trigger_from_datapipe(&keypress_pipe,
 					   powerkey_trigger);
-
-	/* Remove all timer sources */
-	cancel_powerkey_timeout();
-	cancel_doublepress_timeout();
-
-	return;
+	remove_input_trigger_from_datapipe(&submode_pipe,
+            submode_trigger);
+	
+	if (longpress_timer_id != 0)
+		g_source_remove(longpress_timer_id);
 }
