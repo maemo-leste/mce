@@ -1,3 +1,9 @@
+mce (1.9.12) unstable; urgency=medium
+
+  * Fix various powerkey races
+
+ -- Carl Klemm <carl@uvos.org>  Mon, 20 Jan 2022 13:11:23 +0200
+
 mce (1.9.11) unstable; urgency=medium
 
   * Add key-dbus module
