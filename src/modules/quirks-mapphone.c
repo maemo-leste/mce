@@ -219,7 +219,7 @@ void g_module_unload(GModule * module)
 
 	remove_output_trigger_from_datapipe(&display_state_pipe, display_state_trigger);
 
-	display_state_trigger(MCE_DISPLAY_ON);
+	display_state_trigger(GINT_TO_POINTER(MCE_DISPLAY_ON));
 
 	g_source_remove(kick_timeout_cb_id);
 }
