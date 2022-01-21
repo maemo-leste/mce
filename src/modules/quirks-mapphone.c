@@ -30,7 +30,7 @@ G_MODULE_EXPORT module_info_struct module_info = {
 
 static guint kick_timeout_cb_id = 0;
 static display_state_t display_state;
-static bool cpu_offlineing;
+static bool offline_cpu;
 static GCancellable *cancellable = NULL;
 
 static void modem_close_cb(GObject *source_object, GAsyncResult *res,
@@ -137,7 +137,7 @@ static void display_state_trigger(gconstpointer data)
 			       modem_append_cb, GINT_TO_POINTER(display_state));
 	g_object_unref(file);
 
-	if (cpu_offlineing) {
+	if (offline_cpu) {
 		fd = open(CPU1_ONLINE_PATH, O_WRONLY);
 
 		if (fd < 0) {
@@ -207,7 +207,7 @@ const char *g_module_check_init(GModule * module)
 	kick_timeout_cb_id = g_timeout_add_seconds(600, inactivity_timeout_cb, NULL);
 	inactivity_timeout_cb(NULL);
 
-	cpu_offlineing = mce_conf_get_bool("QuirksMapphone", "OfflineCpu", true, NULL);
+	offline_cpu = mce_conf_get_bool("QuirksMapphone", "OfflineCpu", true, NULL);
 
 	return NULL;
 }
