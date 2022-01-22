@@ -41,17 +41,6 @@ Description: the Mode Control Entity for Nokia Internet Tablets
  mode management features.  This is a daemon that is the backend
  for many features on Nokia's Internet Tablets.
 
-Package: mce-dbg
-Section: devel
-Priority: extra
-Architecture: any
-Depends: mce (= ${binary:Version})
-Description: the Mode Control Entity for Nokia Internet Tablets
- This package contains the Mode Control Entity with debug symbols
- which provides mode management features.  This is a daemon that
- is the backend for many features on Nokia's Internet Tablets.
- 
- 
 Package: mce-dev
 Architecture: any
 Multi-arch: same
