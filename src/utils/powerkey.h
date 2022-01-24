@@ -74,6 +74,14 @@ typedef enum {
 /** Name of configuration key for short [power] press action */
 #define MCE_CONF_POWERKEY_SHORT_ACTION	"PowerKeyShortAction"
 
+/** Name of configuration key for short [power] press delay */
+#define MCE_CONF_POWERKEY_SHORT_DELAY	"PowerKeyShortDelay"
+
+/** Name of configuration key for short [power] press delay action combinations
+  * to be applied
+  */
+#define MCE_CONF_POWERKEY_SD_APPLY	"PowerKeyShortDelayApply"
+
 /** Name of configuration key for long [power] press action */
 #define MCE_CONF_POWERKEY_LONG_ACTION	"PowerKeyLongAction"
 
