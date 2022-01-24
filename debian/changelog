@@ -1,3 +1,10 @@
+mce (1.9.13) unstable; urgency=medium
+
+  * quirks-mapphone: Fix big delay on display lock
+  * Workaround power key menu appearing for a split second 
+
+ -- Carl Klemm <carl@uvos.org>  Mon, 24 Jan 2022 23:11:23 +0200
+
 mce (1.9.12) unstable; urgency=medium
 
   * Fix various powerkey races
