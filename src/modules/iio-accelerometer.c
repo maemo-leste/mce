@@ -128,38 +128,38 @@ static void iio_accel_get_value(GDBusProxy * proxy)
 	}
 }
 
+static void iio_accel_dbus_call_cb(GObject *source_object, GAsyncResult *res, gpointer user_data)
+{
+	(void)source_object;
+	bool claim = GPOINTER_TO_INT(user_data);
+	GError *error = NULL;
+	GVariant *ret = g_dbus_proxy_call_finish(iio_proxy, res, &error);
+
+	if (!ret && !g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+		mce_log(LL_WARN, "%s: failed to %s accelerometer %s", MODULE_NAME,
+				claim ? "claim" : "release", error ? error->message : "");
+		g_clear_pointer(&ret, g_variant_unref);
+		return;
+	}
+	g_clear_pointer(&ret, g_variant_unref);
+
+	if(claim)
+		iio_accel_get_value(iio_proxy);
+}
+
 static bool iio_accel_claim_sensor(bool claim)
 {
 	static bool claimed = false;
-	GError *error = NULL;
-	GVariant *ret = NULL;
 
 	if (iio_proxy) {
 		if (claim && !claimed) {
 			mce_log(LL_DEBUG, "%s: ClaimAccelerometer", MODULE_NAME);
-			ret =
-			    g_dbus_proxy_call_sync(iio_proxy, "ClaimAccelerometer", NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL,
-						   &error);
-			if (!ret && !g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
-				mce_log(LL_WARN, "%s: failed to claim accelerometer %s", MODULE_NAME,
-					error->message);
-				g_clear_pointer(&ret, g_variant_unref);
-				return false;
-			}
-			iio_accel_get_value(iio_proxy);
-			g_clear_pointer(&ret, g_variant_unref);
+			g_dbus_proxy_call(iio_proxy, "ClaimAccelerometer", NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL,
+						   iio_accel_dbus_call_cb, GINT_TO_POINTER(true));
 		} else if (!claim && claimed) {
 			mce_log(LL_DEBUG, "%s: ReleaseAccelerometer", MODULE_NAME);
-			ret =
-			    g_dbus_proxy_call_sync(iio_proxy, "ReleaseAccelerometer", NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL,
-						   &error);
-			if (!ret && !g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
-				mce_log(LL_WARN, "%s: failed to relese accelerometer %s", MODULE_NAME,
-					error->message);
-				g_clear_pointer(&ret, g_variant_unref);
-				return false;
-			}
-			g_clear_pointer(&ret, g_variant_unref);
+			g_dbus_proxy_call(iio_proxy, "ReleaseAccelerometer", NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL,
+						   iio_accel_dbus_call_cb, GINT_TO_POINTER(false));
 		}
 		claimed = claim;
 	} else {

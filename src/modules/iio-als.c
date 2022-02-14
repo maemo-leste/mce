@@ -53,40 +53,40 @@ static int iio_als_get_light_value(GDBusProxy * proxy)
 	return (int)mlux;
 }
 
+static void iio_als_dbus_call_cb(GObject *source_object, GAsyncResult *res, gpointer user_data)
+{
+	(void)source_object;
+	bool claim = GPOINTER_TO_INT(user_data);
+	GError *error = NULL;
+	GVariant *ret = g_dbus_proxy_call_finish(iio_proxy, res, &error);
+
+	if (!ret && !g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+		mce_log(LL_WARN, "%s: failed to %s ambient light sensor %s", MODULE_NAME,
+				claim ? "claim" : "release", error ? error->message : "");
+		g_clear_pointer(&ret, g_variant_unref);
+		return;
+	}
+	g_clear_pointer(&ret, g_variant_unref);
+
+	if(claim) {
+		int ilux = iio_als_get_light_value(iio_proxy);
+		execute_datapipe(&light_sensor_pipe, GINT_TO_POINTER(ilux), USE_INDATA, CACHE_INDATA);
+	}
+}
+
 static bool iio_als_claim_light_sensor(bool claim)
 {
 	static bool claimed = false;
-	GError *error = NULL;
-	GVariant *ret = NULL;
 
 	if (iio_proxy) {
 		if (claim && !claimed) {
 			mce_log(LL_DEBUG, "%s: ClaimLight", MODULE_NAME);
-			ret =
-			    g_dbus_proxy_call_sync(iio_proxy, "ClaimLight", NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL,
-						   &error);
-			if (!ret && !g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
-				mce_log(LL_WARN, "%s: failed to claim ambient light sensor %s", MODULE_NAME,
-					error->message);
-				g_clear_pointer(&ret, g_variant_unref);
-				return false;
-			}
-			g_clear_pointer(&ret, g_variant_unref);
-
-			int ilux = iio_als_get_light_value(iio_proxy);
-			(void)execute_datapipe(&light_sensor_pipe, GINT_TO_POINTER(ilux), USE_INDATA, CACHE_INDATA);
+			g_dbus_proxy_call(iio_proxy, "ClaimLight", NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL,
+						   iio_als_dbus_call_cb, GINT_TO_POINTER(true));
 		} else if (!claim && claimed) {
 			mce_log(LL_DEBUG, "%s: ReleaseLight", MODULE_NAME);
-			ret =
-			    g_dbus_proxy_call_sync(iio_proxy, "ReleaseLight", NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL,
-						   &error);
-			if (!ret && !g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
-				mce_log(LL_WARN, "%s: failed to relese ambient light sensor %s", MODULE_NAME,
-					error->message);
-				g_clear_pointer(&ret, g_variant_unref);
-				return false;
-			}
-			g_clear_pointer(&ret, g_variant_unref);
+			g_dbus_proxy_call(iio_proxy, "ReleaseLight", NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL,
+						    iio_als_dbus_call_cb, GINT_TO_POINTER(false));
 		}
 		claimed = claim;
 	} else {
