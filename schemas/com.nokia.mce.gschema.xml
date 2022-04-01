@@ -9,7 +9,7 @@
 		<key type="i" name="display-dim-timeout">
 			<default>20</default>
 		</key>
-		<key type="b" name="inhibit-blank-mode">
+		<key type="i" name="inhibit-blank-mode">
 			<default>false</default>
 		</key>
 		<key type="b" name="als-enabled">

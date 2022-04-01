@@ -152,16 +152,16 @@ static gboolean mce_gconf_get_int(const gchar * const key, gint * value)
 
 	gchar *path = mce_gconf_expand_key(key);
 
-	gcv = gconf_client_get(gconf_client, key, &error);
+	gcv = gconf_client_get(gconf_client, path, &error);
 
 	if (gcv == NULL) {
 		mce_log((error != NULL) ? LL_WARN : LL_INFO,
-			"Could not retrieve %s from GConf; %s", key, (error != NULL) ? error->message : "Key not set");
+			"Could not retrieve %s from GConf; %s", path, (error != NULL) ? error->message : "Key not set");
 		goto EXIT;
 	}
 
 	if (gcv->type != GCONF_VALUE_INT) {
-		mce_log(LL_ERR, "GConf key %s should have type: %d, but has type: %d", key, GCONF_VALUE_INT, gcv->type);
+		mce_log(LL_ERR, "GConf key %s should have type: %d, but has type: %d", path, GCONF_VALUE_INT, gcv->type);
 		goto EXIT;
 	}
 
@@ -207,7 +207,16 @@ static gboolean mce_gconf_notifier_add(const gchar * key,
 	GError *error = NULL;
 	gboolean status = FALSE;
 	
-	const gchar *path = mce_gconf_get_path(key);
+	gchar *path = g_strdup(mce_gconf_get_path(key));
+	
+	if(path[strlen(path)-1] == '/')
+		path[strlen(path)-1] = '\0';
+	
+	gchar *gkey;
+	if(key[0] != '/')
+		gkey = g_strconcat("/", key, NULL);
+	else
+		gkey = g_strdup(key);
 
 	gconf_client_add_dir(gconf_client, path, GCONF_CLIENT_PRELOAD_NONE, &error);
 
@@ -219,7 +228,7 @@ static gboolean mce_gconf_notifier_add(const gchar * key,
 
 	g_clear_error(&error);
 
-	*cb_id = gconf_client_notify_add(gconf_client, key, mce_gconf_gconf_callback, user_data, NULL, &error);
+	*cb_id = gconf_client_notify_add(gconf_client, gkey, mce_gconf_gconf_callback, user_data, NULL, &error);
 	if (error != NULL) {
 		mce_log(LL_CRIT, "Could not register notifier for %s; %s", key, error->message);
 	}
@@ -233,6 +242,8 @@ static gboolean mce_gconf_notifier_add(const gchar * key,
 	status = TRUE;
 
 	g_clear_error(&error);
+	g_free(gkey);
+	g_free(path);
 
 	return status;
 }

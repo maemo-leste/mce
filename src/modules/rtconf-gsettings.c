@@ -32,30 +32,52 @@ struct notifier {
 	const gchar* key;
 };
 
+static gchar *mce_gsettings_translate_key(const gchar * const key)
+{
+	gchar *str = g_strdup(key);
+	for(gchar *iter = str; *iter != '\0'; ++iter)
+	{
+		*iter = g_ascii_tolower(*iter);
+		if(*iter == '_')
+			*iter = '-';
+	}
+	return str;
+}
+
 static gboolean mce_gsettings_set_int(const gchar * const key, const gint value)
 {
-	if (g_settings_set_int(gsettings_client, key, value) == FALSE) {
+	gchar *gkey = mce_gsettings_translate_key(key);
+	if (g_settings_set_int(gsettings_client, gkey, value) == FALSE) {
 		mce_log(LL_WARN, "Failed to write %s to gesettings", key);
+		g_free(gkey);
 		return FALSE;
 	}
+	g_free(gkey);
 	return TRUE;
 }
 
 static gboolean mce_gsettings_get_bool(const gchar * const key, gboolean * value)
 {
-	*value = g_settings_get_boolean(gsettings_client, key);
+	gchar *gkey = mce_gsettings_translate_key(key);
+	*value = g_settings_get_boolean(gsettings_client, gkey);
+	g_free(gkey);
 
 	return TRUE;
 }
 
 static gboolean mce_gsettings_set_bool(const gchar * const key, const gboolean value)
 {
-	return g_settings_set_boolean(gsettings_client, key, value);
+	gchar *gkey = mce_gsettings_translate_key(key);
+	gboolean ret = g_settings_set_boolean(gsettings_client, gkey, value);
+	g_free(gkey);
+	return ret;
 }
 
 static gboolean mce_gsettings_get_int(const gchar * const key, gint * value)
 {
-	*value = g_settings_get_int(gsettings_client, key);
+	gchar *gkey = mce_gsettings_translate_key(key);
+	*value = g_settings_get_int(gsettings_client, gkey);
+	g_free(gkey);
 
 	return TRUE;
 }
@@ -97,7 +119,7 @@ static gboolean mce_gsettings_notifier_add(const gchar * key,
 	not->callback_id = *cb_id;
 	not->callback = callback;
 	not->user_data = user_data;
-	not->key = key;
+	not->key = mce_gsettings_translate_key(key);
 
 	gsettings_notifiers = g_list_prepend(gsettings_notifiers, not);
 
