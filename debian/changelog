@@ -1,3 +1,9 @@
+mce (1.9.15) unstable; urgency=medium
+
+  * add gsettings rtconf backend
+
+ -- Carl Klemm <carl@uvos.org>  Sat, 02 Apr 2022 00:11:23 +0200
+
 mce (1.9.14) unstable; urgency=medium
 
   * ii-als, iio-accelerometer: make comunication with iio-sensor-proxy async
