@@ -9,7 +9,7 @@ gboolean(*mce_rtconf_set_int_backend) (const gchar * const key, const gint value
 gboolean(*mce_rtconf_get_int_backend) (const gchar * const key, gint * value);
 gboolean(*mce_rtconf_get_bool_backend) (const gchar * const key, gboolean * value);
 gboolean(*mce_rtconf_set_bool_backend) (const gchar * const key, const gboolean value);
-gboolean(*mce_rtconf_notifier_add_backend) (const gchar * path, const gchar * key,
+gboolean(*mce_rtconf_notifier_add_backend) (const gchar * key,
 					    const mce_rtconf_callback callback, void *user_data, guint * cb_id);
 void (*mce_rtconf_notifier_remove_backend)(guint cb_id);
 
@@ -86,11 +86,11 @@ gboolean mce_rtconf_get_int(const gchar * const key, gint * value)
  * @param[out] cb_id Will contain the callback ID on return
  * @return TRUE on success, FALSE on failure
  */
-gboolean mce_rtconf_notifier_add(const gchar * path, const gchar * key,
+gboolean mce_rtconf_notifier_add(const gchar * key,
 				 const mce_rtconf_callback callback, void *user_data, guint * cb_id)
 {
 	if (mce_rtconf_notifier_add_backend)
-		return mce_rtconf_notifier_add_backend(path, key, callback, user_data, cb_id);
+		return mce_rtconf_notifier_add_backend(key, callback, user_data, cb_id);
 
 	mce_log(LL_WARN, "%s: %s used without backend", MODULE_NAME, __func__);
 	return FALSE;
@@ -114,7 +114,7 @@ gboolean mce_rtconf_backend_register(gboolean(*set_int_backend) (const gchar * c
 				     gboolean(*get_int_backend) (const gchar * const key, gint * value),
 				     gboolean(*get_bool_backend) (const gchar * const key, gboolean * value),
 					 gboolean(*set_bool_backend) (const gchar * const key, const gboolean value),
-				     gboolean(*notifier_add_backend) (const gchar * path, const gchar * key,
+				     gboolean(*notifier_add_backend) (const gchar * key,
 								      const mce_rtconf_callback callback,
 								      void *user_data, guint * cb_id),
 				     void (*notifier_remove_backend)(guint cb_id))

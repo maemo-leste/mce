@@ -36,6 +36,8 @@
 
 #define MCE_DISPLAY_BRIGHTNESS_STEP		1
 
+#define MCE_DISPLAY_TIMEOUT_LEVELS {0, 10, 30, 60, 120, -1}
+
 /*@}*/
 
 /**
@@ -163,6 +165,24 @@
  * @param brighess @c dbus_int32_t @c display timeout mode to set
  */
 #define MCE_DISPLAY_TIMEOUT_MODE_SET		"set_inhibit_timout_mode"
+
+/**
+ * Query the display timeout mode
+ *
+ * @since v1.9.15
+ * @return @c dbus_bool_t @c TRUE if autolock is enabled,
+ *                        @c FALSE if autolock is disabled
+ */
+#define MCE_AUTOLOCK_GET		"get_autolock"
+
+/**
+ * Set the display timeout mode
+ *
+ * @since v1.9.15
+ * @param autolock @c dbus_bool_t @c TRUE to enable autolock,
+ *                                @c FALSE to disable autolock
+ */
+#define MCE_AUTOLOCK_SET		"set_autolock"
 
 /**
  * Query CABC mode

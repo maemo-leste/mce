@@ -63,10 +63,9 @@ static gboolean rtconf_ini_get_int(const gchar * const key, gint * value)
 	return TRUE;
 }
 
-static gboolean rtconf_ini_notifier_add(const gchar * path, const gchar * key,
-				       const mce_rtconf_callback callback, void *user_data, guint * cb_id)
+static gboolean rtconf_ini_notifier_add(const gchar * key,
+				       const mce_rtconf_callback callback, void *user_data, guint *cb_id)
 {
-	(void)path;
 	(void)key;
 	(void)callback;
 	(void)user_data;

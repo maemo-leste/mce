@@ -29,14 +29,10 @@
 #include "mce-rtconf.h"
 #include "datapipe.h"
 
-#define DEFAULT_TIMEOUT			30	/* 30 seconds */
+#define DEFAULT_TIMEOUT 30	/* 30 seconds */
 
-/** Path to the GConf settings for the display now also used by inactivity.c */
-#ifndef MCE_GCONF_DISPLAY_PATH
-#define MCE_GCONF_DISPLAY_PATH			"/system/osso/dsm/display"
-#endif /* MCE_GCONF_DISPLAY_PATH */
-#define MCE_GCONF_DISPLAY_DIM_TIMEOUT_PATH	MCE_GCONF_DISPLAY_PATH "/display_dim_timeout"
-#define MCE_GCONF_BLANKING_INHIBIT_MODE_PATH	MCE_GCONF_DISPLAY_PATH "/inhibit_blank_mode"
+#define MCE_DISPLAY_DIM_TIMEOUT_KEY "display_dim_timeout"
+#define MCE_BLANKING_INHIBIT_MODE_PATH "inhibit_blank_mode"
 
 /**
  * inactivity prevent timeout, in seconds;
@@ -376,7 +372,7 @@ static gboolean inactivity_timeout_set_dbus_cb(DBusMessage *const msg)
 
 	inactivity_timeout = tmp;
 	inactivity_timeout_dbus_signal();
-	mce_rtconf_set_int(MCE_GCONF_DISPLAY_DIM_TIMEOUT_PATH, inactivity_timeout);
+	mce_rtconf_set_int(MCE_DISPLAY_DIM_TIMEOUT_KEY, inactivity_timeout);
 	mce_log(LL_DEBUG, "%s: inactivity_timeout set to %i", MODULE_NAME, inactivity_timeout);
 
 	if (no_reply == FALSE) {
@@ -470,7 +466,7 @@ static gboolean inactivity_mode_set_dbus_cb(DBusMessage *const msg)
 
 	inactivity_inhibit_mode = tmp;
 	inactivity_mode_dbus_signal();
-	mce_rtconf_set_int(MCE_GCONF_BLANKING_INHIBIT_MODE_PATH, inactivity_inhibit_mode);
+	mce_rtconf_set_int(MCE_BLANKING_INHIBIT_MODE_PATH, inactivity_inhibit_mode);
 	mce_log(LL_DEBUG, "%s: inactivity_inhibit_mode set to %i", MODULE_NAME, inactivity_inhibit_mode);
 
 	if (no_reply == FALSE) {
@@ -514,17 +510,17 @@ static gboolean inactivity_mode_get_dbus_cb(DBusMessage *const msg)
  * @param cb_id Connection ID from gconf_client_notify_add()
  * @param user_data Unused
  */
-static void inactiveity_rtconf_cb(gchar *key, guint cb_id, void *user_data)
+static void inactiveity_rtconf_cb(const gchar *key, guint cb_id, void *user_data)
 {
 	(void)key;
 	(void)user_data;
 
 	if (cb_id == inactivity_timeout_gconf_cb_id) {
-		mce_rtconf_get_int(MCE_GCONF_DISPLAY_DIM_TIMEOUT_PATH, &inactivity_timeout);
+		mce_rtconf_get_int(MCE_DISPLAY_DIM_TIMEOUT_KEY, &inactivity_timeout);
 		mce_log(LL_DEBUG, "%s: inactivity_timeout set to %i", MODULE_NAME, inactivity_timeout);
 		inactivity_timeout_dbus_signal();
 	} else if (cb_id == inactivity_inhibit_gconf_cb_id) {
-		mce_rtconf_get_int(MCE_GCONF_BLANKING_INHIBIT_MODE_PATH, &inactivity_inhibit_mode);
+		mce_rtconf_get_int(MCE_BLANKING_INHIBIT_MODE_PATH, &inactivity_inhibit_mode);
 		inactivity_mode_dbus_signal();
 	} else {
 		mce_log(LL_WARN, "%s: Spurious rtconf value received; confused!", MODULE_NAME);
@@ -553,20 +549,18 @@ const gchar *g_module_check_init(GModule *module)
 					display_state_filter);
 	
 	/* Since we've set a default, error handling is unnecessary */
-	mce_rtconf_get_int(MCE_GCONF_DISPLAY_DIM_TIMEOUT_PATH,
+	mce_rtconf_get_int(MCE_DISPLAY_DIM_TIMEOUT_KEY,
 				&inactivity_timeout);
 
-	if (mce_rtconf_notifier_add(MCE_GCONF_DISPLAY_PATH,
-				   MCE_GCONF_DISPLAY_DIM_TIMEOUT_PATH,
+	if (mce_rtconf_notifier_add(MCE_DISPLAY_DIM_TIMEOUT_KEY,
 				   inactiveity_rtconf_cb, NULL,
 				   &inactivity_timeout_gconf_cb_id) == FALSE)
 		goto EXIT;
 
-	mce_rtconf_get_int(MCE_GCONF_BLANKING_INHIBIT_MODE_PATH,
+	mce_rtconf_get_int(MCE_BLANKING_INHIBIT_MODE_PATH,
 				&inactivity_inhibit_mode);
 
-	if (mce_rtconf_notifier_add(MCE_GCONF_DISPLAY_PATH,
-				   MCE_GCONF_BLANKING_INHIBIT_MODE_PATH,
+	if (mce_rtconf_notifier_add(MCE_BLANKING_INHIBIT_MODE_PATH,
 				   inactiveity_rtconf_cb, NULL,
 				   &inactivity_inhibit_gconf_cb_id) == FALSE)
 		goto EXIT;

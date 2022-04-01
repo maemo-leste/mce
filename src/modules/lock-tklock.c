@@ -51,16 +51,11 @@ G_MODULE_EXPORT module_info_struct module_info = {
 	.priority = 1000
 };
 
-#ifndef MCE_GCONF_LOCK_PATH
-/** Path to the GConf settings for the touchscreen/keypad lock */
-#define MCE_GCONF_LOCK_PATH		"/system/osso/dsm/locks"
-#endif /* MCE_GCONF_LOCK_PATH */
-
 /** Default fallback setting for the touchscreen/keypad autolock */
 #define DEFAULT_TK_AUTOLOCK		FALSE		/* FALSE / TRUE */
 
 /** Path to the touchscreen/keypad autolock GConf setting */
-#define MCE_GCONF_TK_AUTOLOCK_ENABLED_PATH	MCE_GCONF_LOCK_PATH "/touchscreen_keypad_autolock_enabled"
+#define MCE_GCONF_TK_AUTOLOCK_ENABLED_PATH	"touchscreen_keypad_autolock_enabled"
 
 /** Name of D-Bus callback to provide to Touchscreen/Keypad Lock SystemUI */
 #define MCE_TKLOCK_CB_REQ		"tklock_callback"
@@ -1388,6 +1383,65 @@ EXIT:
 	return status;
 }
 
+static gboolean autolock_set_dbus_cb(DBusMessage *const msg)
+{
+	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
+	gboolean status = FALSE;
+	DBusError error;
+
+	dbus_error_init(&error);
+
+	mce_log(LL_DEBUG, "%s: Received autolock set request", MODULE_NAME);
+
+	dbus_bool_t enable;
+	if (dbus_message_get_args(msg, &error,
+				  DBUS_TYPE_BOOLEAN, &enable,
+				  DBUS_TYPE_INVALID) == FALSE) {
+		mce_log(LL_CRIT,
+			"Failed to get argument from %s.%s: %s",
+			MCE_REQUEST_IF, MCE_AUTOLOCK_SET,
+			error.message);
+		dbus_error_free(&error);
+		return FALSE;
+	}
+
+	tk_autolock_enabled = enable;
+	mce_rtconf_set_bool(MCE_GCONF_TK_AUTOLOCK_ENABLED_PATH, enable);
+
+	if (no_reply == FALSE) {
+		DBusMessage *reply = dbus_new_method_reply(msg);
+		status = dbus_send_message(reply);
+	} else {
+		status = TRUE;
+	}
+
+	return status;
+}
+
+static gboolean autolock_get_dbus_cb(DBusMessage *const msg)
+{
+	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
+	gboolean status = FALSE;
+
+	mce_log(LL_DEBUG, "%s: Received autolock get request", MODULE_NAME);
+
+	if (no_reply == FALSE) {
+		DBusMessage *reply = dbus_new_method_reply(msg);
+		dbus_bool_t tmp = tk_autolock_enabled;
+		if (!dbus_message_append_args(reply,
+							 DBUS_TYPE_BOOLEAN, &tmp,
+							 DBUS_TYPE_INVALID)) {
+			mce_log(LL_ERR, "%s: Failed to append dbus arguments", MODULE_NAME);
+			return FALSE;
+		}
+		status = dbus_send_message(reply);
+	} else {
+		status = TRUE;
+	}
+
+	return status;
+}
+
 /**
  * rtconf callback for touchscreen/keypad lock related settings
  *
@@ -1396,7 +1450,7 @@ EXIT:
  * @param entry The modified GConf entry
  * @param data Unused
  */
-static void tklock_rtconf_cb(gchar *key, guint cb_id, void *user_data)
+static void tklock_rtconf_cb(const gchar *key, guint cb_id, void *user_data)
 {
 	(void)key;
 	(void)user_data;
@@ -2265,8 +2319,7 @@ const char *g_module_check_init(GModule * module)
 	(void)mce_rtconf_get_bool(MCE_GCONF_TK_AUTOLOCK_ENABLED_PATH, &tk_autolock_enabled);
 
 	/* Touchscreen/keypad autolock enabled/disabled */
-	if (mce_rtconf_notifier_add(MCE_GCONF_LOCK_PATH,
-				   MCE_GCONF_TK_AUTOLOCK_ENABLED_PATH,
+	if (mce_rtconf_notifier_add(MCE_GCONF_TK_AUTOLOCK_ENABLED_PATH,
 				   tklock_rtconf_cb, NULL,
 				   &tk_autolock_enabled_cb_id) == FALSE)
 		goto EXIT;
@@ -2292,6 +2345,20 @@ const char *g_module_check_init(GModule * module)
 				 NULL,
 				 DBUS_MESSAGE_TYPE_METHOD_CALL,
 				 systemui_tklock_dbus_cb) == NULL)
+		goto EXIT;
+
+	if (mce_dbus_handler_add(MCE_REQUEST_IF,
+				 MCE_AUTOLOCK_GET,
+				 NULL,
+				 DBUS_MESSAGE_TYPE_METHOD_CALL,
+				autolock_get_dbus_cb) == NULL)
+		goto EXIT;
+	
+	if (mce_dbus_handler_add(MCE_REQUEST_IF,
+				 MCE_AUTOLOCK_SET,
+				 NULL,
+				 DBUS_MESSAGE_TYPE_METHOD_CALL,
+				 autolock_set_dbus_cb) == NULL)
 		goto EXIT;
 
 	/* Get configuration options */

@@ -2,13 +2,7 @@
 #define _BUTTON_BACKLIGHT_H
 #include <stdbool.h>
 
-/** Path to the GConf settings for the display */
-#ifndef MCE_GCONF_DISPLAY_PATH
-#define MCE_GCONF_DISPLAY_PATH			"/system/osso/dsm/display"
-#endif /* MCE_GCONF_DISPLAY_PATH */
-/** Path to the ALS enabled GConf setting */
-#define MCE_GCONF_DISPLAY_ALS_ENABLED_PATH	MCE_GCONF_DISPLAY_PATH "/als_enabled"
-
+#define MCE_ALS_ENABLED_KEY	"als_enabled"
 
 #define MCE_CONF_BACKLIGHT_GROUP	"Backlights"
 #define MCE_CONF_CONFIGURED_LIGHTS	"ConfiguredLights"

@@ -1,0 +1,61 @@
+<schemalist>
+	<schema path="/com/nokia/mce/" id="com.nokia.mce">
+		<key type="b" name="mtouchscreen-keypad-autolock-enabled">
+			<default>true</default>
+		</key>
+		<key type="i" name="display-brightness">
+			<default>2</default>
+		</key>
+		<key type="i" name="display-dim-timeout">
+			<default>20</default>
+		</key>
+		<key type="b" name="inhibit-blank-mode">
+			<default>false</default>
+		</key>
+		<key type="b" name="als-enabled">
+			<default>true</default>
+		</key>
+		<key type="b" name="patternerror">
+			<default>true</default>
+		</key>
+		<key type="b" name="patterndeviceon">
+			<default>false</default>
+		</key>
+		<key type="b" name="patternpoweron">
+			<default>true</default>
+		</key>
+		<key type="b" name="patternpoweroff">
+			<default>true</default>
+		</key>
+		<key type="b" name="patterncommunicationcall">
+			<default>true</default>
+		</key>
+		<key type="b" name="patterncommunicationim">
+			<default>true</default>
+		</key>
+		<key type="b" name="patterncommunicationsms">
+			<default>true</default>
+		</key>
+		<key type="b" name="patterncommunicationemail">
+			<default>true</default>
+		</key>
+		<key type="b" name="patterncommonnotification">
+			<default>true</default>
+		</key>
+		<key type="b" name="patternwebcamactive">
+			<default>true</default>
+		</key>
+		<key type="b" name="patternbatterycharging">
+			<default>true</default>
+		</key>
+		<key type="b" name="patternbatteryfull">
+			<default>true</default>
+		</key>
+		<key type="b" name="patterndevicesoftoff">
+			<default>true</default>
+		</key>
+		<key type="b" name="patternboost">
+			<default>true</default>
+		</key>
+	</schema>
+</schemalist>

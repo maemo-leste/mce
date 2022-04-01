@@ -311,14 +311,14 @@ static void setup_blank_timeout(void)
  * @param cb_id Connection ID from gconf_client_notify_add()
  * @param user_data Unused
  */
-static void display_rtconf_cb(gchar *key, guint cb_id, void *user_data)
+static void display_rtconf_cb(const gchar *key, guint cb_id, void *user_data)
 {
 	(void)key;
 	(void)user_data;
 
 	if (cb_id == disp_brightness_gconf_cb_id) {
 		gint tmp;
-		if (mce_rtconf_get_int(MCE_GCONF_DISPLAY_BRIGHTNESS_PATH, &tmp)) {
+		if (mce_rtconf_get_int(MCE_BRIGHTNESS_KEY, &tmp)) {
 			execute_datapipe(&display_brightness_pipe, GINT_TO_POINTER(tmp), USE_INDATA, CACHE_INDATA);
 			set_brightness_unfiltered = tmp;
 			display_brightness_dbus_signal();
@@ -578,7 +578,7 @@ static gboolean display_brightness_set_dbus_cb(DBusMessage *const msg)
 
 	set_brightness_unfiltered = brightness;
 	execute_datapipe(&display_brightness_pipe, GINT_TO_POINTER(brightness), USE_INDATA, CACHE_INDATA);
-	mce_rtconf_set_int(MCE_GCONF_DISPLAY_BRIGHTNESS_PATH, set_brightness_unfiltered);
+	mce_rtconf_set_int(MCE_BRIGHTNESS_KEY, set_brightness_unfiltered);
 	display_brightness_dbus_signal();
 
 	if (no_reply == FALSE) {
@@ -807,7 +807,7 @@ const gchar *g_module_check_init(GModule *module)
 
 	/* Display brightness */
 	/* Since we've set a default, error handling is unnecessary */
-	(void)mce_rtconf_get_int(MCE_GCONF_DISPLAY_BRIGHTNESS_PATH,
+	(void)mce_rtconf_get_int(MCE_BRIGHTNESS_KEY,
 				&disp_brightness);
 
 	set_brightness_unfiltered = disp_brightness;
@@ -828,8 +828,7 @@ const gchar *g_module_check_init(GModule *module)
 			       GINT_TO_POINTER(disp_brightness),
 			       USE_INDATA, CACHE_INDATA);
 
-	if (mce_rtconf_notifier_add(MCE_GCONF_DISPLAY_PATH,
-				   MCE_GCONF_DISPLAY_BRIGHTNESS_PATH,
+	if (mce_rtconf_notifier_add(MCE_BRIGHTNESS_KEY,
 				   display_rtconf_cb, NULL,
 				   &disp_brightness_gconf_cb_id) == FALSE)
 		goto EXIT;

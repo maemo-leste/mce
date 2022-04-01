@@ -91,13 +91,7 @@ set(COMMON_LIBRARIES
 
 add_subdirectory(src)
 add_subdirectory(src/modules)
-
-if(DEFINED GCONF_LIBRARIES)
-	message("GConf support enabled")
-	install(FILES schemas/devicelock.schemas schemas/security.schemas DESTINATION ${MCE_GCONF_DIR})
-else()
-	message("GConf support disabled")
-endif(DEFINED GCONF_LIBRARIES)
+add_subdirectory(schemas)
 
 configure_file(mce.pc.in "${CMAKE_CURRENT_BINARY_DIR}/mce.pc"  @ONLY)
 

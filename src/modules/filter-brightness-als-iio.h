@@ -1,12 +1,8 @@
 #ifndef _FILTER_BRIGHTNESS_ALS_IIO_H_
 #define _FILTER_BRIGHTNESS_ALS_IIO_H_
 
-/** Path to the GConf settings for the display */
-#ifndef MCE_GCONF_DISPLAY_PATH
-#define MCE_GCONF_DISPLAY_PATH			"/system/osso/dsm/display"
-#endif /* MCE_GCONF_DISPLAY_PATH */
 /** Path to the ALS enabled GConf setting */
-#define MCE_GCONF_DISPLAY_ALS_ENABLED_PATH	MCE_GCONF_DISPLAY_PATH "/als_enabled"
+#define MCE_ALS_ENABLED_KEY	"als_enabled"
 
 typedef struct {
 	/** Lower and upper bound for each brightness range */

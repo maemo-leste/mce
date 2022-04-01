@@ -23,8 +23,6 @@
 #define MCE_CONF_LED_GROUP			"LED"
 #define MCE_CONF_LED_PATTERNS		"LEDPatterns"
 
-#define MCE_GCONF_LED_PATH			"/system/osso/dsm/leds"
-
 #define DEFAULT_PATTERN_ENABLED			true
 
 /** Functionality provided by this module */
@@ -389,7 +387,7 @@ static gboolean led_disable_dbus_cb(DBusMessage *const msg)
 	return status;
 }
 
-static void led_rtconf_cb(gchar *key, guint cb_id, void *user_data)
+static void led_rtconf_cb(const gchar *key, guint cb_id, void *user_data)
 {
 	(void)user_data;
 	
@@ -402,7 +400,7 @@ static void led_rtconf_cb(gchar *key, guint cb_id, void *user_data)
 			mce_log(LL_DEBUG, "%s: pattern %s id %u %s", 
 					MODULE_NAME, pattern->name, cb_id, pattern->enabled ? "enabled" : "disabled");
 			if (!pattern->enabled)
-			execute_datapipe(&led_pattern_deactivate_pipe, pattern->name, USE_CACHE, CACHE_INDATA);
+				execute_datapipe(&led_pattern_deactivate_pipe, pattern->name, USE_CACHE, CACHE_INDATA);
 		}
 	} else {
 		mce_log(LL_WARN, "%s: Spurious rtconf value received; confused!", MODULE_NAME);
@@ -413,29 +411,22 @@ static gboolean pattern_get_enabled_conf(const gchar *const patternname,
 					guint *gconf_cb_id)
 {
 	gboolean retval = DEFAULT_PATTERN_ENABLED;
-	gchar *path = g_strconcat(MCE_GCONF_LED_PATH, "/", patternname, NULL);
 
-	if (!mce_rtconf_get_bool(path, &retval))
+	if (!mce_rtconf_get_bool(patternname, &retval))
 		mce_log(LL_INFO, "%s: getting enabled status for %s from rtconf failed", MODULE_NAME, patternname);
 
 	mce_log(LL_DEBUG, "%s: %s %s", MODULE_NAME, patternname, retval ? "enabled" : "disabled");
-	mce_rtconf_notifier_add(MCE_GCONF_LED_PATH, path, led_rtconf_cb, NULL, gconf_cb_id);
-
-	g_free(path);
+	mce_rtconf_notifier_add(patternname, led_rtconf_cb, NULL, gconf_cb_id);
 
 	return retval;
 }
 
 static gboolean pattern_set_enabled_conf(struct led_pattern *pattern)
 {
-	gchar *path = g_strconcat(MCE_GCONF_LED_PATH, "/", pattern->name, NULL);
-
-	if (!mce_rtconf_set_bool(path, pattern->enabled)) {
+	if (!mce_rtconf_set_bool(pattern->name, pattern->enabled)) {
 		mce_log(LL_INFO, "%s: setting enabled status for %s to rtconf failed", MODULE_NAME, pattern->name);
-		g_free(path);
 		return false;
 	}
-	g_free(path);
 
 	return true;
 }

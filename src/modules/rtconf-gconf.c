@@ -32,6 +32,19 @@ struct notifier {
 	mce_rtconf_callback callback;
 };
 
+const gchar *mce_gconf_get_path(const gchar * const key)
+{
+	if(g_strrstr(key, Pattern))
+		return "/system/osso/dsm/leds/";
+	else
+		return "/system/osso/dsm/display/";
+}
+
+gchar *mce_gconf_expand_key(const gchar * const key)
+{
+	return g_strconcat(mce_gconf_get_path(key), key);
+}
+
 /**
  * Set an integer GConf key to the specified value
  *
@@ -42,8 +55,10 @@ struct notifier {
 static gboolean mce_gconf_set_int(const gchar * const key, const gint value)
 {
 	gboolean status = FALSE;
+	
+	gchar *path = mce_gconf_expand_key(key);
 
-	if (gconf_client_set_int(gconf_client, key, value, NULL) == FALSE) {
+	if (gconf_client_set_int(gconf_client, path, value, NULL) == FALSE) {
 		mce_log(LL_WARN, "Failed to write %s to GConf", key);
 		goto EXIT;
 	}
@@ -54,6 +69,7 @@ static gboolean mce_gconf_set_int(const gchar * const key, const gint value)
 	status = TRUE;
 
  EXIT:
+	g_free(path);
 	return status;
 }
 
@@ -70,17 +86,19 @@ static gboolean mce_gconf_get_bool(const gchar * const key, gboolean * value)
 	GError *error = NULL;
 	GConfValue *gcv;
 
-	gcv = gconf_client_get(gconf_client, key, &error);
+	gchar *path = mce_gconf_expand_key(key);
+
+	gcv = gconf_client_get(gconf_client, path, &error);
 
 	if (gcv == NULL) {
 		mce_log((error != NULL) ? LL_WARN : LL_INFO,
-			"Could not retrieve %s from GConf; %s", key, (error != NULL) ? error->message : "Key not set");
+			"Could not retrieve %s from GConf; %s", path, (error != NULL) ? error->message : "Key not set");
 		goto EXIT;
 	}
 
 	if (gcv->type != GCONF_VALUE_BOOL) {
 		mce_log(LL_ERR,
-			"GConf key %s should have type: %d, but has type: %d", key, GCONF_VALUE_BOOL, gcv->type);
+			"GConf key %s should have type: %d, but has type: %d", path, GCONF_VALUE_BOOL, gcv->type);
 		goto EXIT;
 	}
 
@@ -89,6 +107,7 @@ static gboolean mce_gconf_get_bool(const gchar * const key, gboolean * value)
 	status = TRUE;
 
  EXIT:
+	g_free(path);
 	g_clear_error(&error);
 
 	return status;
@@ -99,17 +118,20 @@ static gboolean mce_gconf_set_bool(const gchar * const key, const gboolean value
 	gboolean status = FALSE;
 	GError *error = NULL;
 
-	gconf_client_set_bool(gconf_client, key, value, &error);
+	gchar *path = mce_gconf_expand_key(key);
+
+	gconf_client_set_bool(gconf_client, path, value, &error);
 
 	if (error) {
 		mce_log(LL_WARN,
-			"%s: Could not set %s from GConf; %s", MODULE_NAME, key, error->message);
+			"%s: Could not set %s from GConf; %s", MODULE_NAME, path, error->message);
 	}
 	else {
 		status = TRUE;
 	}
 
 	g_clear_error(&error);
+	g_free(path);
 
 	return status;
 }
@@ -126,6 +148,8 @@ static gboolean mce_gconf_get_int(const gchar * const key, gint * value)
 	gboolean status = FALSE;
 	GError *error = NULL;
 	GConfValue *gcv;
+
+	gchar *path = mce_gconf_expand_key(key);
 
 	gcv = gconf_client_get(gconf_client, key, &error);
 
@@ -146,6 +170,7 @@ static gboolean mce_gconf_get_int(const gchar * const key, gint * value)
 
  EXIT:
 	g_clear_error(&error);
+	g_free(path);
 
 	return status;
 }
@@ -175,11 +200,13 @@ static void mce_gconf_gconf_callback(GConfClient * client, guint cnxn_id, GConfE
  * @param[out] cb_id Will contain the callback ID on return
  * @return TRUE on success, FALSE on failure
  */
-static gboolean mce_gconf_notifier_add(const gchar * path, const gchar * key,
-				       const mce_rtconf_callback callback, void *user_data, guint * cb_id)
+static gboolean mce_gconf_notifier_add(const gchar * key,
+				       const mce_rtconf_callback callback, void *user_data, guint *cb_id)
 {
 	GError *error = NULL;
 	gboolean status = FALSE;
+	
+	const gchar *path = mce_gconf_get_path(key);
 
 	gconf_client_add_dir(gconf_client, path, GCONF_CLIENT_PRELOAD_NONE, &error);
 

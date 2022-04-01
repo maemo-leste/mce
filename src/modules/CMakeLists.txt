@@ -127,6 +127,11 @@ target_link_libraries(rtconf-ini ${COMMON_LIBRARIES})
 target_include_directories(rtconf-ini PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
 install(TARGETS rtconf-ini DESTINATION ${MCE_MODULE_DIR})
 
+add_library(rtconf-gsettings SHARED rtconf-gsettings.c)
+target_link_libraries(rtconf-gsettings ${COMMON_LIBRARIES})
+target_include_directories(rtconf-gsettings PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
+install(TARGETS rtconf-gsettings DESTINATION ${MCE_MODULE_DIR})
+
 if(DEFINED X11_LIBRARIES)
 	add_library(x11-ctrl SHARED x11-ctrl.c)
 	target_link_libraries(x11-ctrl 

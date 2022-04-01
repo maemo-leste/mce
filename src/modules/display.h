@@ -32,11 +32,7 @@
 #define MCE_CONF_DISPLAY_GROUP "Display"
 #define MCE_CONF_DISPLAY_BLANK_KEY "DimToBlankTimeout"
 
-/** Path to the GConf settings for the display */
-#ifndef MCE_GCONF_DISPLAY_PATH
-#define MCE_GCONF_DISPLAY_PATH			"/system/osso/dsm/display"
-#endif /* MCE_GCONF_DISPLAY_PATH */
-#define MCE_GCONF_DISPLAY_BRIGHTNESS_PATH	MCE_GCONF_DISPLAY_PATH "/display_brightness"
+#define MCE_BRIGHTNESS_KEY	"display_brightness"
 
 #define DEFAULT_DISP_BRIGHTNESS			3	/* 60% */
 #define DEFAULT_BLANK_TIMEOUT			3	/* 3 seconds */

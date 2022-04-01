@@ -86,15 +86,15 @@ static int no_lower_percent = -1;
  * @param cb_id Connection ID from gconf_client_notify_add()
  * @param user_data Unused
  */
-static void als_rtconf_cb(gchar *key, guint cb_id, void *user_data)
+static void als_rtconf_cb(const gchar *key, guint cb_id, void *user_data)
 {
 	(void)key;
 	(void)user_data;
 
 	if (cb_id == als_enabled_gconf_cb_id)
-		mce_rtconf_get_bool(MCE_GCONF_DISPLAY_ALS_ENABLED_PATH, &als_enabled);
+		mce_rtconf_get_bool(MCE_ALS_ENABLED_KEY, &als_enabled);
 	else
-		mce_log(LL_WARN, "%s: Spurious GConf value received; confused!", MODULE_NAME);
+		mce_log(LL_WARN, "%s: Spurious RTConf value received; confused!", MODULE_NAME);
 }
 
 static gint filter_data(als_profile_struct *profiles, als_profile_t profile,
@@ -249,10 +249,9 @@ const gchar *g_module_check_init(GModule *module)
 
 	/* ALS enabled */
 	/* Since we've set a default, error handling is unnecessary */
-	(void)mce_rtconf_get_bool(MCE_GCONF_DISPLAY_ALS_ENABLED_PATH, &als_enabled);
+	(void)mce_rtconf_get_bool(MCE_ALS_ENABLED_KEY, &als_enabled);
 
-	if (mce_rtconf_notifier_add(MCE_GCONF_DISPLAY_PATH,
-				   MCE_GCONF_DISPLAY_ALS_ENABLED_PATH,
+	if (mce_rtconf_notifier_add(MCE_ALS_ENABLED_KEY,
 				   als_rtconf_cb, NULL,
 				   &als_enabled_gconf_cb_id) == FALSE)
 		goto EXIT;
