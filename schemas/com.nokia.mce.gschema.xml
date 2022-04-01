@@ -1,6 +1,6 @@
 <schemalist>
 	<schema path="/com/nokia/mce/" id="com.nokia.mce">
-		<key type="b" name="mtouchscreen-keypad-autolock-enabled">
+		<key type="b" name="touchscreen-keypad-autolock-enabled">
 			<default>true</default>
 		</key>
 		<key type="i" name="display-brightness">
@@ -10,7 +10,7 @@
 			<default>20</default>
 		</key>
 		<key type="i" name="inhibit-blank-mode">
-			<default>false</default>
+			<default>0</default>
 		</key>
 		<key type="b" name="als-enabled">
 			<default>true</default>
