@@ -32,17 +32,18 @@ struct notifier {
 	mce_rtconf_callback callback;
 };
 
-const gchar *mce_gconf_get_path(const gchar * const key)
+static const gchar *mce_gconf_get_path(const gchar * const key)
 {
-	if(g_strrstr(key, Pattern))
+	if(g_strrstr(key, "Pattern"))
 		return "/system/osso/dsm/leds/";
 	else
 		return "/system/osso/dsm/display/";
 }
 
-gchar *mce_gconf_expand_key(const gchar * const key)
+static gchar *mce_gconf_expand_key(const gchar * const key)
 {
-	return g_strconcat(mce_gconf_get_path(key), key);
+	gchar *str = g_strconcat(mce_gconf_get_path(key), key, NULL);
+	return str;
 }
 
 /**
