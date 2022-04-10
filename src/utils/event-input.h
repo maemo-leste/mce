@@ -81,6 +81,9 @@ static const gchar *const keyboard_event_drivers[] = {
 	/* Droid4 power button */
 	"cpcap-pwrbutton",
 
+	/* Pinephone Volume keys */
+	"1c21800.lradc",
+
 	/** No more entries */
 	NULL
 };
