@@ -26,8 +26,12 @@
 
 gboolean mce_conf_get_bool(const gchar *group, const gchar *key,
 			   const gboolean defaultval, gpointer keyfileptr);
+gboolean mce_conf_set_bool(const gchar *group, const gchar *key,
+		      const gboolean val, gpointer keyfileptr);
 gint mce_conf_get_int(const gchar *group, const gchar *key,
 		      const gint defaultval, gpointer keyfileptr);
+gboolean mce_conf_set_int(const gchar *group, const gchar *key,
+		      const gint val, gpointer keyfileptr);
 gint *mce_conf_get_int_list(const gchar *group, const gchar *key,
 			    gsize *length, gpointer keyfileptr);
 gchar *mce_conf_get_string(const gchar *group, const gchar *key,

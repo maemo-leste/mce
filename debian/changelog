@@ -1,3 +1,10 @@
+mce (1.9.16) unstable; urgency=medium
+
+  * rtconf-gconf: relocate touchscreen_keypad_autolock_enabled key back to dsm/locks/ from dsm/display/
+  * rtconf-ini: add write support
+
+ -- Carl Klemm <carl@uvos.org>  Wed, 27 Apr 2022 23:00:00 +0200
+
 mce (1.9.15) unstable; urgency=medium
 
   * add gsettings rtconf backend

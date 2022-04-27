@@ -109,6 +109,18 @@ EXIT:
 	return tmp;
 }
 
+gboolean mce_conf_set_bool(const gchar *group, const gchar *key,
+		      const gboolean val, gpointer keyfileptr)
+{
+	keyfileptr = mce_conf_decide_keyfile_to_use(group, key, keyfileptr);
+	if (keyfileptr == NULL)
+		return FALSE;
+
+	g_key_file_set_boolean(keyfileptr, group, key, val);
+
+	return TRUE;
+}
+
 /**
  * Get an integer configuration value
  *
@@ -144,6 +156,18 @@ gint mce_conf_get_int(const gchar *group, const gchar *key,
 
 EXIT:
 	return tmp;
+}
+
+gboolean mce_conf_set_int(const gchar *group, const gchar *key,
+		      const gint val, gpointer keyfileptr)
+{
+	keyfileptr = mce_conf_decide_keyfile_to_use(group, key, keyfileptr);
+	if (keyfileptr == NULL)
+		return FALSE;
+
+	g_key_file_set_integer(keyfileptr, group, key, val);
+
+	return TRUE;
 }
 
 /**
