@@ -36,6 +36,8 @@ static const gchar *mce_gconf_get_path(const gchar * const key)
 {
 	if(g_strrstr(key, "Pattern"))
 		return "/system/osso/dsm/leds/";
+	else if(g_strcmp0(key, "touchscreen_keypad_autolock_enabled") == 0)
+		return "/system/osso/dsm/locks/";
 	else
 		return "/system/osso/dsm/display/";
 }
