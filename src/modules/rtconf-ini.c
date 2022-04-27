@@ -29,9 +29,10 @@ static gpointer keyfile;
 
 static gboolean rtconf_ini_set_int(const gchar * const key, const gint value)
 {
-	(void)key;
-	(void)value;
-	return TRUE;
+	if(!keyfile)
+		return FALSE;
+
+	return mce_conf_set_int(RTCONF_INI_GROUP, key, value, keyfile);
 }
 
 static gboolean rtconf_ini_get_bool(const gchar * const key, gboolean * value)
@@ -47,9 +48,10 @@ static gboolean rtconf_ini_get_bool(const gchar * const key, gboolean * value)
 
 static gboolean rtconf_ini_set_bool(const gchar * const key, const gboolean value)
 {
-	(void)key;
-	(void)value;
-	return TRUE;
+	if(!keyfile)
+		return FALSE;
+
+	return mce_conf_set_bool(RTCONF_INI_GROUP, key, value, keyfile);
 }
 
 static gboolean rtconf_ini_get_int(const gchar * const key, gint * value)
