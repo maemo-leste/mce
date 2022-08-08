@@ -27,6 +27,7 @@
 #include <systemui/dbus-names.h>
 #include <systemui/powerkeymenu-dbus-names.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "mce.h"
 #include "powerkey.h"
 #include "mce-log.h"
@@ -44,6 +45,8 @@ static guint shortpress_timer_id;
 static gint *shortpress_data = NULL;
 
 static bool handle_release = false;
+
+static uint16_t power_keycode;
 
 /** Time in milliseconds before the key press is considered medium */
 static gint mediumdelay = DEFAULT_POWER_MEDIUM_DELAY;
@@ -750,6 +753,8 @@ gboolean mce_powerkey_init(void)
 	/* Since we've set a default, error handling is unnecessary */
 	(void)parse_action(tmp, &longpressaction);
 	g_free(tmp);
+
+	power_keycode = mce_conf_get_int(MCE_CONF_POWERKEY_GROUP, MCE_CONF_POWERKEY_KEYCODE, KEY_POWER, NULL);
 
 	doublepressdelay = mce_conf_get_int(MCE_CONF_POWERKEY_GROUP,
 					    MCE_CONF_POWERKEY_DOUBLE_DELAY,

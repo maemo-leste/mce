@@ -27,6 +27,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <linux/input.h>
@@ -36,10 +37,7 @@
 #include "mce-log.h"
 #include "datapipe.h"
 #include "event-input-utils.h"
-#include "powerkey.h"
 #include "mce-conf.h"
-
-guint16 power_keycode;
 
 /** ID for touchscreen I/O monitor timeout source */
 static guint touchscreen_io_monitor_timeout_cb_id = 0;
@@ -47,17 +45,10 @@ static guint touchscreen_io_monitor_timeout_cb_id = 0;
 /** ID for keypress timeout source */
 static guint keypress_repeat_timeout_cb_id = 0;
 
-/** ID for misc timeout source */
-static guint misc_io_monitor_timeout_cb_id = 0;
-
 /** List of touchscreen input devices */
 static GSList *touchscreen_dev_list = NULL;
 /** List of keyboard input devices */
 static GSList *keyboard_dev_list = NULL;
-/** List of misc input devices */
-static GSList *misc_dev_list = NULL;
-/** List of switch input devices */
-static GSList *switch_dev_list = NULL;
 
 /** GFile pointer for the directory we monitor */
 GFile *dev_input_gfp = NULL;
@@ -118,10 +109,8 @@ static gboolean touchscreen_io_monitor_timeout_cb(gpointer data)
 	touchscreen_io_monitor_timeout_cb_id = 0;
 
 	/* Resume I/O monitors */
-	if (touchscreen_dev_list != NULL) {
-		g_slist_foreach(touchscreen_dev_list,
-				(GFunc)resume_io_monitor, NULL);
-	}
+	if (touchscreen_dev_list != NULL)
+		g_slist_foreach(touchscreen_dev_list, (GFunc)resume_io_monitor, NULL);
 
 	return FALSE;
 }
@@ -146,8 +135,7 @@ static void setup_touchscreen_io_monitor_timeout(void)
 
 	/* Setup new timeout */
 	touchscreen_io_monitor_timeout_cb_id =
-		g_timeout_add_seconds(MONITORING_DELAY,
-				      touchscreen_io_monitor_timeout_cb, NULL);
+		g_timeout_add_seconds(MONITORING_DELAY, touchscreen_io_monitor_timeout_cb, NULL);
 }
 
 /**
@@ -164,53 +152,42 @@ static void touchscreen_cb(gpointer data, gsize bytes_read)
 	ev = data;
 
 	/* Don't process invalid reads */
-	if (bytes_read != sizeof (struct input_event)) {
-		goto EXIT;
-	}
+	if (bytes_read != sizeof (struct input_event))
+		return;
 
 	/* Ignore unwanted events */
-	if (ev->type != EV_ABS) {
-		goto EXIT;
-	}
+	if (ev->type != EV_ABS)
+		return;
 
 	mce_log(LL_DEBUG, "Got touchscreen event: %i,%i",ev->type, ev->code);
 	
 	/* Generate activity */
 	mce_log(LL_DEBUG, "Setting inactive to false in %s %s %d",__FILE__, __func__, __LINE__);
-	(void)execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE),
-			       USE_INDATA, CACHE_INDATA);
+	execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE), USE_INDATA, CACHE_INDATA);
 
 	/* If visual tklock is active or autorelock isn't active,
 	 * suspend I/O monitors
 	 */
 	if (((submode & MCE_VISUAL_TKLOCK_SUBMODE) != 0) ||
 	    ((submode & MCE_AUTORELOCK_SUBMODE) == 0)) {
-		if (touchscreen_dev_list != NULL) {
-			g_slist_foreach(touchscreen_dev_list,
-					(GFunc)suspend_io_monitor, NULL);
-		}
+		if (touchscreen_dev_list != NULL)
+			g_slist_foreach(touchscreen_dev_list, (GFunc)suspend_io_monitor, NULL);
 
 		/* Setup a timeout I/O monitor reprogramming */
 		setup_touchscreen_io_monitor_timeout();
 	}
 
 	/* Ignore non-pressure events */
-	if (ev->code != ABS_PRESSURE) {
-		goto EXIT;
-	}
+	if (ev->code != ABS_PRESSURE)
+		return;
 
 	/* For now there's no reason to cache the value,
 	 * or indeed to send any kind of real value at all
 	 *
 	 * If the event eater is active, don't send anything
 	 */
-	if ((submode & MCE_EVEATER_SUBMODE) == 0) {
-		(void)execute_datapipe(&touchscreen_pipe, NULL,
-				       USE_INDATA, DONT_CACHE_INDATA);
-	}
-
-EXIT:
-	return;
+	if ((submode & MCE_EVEATER_SUBMODE) == 0)
+		execute_datapipe(&touchscreen_pipe, NULL, USE_INDATA, DONT_CACHE_INDATA);
 }
 
 /**
@@ -262,195 +239,75 @@ static void keypress_cb(gpointer data, gsize bytes_read)
 {
 	submode_t submode = mce_get_submode_int32();
 	struct input_event *ev;
+	bool handled = false;
+	bool activity = true;
 
 	ev = data;
 
 	/* Don't process invalid reads */
-	if (bytes_read != sizeof (struct input_event)) {
-		goto EXIT;
-	}
+	if (bytes_read != sizeof (struct input_event))
+		return;
 
 	/* Ignore non-keypress events */
-	if (ev->type != EV_KEY) {
-		goto EXIT;
-	}
+	if (ev->type != EV_KEY && ev->type != EV_SW)
+		return;
 
 	mce_log(LL_DEBUG, "Got keyboard event: %i,%i",ev->type, ev->code);
-	
-	/* Generate activity:
-	 * 1 - press (always)
-	 * 2 - repeat (once a second)
-	 */
-	if ((ev->value == 0) || (ev->value == 1) ||
-	    ((ev->value == 2) && (keypress_repeat_timeout_cb_id == 0))) {
-		mce_log(LL_DEBUG, "send device_inactive_pipe -> FALSE");
-		if (!(submode & MCE_EVEATER_SUBMODE))
-		{
-			mce_log(LL_DEBUG, "Setting inactive to false in %s %s %d",__FILE__, __func__, __LINE__);
-			(void)execute_datapipe(&device_inactive_pipe,
-					       GINT_TO_POINTER(FALSE),
-					       USE_INDATA, CACHE_INDATA);
-		}
-
-		if (ev->value == 2) {
-			setup_keypress_repeat_timeout();
-		}
-	}
-
-	if ((ev->value == 1) || (ev->value == 0)) {
-		(void)execute_datapipe(&keypress_pipe, &ev,
-				       USE_INDATA, DONT_CACHE_INDATA);
-	}
-
-EXIT:
-	return;
-}
-
-/**
- * I/O monitor callback for switch
- *
- * @param data The new data
- * @param bytes_read The number of bytes read
- */
-static void switch_cb(gpointer data, gsize bytes_read)
-{
-	struct input_event *ev;
-	gboolean handled = FALSE;
-
-	ev = data;
-
-	/* Don't process invalid reads */
-	if (bytes_read != sizeof (struct input_event)) {
-		return;
-	}
 
 	if (ev->type == EV_SW) {
 		switch (ev->code) {
-			case SW_KEYPAD_SLIDE: {
+			case SW_KEYPAD_SLIDE:
 				execute_datapipe(&keyboard_slide_pipe, GINT_TO_POINTER(ev->value),
 								 USE_INDATA, CACHE_INDATA);
 				handled = TRUE;
 				break;
-			}
-			case SW_CAMERA_LENS_COVER: {
+			case SW_CAMERA_LENS_COVER:
 				execute_datapipe(&camera_button_pipe, GINT_TO_POINTER(ev->value),
 								 USE_INDATA, CACHE_INDATA);
 				handled = TRUE;
 				break;
-			}
 			default:
 				break;
 		}
 	} else if (ev->type == EV_KEY) {
 		switch (ev->code) {
-			case KEY_SCREENLOCK: {
+			case KEY_SCREENLOCK:
 				execute_datapipe(&lockkey_pipe, GINT_TO_POINTER(ev->value),
 								 USE_INDATA, CACHE_INDATA);
 				handled = TRUE;
 				break;
-			}
-			case KEY_CAMERA: {
+			case KEY_CAMERA:
 				execute_datapipe(&camera_button_pipe, GINT_TO_POINTER(ev->value),
 								 USE_INDATA, CACHE_INDATA);
 				handled = TRUE;
 				break;
-			}
-			case KEY_CAMERA_FOCUS: {
+			case KEY_CAMERA_FOCUS:
 				handled = TRUE;
 				break;
-			}
-		default:
-			break;
+			default:
+				break;
 		}
 	}
 	
+	/* Generate activity:
+	 * 1 - press (always)
+	 * 2 - repeat (once a second)
+	 */
+	if (activity && (ev->value < 2 || (ev->value == 2 && keypress_repeat_timeout_cb_id == 0))) {
+		if (!(submode & MCE_EVEATER_SUBMODE)) {
+			mce_log(LL_DEBUG, "Setting inactive to false in %s", __func__);
+			(void)execute_datapipe(&device_inactive_pipe,
+					       GINT_TO_POINTER(FALSE),
+					       USE_INDATA, CACHE_INDATA);
+		}
+
+		if (ev->value == 2)
+			setup_keypress_repeat_timeout();
+	}
+
 	if (!handled && (ev->value == 1 || ev->value == 0))
-		(void)execute_datapipe(&keypress_pipe, &ev, USE_INDATA, DONT_CACHE_INDATA);
-
-	execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE),
-				USE_INDATA, CACHE_INDATA);
-}
-
-/**
- * Timeout callback for misc event monitoring reprogramming
- *
- * @param data Unused
- * @return Always returns FALSE, to disable the timeout
- */
-static gboolean misc_io_monitor_timeout_cb(gpointer data)
-{
-	(void)data;
-
-	misc_io_monitor_timeout_cb_id = 0;
-
-	/* Resume I/O monitors */
-	if (misc_dev_list != NULL) {
-		g_slist_foreach(misc_dev_list,
-				(GFunc)resume_io_monitor, NULL);
-	}
-
-	return FALSE;
-}
-
-/**
- * Cancel timeout for misc event I/O monitoring
- */
-static void cancel_misc_io_monitor_timeout(void)
-{
-	if (misc_io_monitor_timeout_cb_id != 0) {
-		g_source_remove(misc_io_monitor_timeout_cb_id);
-		misc_io_monitor_timeout_cb_id = 0;
-	}
-}
-
-/**
- * Setup timeout for misc event I/O monitoring
- */
-static void setup_misc_io_monitor_timeout(void)
-{
-	cancel_misc_io_monitor_timeout();
-
-	/* Setup new timeout */
-	misc_io_monitor_timeout_cb_id =
-		g_timeout_add_seconds(MONITORING_DELAY,
-				      misc_io_monitor_timeout_cb, NULL);
-}
-
-/**
- * I/O monitor callback for misc /dev/input devices
- *
- * @param data Unused
- * @param bytes_read Unused
- */
-static void misc_cb(gpointer data, gsize bytes_read)
-{
-	struct input_event *ev;
-
-	ev = data;
-
-	/* Don't process invalid reads */
-	if (bytes_read != sizeof (struct input_event)) {
-		goto EXIT;
-	}
-	/* ev->type for the jack sense is EV_SW */
-	mce_log(LL_DEBUG, "Got misc event: %i,%i",ev->type, ev->code);
-
-	/* Generate activity */
-	mce_log(LL_DEBUG, "Setting inactive to false in %s %s %d",__FILE__, __func__, __LINE__);
-	(void)execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE),
-			       USE_INDATA, CACHE_INDATA);
-
-	/* Suspend I/O monitors */
-	if (misc_dev_list != NULL) {
-		g_slist_foreach(misc_dev_list,
-				(GFunc)suspend_io_monitor, NULL);
-	}
-
-	/* Setup a timeout I/O monitor reprogramming */
-	setup_misc_io_monitor_timeout();
-
-EXIT:
-	return;
+		(void)execute_datapipe(&keypress_pipe, &ev,
+				       USE_INDATA, DONT_CACHE_INDATA);
 }
 
 /**
@@ -504,60 +361,29 @@ static void register_io_monitor_chunk(const gint fd, const gchar *const file,
 static void match_and_register_io_monitor(const gchar *filename)
 {
 	int fd;
-	gboolean match = FALSE;
 
 	if ((fd = mce_match_event_file(filename, driver_blacklist)) != -1) {
 		/* If the driver for the event file is blacklisted, skip it */
 		close(fd);
-		goto EXIT;
+		return;
 	} else if (strstr(filename, "event") == NULL) {
 		/* Only open event* devices */
-		goto EXIT;
+		return;
 	} else if ((fd = mce_match_event_file(filename,
 					  touchscreen_event_drivers)) != -1) {
 		mce_log(LL_DEBUG, "Registering %s as touchscreen fd: %i", filename, fd);
 		register_io_monitor_chunk(fd, filename, touchscreen_cb,
 					  &touchscreen_dev_list);
-		match = TRUE;
 	} else if ((fd = mce_match_event_file_by_caps(filename,
 					  touch_event_types, touch_event_keys)) != -1) {
 		mce_log(LL_DEBUG, "Registering %s as touchscreen fd: %i", filename, fd);
 		register_io_monitor_chunk(fd, filename, touchscreen_cb,
 					  &touchscreen_dev_list);
-		match = TRUE;
-	} else if ((fd = mce_match_event_file(filename,
-					  keyboard_event_drivers)) != -1) {
+	} else {
 		mce_log(LL_DEBUG, "Registering %s as keyboard fd: %i", filename, fd);
 		register_io_monitor_chunk(fd, filename, keypress_cb,
 					  &keyboard_dev_list);
-		match = TRUE;
-	} else if ((fd = mce_match_event_file_by_caps(filename, power_event_types,
-					   power_event_keys)) != -1) {
-		mce_log(LL_DEBUG, "Registering %s as keyboard fd: %i", filename, fd);
-		register_io_monitor_chunk(fd, filename, keypress_cb,
-					  &keyboard_dev_list);
-		match = TRUE;
-	}  else if ((fd = mce_match_event_file_by_caps(filename, keyboard_event_types,
-					   keyboard_event_keys)) != -1) {
-		mce_log(LL_DEBUG, "Registering %s as keyboard fd: %i", filename, fd);
-		register_io_monitor_chunk(fd, filename, keypress_cb,
-					  &keyboard_dev_list);
-		match = TRUE;
-	} else if ((fd = mce_match_event_file_by_caps(filename, switch_event_types,
-					   switch_event_keys)) != -1) {
-		mce_log(LL_DEBUG, "Registering %s as switchboard fd: %i", filename, fd);
-		register_io_monitor_chunk(fd, filename, switch_cb,
-					  &switch_dev_list);
-		match = TRUE;
 	}
-
-	if (!match) {
-		register_io_monitor_chunk(fd, filename, misc_cb,
-					  &misc_dev_list);
-		mce_log(LL_DEBUG, "Registering %s as misc input device fd: %i", filename, fd);
-	}
-
-EXIT:;
 }
 
 static void remove_input_device(GSList **devices, const gchar *device)
@@ -596,12 +422,6 @@ static void update_inputdevices(const gchar *device, gboolean add)
 	/* Try to find a matching keyboard I/O monitor */
 	remove_input_device(&keyboard_dev_list, device);
 
-	/* Try to find a matching switch I/O monitor */
-	remove_input_device(&switch_dev_list, device);
-
-	/* Try to find a matching misc I/O monitor */
-	remove_input_device(&misc_dev_list, device);
-
 	if (add == TRUE)
 		match_and_register_io_monitor(device);
 }
@@ -617,7 +437,6 @@ static void unregister_touchscreen_devices(void) {
 		touchscreen_dev_list = NULL;
 	}
 }
-
 
 /**
  * Unregister monitors for input devices allocated by mce_scan_inputdevices
@@ -636,20 +455,6 @@ static void unregister_inputdevices(void)
 				(GFunc)unregister_io_monitor, NULL);
 		g_slist_free(keyboard_dev_list);
 		keyboard_dev_list = NULL;
-	}
-
-	if (switch_dev_list != NULL) {
-		g_slist_foreach(switch_dev_list,
-				(GFunc)unregister_io_monitor, NULL);
-		g_slist_free(switch_dev_list);
-		switch_dev_list = NULL;
-	}
-
-	if (misc_dev_list != NULL) {
-		g_slist_foreach(misc_dev_list,
-				(GFunc)unregister_io_monitor, NULL);
-		g_slist_free(misc_dev_list);
-		misc_dev_list = NULL;
 	}
 }
 
@@ -746,8 +551,6 @@ gboolean mce_input_init(void)
 	g_type_init ();
 #endif
 
-	power_keycode = mce_conf_get_int(MCE_CONF_POWERKEY_GROUP, MCE_CONF_POWERKEY_KEYCODE, KEY_POWER, NULL);
-
 	/* Retrieve a GFile pointer to the directory to monitor */
 	dev_input_gfp = g_file_new_for_path(DEV_INPUT_PATH);
 
@@ -802,7 +605,6 @@ void mce_input_exit(void)
 	/* Remove all timer sources */
 	cancel_touchscreen_io_monitor_timeout();
 	cancel_keypress_repeat_timeout();
-	cancel_misc_io_monitor_timeout();
 
 	return;
 }

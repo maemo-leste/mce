@@ -24,7 +24,7 @@
 
 #include <glib.h>
 
-#include <linux/input.h>	/* KEY_POWER */
+#include <linux/input.h>
 
 /**
  * List of drivers that provide touchscreen events
@@ -86,60 +86,6 @@ static const gchar *const keyboard_event_drivers[] = {
 };
 
 /**
- * List of event types for switch monitor
- */
-static const int switch_event_types[] = {
-	EV_SW,
-	EV_KEY,
-	/** No more entries */
-	-1
-};
-
-/**
- * List of key types for switch monitor
- */
-static const int event_switches[] = {
-	SW_CAMERA_LENS_COVER,
-	SW_KEYPAD_SLIDE,
-	SW_FRONT_PROXIMITY,
-	-1
-};
-
-static const int event_keys[] = {
-	KEY_SCREENLOCK,
-	KEY_CAMERA,
-	KEY_CAMERA_FOCUS,
-	-1
-};
-
-static const int *const switch_event_keys[]= {
-	event_switches,
-	event_keys
-};
-
-
-/**
- * List of event types for power keys
- */
-static const int power_event_types[] = {
-	EV_KEY,
-	/** No more entries */
-	-1
-};
-
-/**
- * List of key types for power monitor
- */
-static const int power_switches[] = {
-	KEY_POWER,
-	-1
-};
-
-static const int *const power_event_keys[]= {
-	power_switches,
-};
-
-/**
  * List of event types for touchscreen keys
  */
 static const int touch_event_types[] = {
@@ -160,46 +106,6 @@ static const int *const touch_event_keys[]= {
 	touch_keys,
 };
 
-static const int keyboard_event_types[] = {
-	EV_KEY,
-	/** No more entries */
-	-1
-};
-
-static const int keyboard_keys[]= {
-	KEY_Q,
-	KEY_W,
-	KEY_E,
-	KEY_R,
-	KEY_T,
-	KEY_Y,
-	KEY_U,
-	KEY_I,
-	KEY_O,
-	KEY_P,
-	KEY_A,
-	KEY_S,
-	KEY_D,
-	KEY_F,
-	KEY_G,
-	KEY_H,
-	KEY_J,
-	KEY_K,
-	KEY_L,
-	KEY_Z,
-	KEY_X,
-	KEY_C,
-	KEY_V,
-	KEY_B,
-	KEY_N,
-	KEY_M,
-	-1
-};
-
-static const int *const keyboard_event_keys[]= {
-	keyboard_keys,
-};
-
 /**
  * List of drivers that we should not monitor
  */
@@ -213,7 +119,6 @@ static const gchar *const driver_blacklist[] = {
 };
 
 #define MONITORING_DELAY		1
-
 
 /* When MCE is made modular, this will be handled differently */
 gboolean mce_input_init(void);

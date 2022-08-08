@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <linux/input.h>
@@ -12,6 +13,7 @@
 #include "mce-log.h"
 #include "mce-conf.h"
 #include "datapipe.h"
+#include "powerkey.h"
 
 #define MODULE_NAME		"lock-generic"
 
@@ -25,11 +27,12 @@ G_MODULE_EXPORT module_info_struct module_info = {
 	.priority = 100
 };
 
-int autolock_timeout = 10;
-bool autolock = true;
-bool unlock_on_slide = false;
-bool slidelock = false;
+static int autolock_timeout = 10;
+static bool autolock = true;
+static bool unlock_on_slide = false;
+static bool slidelock = false;
 static guint autolock_cb_id = 0;
+static uint16_t power_keycode;
 
 char *lock_command = NULL;
 
@@ -178,7 +181,8 @@ const char *g_module_check_init(GModule * module)
 	autolock_timeout = mce_conf_get_int("LockGeneric", "AutolockTimout", 10, NULL);
 	if (autolock_timeout < 0) 
 		autolock_timeout = 10;
-	
+
+	power_keycode = mce_conf_get_int(MCE_CONF_POWERKEY_GROUP, MCE_CONF_POWERKEY_KEYCODE, KEY_POWER, NULL);
 	autolock = mce_conf_get_bool("LockGeneric", "Autolock", true, NULL);
 	slidelock = mce_conf_get_bool("LockGeneric", "LockOnSlide", false, NULL);
 	lock_command = mce_conf_get_string("LockGeneric", "LockCommand", NULL, NULL);

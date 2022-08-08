@@ -25,6 +25,7 @@
 #include <gmodule.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <linux/input.h>
 #include <mce/mode-names.h>
 #include <systemui/dbus-names.h>
@@ -38,6 +39,7 @@
 #include "mce-dbus.h"
 #include "mce-rtconf.h"
 #include "event-input.h"
+#include "powerkey.h"
 
 #define MODULE_NAME		"lock-tklock"
 
@@ -163,6 +165,8 @@ static gboolean proximity_lock_when_ringing = DEFAULT_PROXIMITY_LOCK_WHEN_RINGIN
 /** Submode at the beginning of a call */
 static submode_t saved_submode = MCE_INVALID_SUBMODE;
 static submode_t call_submode = MCE_INVALID_SUBMODE;
+
+static uint16_t power_keycode;
 
 /** TKLock UI state type */
 typedef enum {
@@ -2362,6 +2366,9 @@ const char *g_module_check_init(GModule * module)
 		goto EXIT;
 
 	/* Get configuration options */
+
+	power_keycode = mce_conf_get_int(MCE_CONF_POWERKEY_GROUP, MCE_CONF_POWERKEY_KEYCODE, KEY_POWER, NULL);
+
 	blank_immediately = mce_conf_get_bool(MCE_CONF_TKLOCK_GROUP,
 					      MCE_CONF_BLANK_IMMEDIATELY,
 					      DEFAULT_BLANK_IMMEDIATELY,

@@ -333,8 +333,6 @@ extern datapipe_struct audio_route_pipe;
 extern datapipe_struct usb_cable_pipe;
 extern datapipe_struct tvout_pipe;
 
-extern guint16 power_keycode;
-
 /**
  * Default inactivity timeout, in seconds;
  * dim timeout: 30 seconds
