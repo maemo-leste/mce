@@ -259,12 +259,13 @@ static void keypress_cb(gpointer data, gsize bytes_read)
 			case SW_KEYPAD_SLIDE:
 				execute_datapipe(&keyboard_slide_pipe, GINT_TO_POINTER(ev->value),
 								 USE_INDATA, CACHE_INDATA);
-				handled = TRUE;
+				handled = true;
+				activity = false;
 				break;
 			case SW_CAMERA_LENS_COVER:
 				execute_datapipe(&camera_button_pipe, GINT_TO_POINTER(ev->value),
 								 USE_INDATA, CACHE_INDATA);
-				handled = TRUE;
+				handled = true;
 				break;
 			default:
 				break;
@@ -274,15 +275,15 @@ static void keypress_cb(gpointer data, gsize bytes_read)
 			case KEY_SCREENLOCK:
 				execute_datapipe(&lockkey_pipe, GINT_TO_POINTER(ev->value),
 								 USE_INDATA, CACHE_INDATA);
-				handled = TRUE;
+				handled = true;
 				break;
 			case KEY_CAMERA:
 				execute_datapipe(&camera_button_pipe, GINT_TO_POINTER(ev->value),
 								 USE_INDATA, CACHE_INDATA);
-				handled = TRUE;
+				handled = true;
 				break;
 			case KEY_CAMERA_FOCUS:
-				handled = TRUE;
+				handled = true;
 				break;
 			default:
 				break;
