@@ -1,3 +1,10 @@
+mce (1.9.17) unstable; urgency=medium
+
+  * event-input: unify handling of key events, dont rely on there being certin keys on different input devices
+  * lock-generic: avoid glib warning
+
+-- Carl Klemm <carl@uvos.org>  Mon, 08 Aug 2022 23:50:00 +0200
+
 mce (1.9.16) unstable; urgency=medium
 
   * rtconf-gconf: relocate touchscreen_keypad_autolock_enabled key back to dsm/locks/ from dsm/display/
