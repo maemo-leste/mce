@@ -77,6 +77,7 @@ static gboolean autolock_timeout_cb(gpointer data)
 {
 	(void)data;
 	set_lock(true);
+	autolock_cb_id = 0;
 	return FALSE;
 }
 
