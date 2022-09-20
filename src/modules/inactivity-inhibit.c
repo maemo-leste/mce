@@ -121,20 +121,33 @@ static gboolean blanking_pause_req_dbus_cb(DBusMessage *const msg)
 	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
 	const gchar *sender = dbus_message_get_sender(msg);
 	gboolean status = FALSE;
+	dbus_bool_t request_pause;
+
+	if (dbus_message_get_args(msg, NULL,
+				  DBUS_TYPE_BOOLEAN, &request_pause,
+				  DBUS_TYPE_INVALID) == FALSE) {
+		request_pause = TRUE;
+	}
 
 	mce_log(LL_DEBUG,
-		"%s: Received blanking pause request from %s", MODULE_NAME,
-		(sender == NULL) ? "(unknown)" : sender);
+		"%s: Received blanking pause request from %s, inhibit %s",
+		MODULE_NAME, (sender == NULL) ? "(unknown)" : sender,
+		request_pause ? "(true)" : "(false)");
 
-	request_blanking_pause();
+	if (request_pause) {
+		request_blanking_pause();
 
-	if (mce_dbus_owner_monitor_add(sender,
-				       blanking_pause_owner_monitor_dbus_cb,
-				       &blanking_pause_monitor_list,
-				       MAX_MONITORED_SERVICES) == -1) {
-		mce_log(LL_INFO,
-			"%s: Failed to add name owner monitoring for `%s'",
-			MODULE_NAME, sender);
+		if (mce_dbus_owner_monitor_add(sender,
+					       blanking_pause_owner_monitor_dbus_cb,
+					       &blanking_pause_monitor_list,
+					       MAX_MONITORED_SERVICES) == -1) {
+			mce_log(LL_INFO,
+				"%s: Failed to add name owner monitoring for `%s'",
+				MODULE_NAME, sender);
+		}
+	} else if (mce_dbus_owner_monitor_remove(sender,
+						 &blanking_pause_monitor_list) == 0) {
+		cancel_blank_prevent();
 	}
 
 	if (no_reply == FALSE) {
