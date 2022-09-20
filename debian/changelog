@@ -1,3 +1,9 @@
+mce (1.10.0) unstable; urgency=medium
+
+  * inactivity-inhibit: Extend MCE_PREVENT_BLANK_REQUEST with optional param
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Tue, 20 Sep 2022 06:38:34 +0300
+
 mce (1.9.17) unstable; urgency=medium
 
   * event-input: unify handling of key events, dont rely on there being certin
