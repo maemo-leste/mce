@@ -642,7 +642,7 @@ static gboolean close_tklock_ui(const dbus_bool_t silent)
 
 	dbus_error_init(&error);
 
-	mce_log(LL_DEBUG, "tklock.c: closeing tklock");
+	mce_log(LL_DEBUG, "tklock.c: closing tklock");
 
 	reply = dbus_send_with_block(SYSTEMUI_SERVICE, SYSTEMUI_REQUEST_PATH,
 				     SYSTEMUI_REQUEST_IF,
