@@ -40,13 +40,13 @@
 #include "mce-conf.h"
 
 /** ID for touchscreen I/O monitor timeout source */
-static guint touchscreen_io_monitor_timeout_cb_id = 0;
+static guint pointer_io_monitor_timeout_cb_id = 0;
 
 /** ID for keypress timeout source */
 static guint keypress_repeat_timeout_cb_id = 0;
 
 /** List of touchscreen input devices */
-static GSList *touchscreen_dev_list = NULL;
+static GSList *pointer_dev_list = NULL;
 /** List of keyboard input devices */
 static GSList *keyboard_dev_list = NULL;
 
@@ -102,15 +102,15 @@ static void unregister_io_monitor(gpointer io_monitor, gpointer user_data)
  * @param data Unused
  * @return Always returns FALSE, to disable the timeout
  */
-static gboolean touchscreen_io_monitor_timeout_cb(gpointer data)
+static gboolean pointer_io_monitor_timeout_cb(gpointer data)
 {
 	(void)data;
 
-	touchscreen_io_monitor_timeout_cb_id = 0;
+	pointer_io_monitor_timeout_cb_id = 0;
 
 	/* Resume I/O monitors */
-	if (touchscreen_dev_list != NULL)
-		g_slist_foreach(touchscreen_dev_list, (GFunc)resume_io_monitor, NULL);
+	if (pointer_dev_list != NULL)
+		g_slist_foreach(pointer_dev_list, (GFunc)resume_io_monitor, NULL);
 
 	return FALSE;
 }
@@ -118,24 +118,24 @@ static gboolean touchscreen_io_monitor_timeout_cb(gpointer data)
 /**
  * Cancel timeout for touchscreen I/O monitor reprogramming
  */
-static void cancel_touchscreen_io_monitor_timeout(void)
+static void cancel_pointer_io_monitor_timeout(void)
 {
-	if (touchscreen_io_monitor_timeout_cb_id != 0) {
-		g_source_remove(touchscreen_io_monitor_timeout_cb_id);
-		touchscreen_io_monitor_timeout_cb_id = 0;
+	if (pointer_io_monitor_timeout_cb_id != 0) {
+		g_source_remove(pointer_io_monitor_timeout_cb_id);
+		pointer_io_monitor_timeout_cb_id = 0;
 	}
 }
 
 /**
  * Setup timeout for touchscreen I/O monitor reprogramming
  */
-static void setup_touchscreen_io_monitor_timeout(void)
+static void setup_pointer_io_monitor_timeout(void)
 {
-	cancel_touchscreen_io_monitor_timeout();
+	cancel_pointer_io_monitor_timeout();
 
 	/* Setup new timeout */
-	touchscreen_io_monitor_timeout_cb_id =
-		g_timeout_add_seconds(MONITORING_DELAY, touchscreen_io_monitor_timeout_cb, NULL);
+	pointer_io_monitor_timeout_cb_id =
+		g_timeout_add_seconds(MONITORING_DELAY, pointer_io_monitor_timeout_cb, NULL);
 }
 
 /**
@@ -144,7 +144,7 @@ static void setup_touchscreen_io_monitor_timeout(void)
  * @param data The new data
  * @param bytes_read The number of bytes read
  */
-static void touchscreen_cb(gpointer data, gsize bytes_read)
+static void pointer_cb(gpointer data, gsize bytes_read)
 {
 	submode_t submode = mce_get_submode_int32();
 	struct input_event *ev;
@@ -156,29 +156,30 @@ static void touchscreen_cb(gpointer data, gsize bytes_read)
 		return;
 
 	/* Ignore unwanted events */
-	if (ev->type != EV_ABS)
-		return;
 
-	mce_log(LL_DEBUG, "Got touchscreen event: %i,%i",ev->type, ev->code);
+	mce_log(LL_DEBUG, "Got pointer event: %i,%i", ev->type, ev->code);
 	
 	/* Generate activity */
 	mce_log(LL_DEBUG, "Setting inactive to false in %s %s %d",__FILE__, __func__, __LINE__);
 	execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE), USE_INDATA, CACHE_INDATA);
+
+	if (ev->type == EV_KEY)
+		return;
 
 	/* If visual tklock is active or autorelock isn't active,
 	 * suspend I/O monitors
 	 */
 	if (((submode & MCE_VISUAL_TKLOCK_SUBMODE) != 0) ||
 	    ((submode & MCE_AUTORELOCK_SUBMODE) == 0)) {
-		if (touchscreen_dev_list != NULL)
-			g_slist_foreach(touchscreen_dev_list, (GFunc)suspend_io_monitor, NULL);
+		if (pointer_dev_list != NULL)
+			g_slist_foreach(pointer_dev_list, (GFunc)suspend_io_monitor, NULL);
 
 		/* Setup a timeout I/O monitor reprogramming */
-		setup_touchscreen_io_monitor_timeout();
+		setup_pointer_io_monitor_timeout();
 	}
 
 	/* Ignore non-pressure events */
-	if (ev->code != ABS_PRESSURE)
+	if (ev->type != EV_ABS || ev->code != ABS_PRESSURE)
 		return;
 
 	/* For now there's no reason to cache the value,
@@ -371,15 +372,15 @@ static void match_and_register_io_monitor(const gchar *filename)
 		/* Only open event* devices */
 		return;
 	} else if ((fd = mce_match_event_file(filename,
-					  touchscreen_event_drivers)) != -1) {
+					  pointer_event_drivers)) != -1) {
 		mce_log(LL_DEBUG, "Registering %s as touchscreen fd: %i", filename, fd);
-		register_io_monitor_chunk(fd, filename, touchscreen_cb,
-					  &touchscreen_dev_list);
+		register_io_monitor_chunk(fd, filename, pointer_cb,
+					  &pointer_dev_list);
 	} else if ((fd = mce_match_event_file_by_caps(filename,
-					  touch_event_types, touch_event_keys)) != -1) {
+					  pointer_event_types, pointer_event_keys)) != -1) {
 		mce_log(LL_DEBUG, "Registering %s as touchscreen fd: %i", filename, fd);
-		register_io_monitor_chunk(fd, filename, touchscreen_cb,
-					  &touchscreen_dev_list);
+		register_io_monitor_chunk(fd, filename, pointer_cb,
+					  &pointer_dev_list);
 	} else {
 		mce_log(LL_DEBUG, "Registering %s as keyboard fd: %i", filename, fd);
 		register_io_monitor_chunk(fd, filename, keypress_cb,
@@ -418,7 +419,7 @@ static void remove_input_device(GSList **devices, const gchar *device)
 static void update_inputdevices(const gchar *device, gboolean add)
 {
 	/* Try to find a matching touchscreen I/O monitor */
-	remove_input_device(&touchscreen_dev_list, device);
+	remove_input_device(&pointer_dev_list, device);
 
 	/* Try to find a matching keyboard I/O monitor */
 	remove_input_device(&keyboard_dev_list, device);
@@ -430,12 +431,12 @@ static void update_inputdevices(const gchar *device, gboolean add)
 /**
  * Unregister monitors for touchscreen devices allocated by mce_scan_inputdevices
  */
-static void unregister_touchscreen_devices(void) {
-	if (touchscreen_dev_list != NULL) {
-		mce_log(LL_DEBUG, "event-input: unbinding %u touchscreen devices", g_slist_length(touchscreen_dev_list));
-		g_slist_foreach(touchscreen_dev_list, (GFunc)unregister_io_monitor, NULL);
-		g_slist_free(touchscreen_dev_list);
-		touchscreen_dev_list = NULL;
+static void unregister_pointer_devices(void) {
+	if (pointer_dev_list != NULL) {
+		mce_log(LL_DEBUG, "event-input: unbinding %u touchscreen devices", g_slist_length(pointer_dev_list));
+		g_slist_foreach(pointer_dev_list, (GFunc)unregister_io_monitor, NULL);
+		g_slist_free(pointer_dev_list);
+		pointer_dev_list = NULL;
 	}
 }
 
@@ -444,11 +445,11 @@ static void unregister_touchscreen_devices(void) {
  */
 static void unregister_inputdevices(void)
 {
-	if (touchscreen_dev_list != NULL) {
-		g_slist_foreach(touchscreen_dev_list,
+	if (pointer_dev_list != NULL) {
+		g_slist_foreach(pointer_dev_list,
 				(GFunc)unregister_io_monitor, NULL);
-		g_slist_free(touchscreen_dev_list);
-		touchscreen_dev_list = NULL;
+		g_slist_free(pointer_dev_list);
+		pointer_dev_list = NULL;
 	}
 
 	if (keyboard_dev_list != NULL) {
@@ -508,34 +509,34 @@ static void match_ts_only(const gchar* filename) {
 	}
 
 	if ((fd = mce_match_event_file(filename,
-					  touchscreen_event_drivers)) != -1) {
-		register_io_monitor_chunk(fd, filename, touchscreen_cb,
-					  &touchscreen_dev_list);
-		mce_log(LL_DEBUG, "Registering %s as touchscreen fd: %i", filename, fd);
+					  pointer_event_drivers)) != -1) {
+		register_io_monitor_chunk(fd, filename, pointer_cb,
+					  &pointer_dev_list);
+		mce_log(LL_DEBUG, "Registering %s as pointer fd: %i", filename, fd);
 		return;
 	} else if ((fd = mce_match_event_file_by_caps(filename,
-					  touch_event_types, touch_event_keys)) != -1) {
-		register_io_monitor_chunk(fd, filename, touchscreen_cb,
-					  &touchscreen_dev_list);
-		mce_log(LL_DEBUG, "Registering %s as touchscreen fd: %i", filename, fd);
+					  pointer_event_types, pointer_event_keys)) != -1) {
+		register_io_monitor_chunk(fd, filename, pointer_cb,
+					  &pointer_dev_list);
+		mce_log(LL_DEBUG, "Registering %s as pointer fd: %i", filename, fd);
 		return;
 	}
 
 	close(fd);
 }
 
-static void mce_reopen_touchscreen_devices(void) {
-	if (touchscreen_dev_list == NULL)
+static void mce_reopen_pointer_devices(void) {
+	if (pointer_dev_list == NULL)
 		mce_scan_inputdevices(match_ts_only);
 }
 
 
-static void touchscreen_control_trigger(gconstpointer data) {
+static void pointer_control_trigger(gconstpointer data) {
 	gboolean enable = !GPOINTER_TO_INT(data);
 	if (enable)
-		mce_reopen_touchscreen_devices();
+		mce_reopen_pointer_devices();
 	else
-		unregister_touchscreen_devices();
+		unregister_pointer_devices();
 }
 
 /**
@@ -582,7 +583,7 @@ gboolean mce_input_init(void)
 			 G_CALLBACK(dir_changed_cb), NULL);
 
 	append_output_trigger_to_datapipe(&touchscreen_suspend_pipe,
-					touchscreen_control_trigger);
+					pointer_control_trigger);
 
 EXIT:
 	g_clear_error(&error);
@@ -599,12 +600,12 @@ void mce_input_exit(void)
 		g_file_monitor_cancel(dev_input_gfmp);
 
 	remove_output_trigger_from_datapipe(&touchscreen_suspend_pipe,
-					touchscreen_control_trigger);
+					pointer_control_trigger);
 
 	unregister_inputdevices();
 
 	/* Remove all timer sources */
-	cancel_touchscreen_io_monitor_timeout();
+	cancel_pointer_io_monitor_timeout();
 	cancel_keypress_repeat_timeout();
 
 	return;

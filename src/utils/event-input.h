@@ -27,19 +27,19 @@
 #include <linux/input.h>
 
 /**
- * List of drivers that provide touchscreen events
+ * List of drivers that provide pointer events
  */
-static const gchar *const touchscreen_event_drivers[] = {
-	/** TSC2005 touchscreen */
-	"TSC2005 touchscreen",
+static const gchar *const pointer_event_drivers[] = {
+	/** TSC2005 pointer */
+	"TSC2005 pointer",
 
-	/** TSC2301 touchscreen */
-	"TSC2301 touchscreen",
+	/** TSC2301 pointer */
+	"TSC2301 pointer",
 
-	/** ADS784x touchscreen */
-	"ADS784x touchscreen",
+	/** ADS784x pointer */
+	"ADS784x pointer",
 
-	/* Motorola Droid 4 touchscreen */
+	/* Motorola Droid 4 pointer */
 	"Atmel maXTouch Touchscreen",
 
 	/** No more entries */
@@ -86,24 +86,27 @@ static const gchar *const keyboard_event_drivers[] = {
 };
 
 /**
- * List of event types for touchscreen keys
+ * List of event types for pointer keys
  */
-static const int touch_event_types[] = {
+static const int pointer_event_types[] = {
 	EV_KEY,
 	/** No more entries */
 	-1
 };
 
 /**
- * List of key types for touchscreen monitor
+ * List of key types for pointer monitor
  */
-static const int touch_keys[] = {
+static const int pointer_keys[] = {
 	BTN_TOUCH,
+	BTN_RIGHT,
+	BTN_LEFT,
+	BTN_MIDDLE,
 	-1
 };
 
-static const int *const touch_event_keys[]= {
-	touch_keys,
+static const int *const pointer_event_keys[]= {
+	pointer_keys,
 };
 
 /**
