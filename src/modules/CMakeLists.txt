@@ -193,3 +193,8 @@ add_library(key-dbus SHARED key-dbus.c)
 target_link_libraries(key-dbus ${COMMON_LIBRARIES})
 target_include_directories(key-dbus PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
 install(TARGETS key-dbus DESTINATION ${MCE_MODULE_DIR})
+
+add_library(startup-hildon SHARED startup-hildon.c)
+target_link_libraries(startup-hildon ${COMMON_LIBRARIES})
+target_include_directories(startup-hildon PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
+install(TARGETS startup-hildon DESTINATION ${MCE_MODULE_DIR})
