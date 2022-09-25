@@ -1,3 +1,13 @@
+mce (1.10.1) unstable; urgency=medium
+
+  * event-input: add mice to touchscreen class, makeing it the "pointer"
+    class, this fixes mice axies not contributing to inactivity timeout
+  * startup-hildon: add hildon-desktop specific startup module
+  * enable startup-hildon module. reorder modules so display to be
+    loaded after all its users
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Sun, 25 Sep 2022 15:37:21 +0300
+
 mce (1.10.0) unstable; urgency=medium
 
   * inactivity-inhibit: Extend MCE_PREVENT_BLANK_REQUEST with optional param
