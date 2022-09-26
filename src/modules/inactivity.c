@@ -521,6 +521,7 @@ static void inactiveity_rtconf_cb(const gchar *key, guint cb_id, void *user_data
 		inactivity_timeout_dbus_signal();
 	} else if (cb_id == inactivity_inhibit_gconf_cb_id) {
 		mce_rtconf_get_int(MCE_BLANKING_INHIBIT_MODE_PATH, &inactivity_inhibit_mode);
+		execute_datapipe(&device_inactive_pipe, GINT_TO_POINTER(FALSE), USE_INDATA, CACHE_INDATA);
 		inactivity_mode_dbus_signal();
 	} else {
 		mce_log(LL_WARN, "%s: Spurious rtconf value received; confused!", MODULE_NAME);
