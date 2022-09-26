@@ -8,6 +8,8 @@
 #define MCE_CONF_CONFIGURED_LIGHTS	"ConfiguredLights"
 #define MCE_CONF_COUNT_BACKLIGHT_FIELDS 6
 
+#define MCE_BUTTON_BACKLIGHT_BRIGHTNESS_VALUES 5
+
 #define LED_SYSFS_PATH "/sys/class/leds/"
 
 #define LED_BRIGHTNESS_PATH "/brightness"
@@ -23,8 +25,8 @@ typedef enum {
 } backlight_field;
 
 struct brightness {
-	int lux[5];
-	int value[5];
+	int lux[MCE_BUTTON_BACKLIGHT_BRIGHTNESS_VALUES];
+	int value[MCE_BUTTON_BACKLIGHT_BRIGHTNESS_VALUES];
 };
 
 struct button_backlight{
@@ -37,10 +39,5 @@ struct button_backlight{
 	unsigned int fade_time;
 	const struct brightness *brightness_map;
 };
-
-/* format: { {series of 5 points in mlux}, {5 corresponding brightness values} } */
-static const struct brightness brightness_map_kbd = { {25, 250000, 1750000, 15000000, 30000000}, {80, 128, 0, 0, 0} };
-static const struct brightness brightness_map_btn = { {25, 250000, 1750000, 15000000, 30000000}, {1, 1, 0, 0, 0} };
-
 
 #endif

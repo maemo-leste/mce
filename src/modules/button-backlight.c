@@ -40,6 +40,10 @@ static gboolean als_enabled = true;
 static struct button_backlight *button_backlights = NULL;
 static unsigned int count_backlights = 0;
 
+/* format: { {series of 5 points in mlux}, {5 corresponding brightness values} } */
+static struct brightness brightness_map_kbd = { {25, 100000, 300000, 1000000, 30000000}, {80, 128, 0, 0, 0} };
+static struct brightness brightness_map_btn = { {25, 100000, 300000, 1000000, 30000000}, {1, 1, 0, 0, 0} };
+
 static void set_backlight_states(bool by_display_state)
 {
 	for (unsigned int i = 0; i < count_backlights; ++i) {
@@ -274,6 +278,24 @@ static gboolean init_backlights(void)
 	return true;
 }
 
+static bool load_brightness_profile(const char* key, struct brightness *profile)
+{
+	gsize length;
+	gint *profilelist = mce_conf_get_int_list(MCE_CONF_BACKLIGHT_GROUP, key, &length, NULL);
+
+	if (profilelist == NULL || length != MCE_BUTTON_BACKLIGHT_BRIGHTNESS_VALUES) {
+		mce_log(LL_WARN, "%s: Failed to load brightness profile %s%s using defaults", MODULE_NAME, key,
+				profilelist != NULL && length != MCE_BUTTON_BACKLIGHT_BRIGHTNESS_VALUES ? " due to there being less or more than 5 values" : "");
+		return false;
+	}
+
+	for(size_t i = 0; i < length; ++i)
+		profile->value[i] = profilelist[i];
+
+	g_free(profilelist);
+	return true;
+}
+
 /**
  * Init function for the keypad module
  *
@@ -288,6 +310,9 @@ const gchar *g_module_check_init(GModule *module)
 	gchar *status = NULL;
 
 	(void)module;
+
+	load_brightness_profile("KeyboardBrightness", &brightness_map_kbd);
+	load_brightness_profile("ButtonBrightness", &brightness_map_btn);
 	
 	if (!init_backlights())
 		return NULL;
