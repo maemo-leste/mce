@@ -1,3 +1,11 @@
+mce (1.10.2) unstable; urgency=medium
+
+  * rtconf-gconf: fix watches not being set on correct path on /lock keys
+  * button-backlight: dehardcode button brightnesses
+  * inactivity: set device to active when device inactive inhibit mode changes
+
+ -- Carl Klemm <carl@uvos.org>  Sun, 16 Oct 2022 14:50:00 +0200
+
 mce (1.10.1) unstable; urgency=medium
 
   * event-input: add mice to touchscreen class, makeing it the "pointer"
