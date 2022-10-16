@@ -5,6 +5,8 @@
 #include "mce-rtconf.h"
 #include "mce-log.h"
 
+#include <stdbool.h>
+
 /** Module name */
 #define MODULE_NAME		"rtconf-gconf"
 #define MODULE_PROVIDES	"rtconf"
@@ -185,13 +187,20 @@ static void mce_gconf_gconf_callback(GConfClient * client, guint cnxn_id, GConfE
 
 	(void)client;
 
+	bool handled = false;
+
 	for (l = gconf_notifiers; l != NULL; l = l->next) {
 		not = (struct notifier *)l->data;
 		if (not->callback_id == cnxn_id) {
+			mce_log(LL_DEBUG, "%s: got key changed callback for %s (%s)", MODULE_NAME, entry->key, gconf_entry_get_key(entry));
 			not->callback(entry->key, cnxn_id, user_data);
+			handled = true;
 			break;
 		}
 	}
+
+	if(!handled)
+		mce_log(LL_WARN, "%s: %s called for key \"%s\" with no handler", MODULE_NAME, __func__, gconf_entry_get_key(entry));
 }
 
 /**
@@ -220,6 +229,10 @@ static gboolean mce_gconf_notifier_add(const gchar * key,
 	else
 		gkey = g_strdup(key);
 
+	gchar *full_path = g_strconcat(path, gkey, NULL);
+
+	mce_log(LL_DEBUG, "%s: registering gconf watch on %s%s", MODULE_NAME, path, gkey);
+
 	gconf_client_add_dir(gconf_client, path, GCONF_CLIENT_PRELOAD_NONE, &error);
 
 	if (error != NULL) {
@@ -230,7 +243,7 @@ static gboolean mce_gconf_notifier_add(const gchar * key,
 
 	g_clear_error(&error);
 
-	*cb_id = gconf_client_notify_add(gconf_client, gkey, mce_gconf_gconf_callback, user_data, NULL, &error);
+	*cb_id = gconf_client_notify_add(gconf_client, full_path, mce_gconf_gconf_callback, user_data, NULL, &error);
 	if (error != NULL) {
 		mce_log(LL_CRIT, "Could not register notifier for %s; %s", key, error->message);
 	}
@@ -246,6 +259,7 @@ static gboolean mce_gconf_notifier_add(const gchar * key,
 	g_clear_error(&error);
 	g_free(gkey);
 	g_free(path);
+	g_free(full_path);
 
 	return status;
 }
