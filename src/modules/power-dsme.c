@@ -67,11 +67,6 @@ G_MODULE_EXPORT module_info_struct module_info = {
 
 #define MCE_CONF_SOFTPOWEROFF_CHARGER_POLICY_CONNECT "ChargerPolicyConnect"
 
-
-#define MCE_IS_USB_MASS_STORAGE_CONNECTED_FLAG_0 "/sys/devices/platform/musb_hdrc/gadget/gadget-lun0/file"
-
-#define MCE_IS_USB_MASS_STORAGE_CONNECTED_FLAG_1 "/sys/devices/platform/musb_hdrc/gadget/gadget-lun1/file"
-
 #define SOFTOFF_CONNECTIVITY_FORCE_OFFLINE_STR		"forceoffline"
 #define SOFTOFF_CONNECTIVITY_SOFT_OFFLINE_STR		"softoffline"
 #define SOFTOFF_CONNECTIVITY_RETAIN_STR			"retain"
@@ -113,7 +108,6 @@ enum {
 	/** Default setting */
 	DEFAULT_SOFTOFF_CHARGER_CONNECT = SOFTOFF_CHARGER_CONNECT_IGNORE,
 };
-
 
 /** Charger state */
 static gboolean charger_connected = FALSE;
@@ -193,7 +187,6 @@ static const mce_translation_t soft_poweroff_charger_connect_translation[] = {
 };
 
 static gboolean init_dsmesock(void);
-static gboolean usb_mass_storage_mode(void);
 
 /**
  * Generic send function for dsmesock messages
@@ -381,9 +374,6 @@ static void request_soft_poweroff(void)
 	}
 
 	mce_add_submode_int32(MCE_SOFTOFF_SUBMODE);
-	execute_datapipe(&display_state_pipe,
-			 GINT_TO_POINTER(MCE_DISPLAY_OFF),
-			 USE_INDATA, CACHE_INDATA);
 
 	/* Enable the soft poweroff LED pattern */
 	gchar *pattern = g_strdup(MCE_LED_PATTERN_DEVICE_SOFT_OFF);
@@ -431,31 +421,6 @@ static void setup_transition_timeout(void)
 	transition_timeout_cb_id =
 		g_timeout_add(TRANSITION_DELAY, transition_timeout_cb, NULL);
 }
-static gboolean file_scan(const char* filename,
-                   const char* format,
-                  int         expected_items,
-                  ...)
-{
-	FILE*   fp;
-	int     scanned_items = EOF;
-	va_list ap;
-
-	if ((fp = fopen(filename, "r")) == NULL) {
-		return FALSE;
-	}
-	va_start(ap, expected_items);
-	scanned_items = vfscanf(fp, format, ap);
-	va_end(ap);
-	fclose(fp);
-
-	return (scanned_items != EOF && (expected_items == -1 || scanned_items == expected_items));
-}
-static gboolean usb_mass_storage_mode(void)
-{
-    int string_length = 0;
-    return (file_scan(MCE_IS_USB_MASS_STORAGE_CONNECTED_FLAG_0, "%*s%n", -1, &string_length) && string_length != 0) ||
-           (file_scan(MCE_IS_USB_MASS_STORAGE_CONNECTED_FLAG_1, "%*s%n", -1, &string_length) && string_length !=-0);
-}
 
 /**
  * Request normal shutdown
@@ -464,12 +429,6 @@ static void request_normal_shutdown(void)
 {
 	/* Set up the message */
 	DSM_MSGTYPE_SHUTDOWN_REQ msg = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN_REQ);
-	if(!usb_mass_storage_mode()) {
-		execute_datapipe(&display_state_pipe, 
-						 GINT_TO_POINTER(MCE_DISPLAY_OFF), 
-						 USE_INDATA, 
-						 CACHE_INDATA);
-	}
 	/* Send the message */
 	mce_dsme_send(&msg);
 	mce_log(LL_DEBUG,
@@ -610,10 +569,6 @@ static gboolean io_data_ready_cb(GIOChannel *source,
 		case MCE_STATE_SHUTDOWN:
 		case MCE_STATE_REBOOT:
 			mce_rem_submode_int32(MCE_MODECHG_SUBMODE);
-			execute_datapipe(&display_state_pipe, 
-						 GINT_TO_POINTER(MCE_DISPLAY_OFF), 
-						 USE_INDATA, 
-						 CACHE_INDATA);
 			execute_datapipe_output_triggers(&led_pattern_deactivate_pipe, MCE_LED_PATTERN_DEVICE_ON, USE_INDATA);
 			break;
 

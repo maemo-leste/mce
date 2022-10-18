@@ -89,9 +89,11 @@ static gint maximum_display_brightness = DEFAULT_MAXIMUM_DISPLAY_BRIGHTNESS;
 
 static gchar *brightness_file = NULL;
 static gchar *max_brightness_file = NULL;
-static gboolean hw_display_fading = FALSE;
+static bool hw_display_fading = false;
 
-static gboolean is_tvout_state_changed = FALSE;
+static bool is_tvout_state_changed = false;
+
+static bool blank_during_shutdown = true;
 
 static gboolean display_brightness_dbus_signal(void);
 
@@ -99,12 +101,12 @@ static gboolean display_brightness_dbus_signal(void);
  * Timeout callback for the brightness fade
  *
  * @param data Unused
- * @return Returns TRUE to repeat, until the cached brightness has reached
- *         the destination value; when this happens, FALSE is returned
+ * @return Returns true to repeat, until the cached brightness has reached
+ *         the destination value; when this happens, false is returned
  */
 static gboolean brightness_fade_timeout_cb(gpointer data)
 {
-	gboolean retval = TRUE;
+	bool retval = true;
 
 	(void)data;
 
@@ -112,7 +114,7 @@ static gboolean brightness_fade_timeout_cb(gpointer data)
 	    (ABS(cached_brightness -
 		 target_brightness) < brightness_fade_steplength)) {
 		cached_brightness = target_brightness;
-		retval = FALSE;
+		retval = false;
 	} else if (target_brightness > cached_brightness) {
 		cached_brightness += brightness_fade_steplength;
 	} else {
@@ -122,7 +124,7 @@ static gboolean brightness_fade_timeout_cb(gpointer data)
 	mce_write_number_string_to_file(brightness_file,
 					cached_brightness);
 
-	if (retval == FALSE)
+	if (retval == false)
 		 brightness_fade_timeout_cb_id = 0;
 
 	return retval;
@@ -165,7 +167,7 @@ static void update_brightness_fade(gint new_brightness)
 {
 	gint step_time = 10;
 
-	if (hw_display_fading == TRUE) {
+	if (hw_display_fading == true) {
 		cancel_brightness_fade_timeout();
 		cached_brightness = new_brightness;
 		target_brightness = new_brightness;
@@ -264,7 +266,7 @@ EXIT:
  * Timeout callback for display blanking
  *
  * @param data Unused
- * @return Always returns FALSE, to disable the timeout
+ * @return Always returns false, to disable the timeout
  */
 static gboolean blank_timeout_cb(gpointer data)
 {
@@ -276,7 +278,7 @@ static gboolean blank_timeout_cb(gpointer data)
 			       GINT_TO_POINTER(MCE_DISPLAY_OFF),
 			       USE_INDATA, CACHE_INDATA);
 
-	return FALSE;
+	return false;
 }
 
 /**
@@ -333,16 +335,16 @@ static void display_rtconf_cb(const gchar *key, guint cb_id, void *user_data)
  *
  * @param method_call A DBusMessage to reply to;
  *                    pass NULL to send a display status signal instead
- * @return TRUE on success, FALSE on failure
+ * @return true on success, false on failure
  */
 static gboolean send_display_status(DBusMessage *const method_call)
 {
 	display_state_t display_state = datapipe_get_gint(display_state_pipe);
-	gboolean is_tvout_on = datapipe_get_gint(tvout_pipe);
+	bool is_tvout_on = datapipe_get_gint(tvout_pipe);
 
 	DBusMessage *msg = NULL;
 	const gchar *state = NULL;
-	gboolean status = FALSE;
+	bool status = false;
 
 	switch (display_state) {
 	case MCE_DISPLAY_OFF:
@@ -358,7 +360,7 @@ static gboolean send_display_status(DBusMessage *const method_call)
 		state = MCE_DISPLAY_ON_STRING;
 		break;
 	}
-	if ((is_tvout_state_changed == TRUE) && (display_state == MCE_DISPLAY_OFF)) {
+	if ((is_tvout_state_changed == true) && (display_state == MCE_DISPLAY_OFF)) {
 		state = is_tvout_on ? MCE_DISPLAY_ON_STRING : MCE_DISPLAY_OFF_STRING;
 	}
 	mce_log(LL_DEBUG,
@@ -384,7 +386,7 @@ static gboolean send_display_status(DBusMessage *const method_call)
 		/* Append the display status */
 		if (dbus_message_append_args(msg,
 						 DBUS_TYPE_STRING, &state,
-						 DBUS_TYPE_INVALID) == FALSE) {
+						 DBUS_TYPE_INVALID) == false) {
 			mce_log(LL_CRIT,
 				"Failed to append %sargument to D-Bus message "
 				"for %s.%s",
@@ -408,20 +410,20 @@ EXIT:
  * D-Bus callback for the get display status method call
  *
  * @param msg The D-Bus message
- * @return TRUE on success, FALSE on failure
+ * @return true on success, false on failure
  */
 static gboolean display_status_get_dbus_cb(DBusMessage *const msg)
 {
-	gboolean status = FALSE;
+	bool status = false;
 
 	mce_log(LL_DEBUG,
 		"Received display status get request");
 
 	/* Try to send a reply that contains the current display status */
-	if (send_display_status(msg) == FALSE)
+	if (send_display_status(msg) == false)
 		goto EXIT;
 
-	status = TRUE;
+	status = true;
 
 EXIT:
 	return status;
@@ -431,13 +433,13 @@ EXIT:
  * D-Bus callback for the display on method call
  *
  * @param msg The D-Bus message
- * @return TRUE on success, FALSE on failure
+ * @return true on success, false on failure
  */
 static gboolean display_on_req_dbus_cb(DBusMessage *const msg)
 {
 	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
 	submode_t submode = mce_get_submode_int32();
-	gboolean status = FALSE;
+	bool status = false;
 
 	mce_log(LL_DEBUG,
 		"Received display on request");
@@ -449,12 +451,12 @@ static gboolean display_on_req_dbus_cb(DBusMessage *const msg)
 				       USE_INDATA, CACHE_INDATA);
 	}
 
-	if (no_reply == FALSE) {
+	if (no_reply == false) {
 		DBusMessage *reply = dbus_new_method_reply(msg);
 
 		status = dbus_send_message(reply);
 	} else {
-		status = TRUE;
+		status = true;
 	}
 
 	return status;
@@ -464,13 +466,13 @@ static gboolean display_on_req_dbus_cb(DBusMessage *const msg)
  * D-Bus callback for the display dim method call
  *
  * @param msg The D-Bus message
- * @return TRUE on success, FALSE on failure
+ * @return true on success, false on failure
  */
 static gboolean display_dim_req_dbus_cb(DBusMessage *const msg)
 {
 	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
 	submode_t submode = mce_get_submode_int32();
-	gboolean status = FALSE;
+	bool status = false;
 
 	mce_log(LL_DEBUG,
 		"Received display dim request");
@@ -482,12 +484,12 @@ static gboolean display_dim_req_dbus_cb(DBusMessage *const msg)
 				       USE_INDATA, CACHE_INDATA);
 	}
 
-	if (no_reply == FALSE) {
+	if (no_reply == false) {
 		DBusMessage *reply = dbus_new_method_reply(msg);
 
 		status = dbus_send_message(reply);
 	} else {
-		status = TRUE;
+		status = true;
 	}
 
 	return status;
@@ -497,12 +499,12 @@ static gboolean display_dim_req_dbus_cb(DBusMessage *const msg)
  * D-Bus callback for the display off method call
  *
  * @param msg The D-Bus message
- * @return TRUE on success, FALSE on failure
+ * @return true on success, false on failure
  */
 static gboolean display_off_req_dbus_cb(DBusMessage *const msg)
 {
 	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
-	gboolean status = FALSE;
+	bool status = false;
 
 	mce_log(LL_DEBUG,
 		"Received display off request");
@@ -511,12 +513,12 @@ static gboolean display_off_req_dbus_cb(DBusMessage *const msg)
 			       GINT_TO_POINTER(MCE_DISPLAY_OFF),
 			       USE_INDATA, CACHE_INDATA);
 
-	if (no_reply == FALSE) {
+	if (no_reply == false) {
 		DBusMessage *reply = dbus_new_method_reply(msg);
 
 		status = dbus_send_message(reply);
 	} else {
-		status = TRUE;
+		status = true;
 	}
 
 	return status;
@@ -525,7 +527,7 @@ static gboolean display_off_req_dbus_cb(DBusMessage *const msg)
 static gboolean display_brightness_dbus_signal(void)
 {
 	DBusMessage *msg = NULL;
-	gboolean status = FALSE;
+	bool status = false;
 
 	mce_log(LL_DEBUG,
 		"%s: Sending display brightness state: %i", MODULE_NAME,
@@ -538,7 +540,7 @@ static gboolean display_brightness_dbus_signal(void)
 	/* Append the inactivity status */
 	if (dbus_message_append_args(msg,
 					 DBUS_TYPE_INT32, &tmp,
-					 DBUS_TYPE_INVALID) == FALSE) {
+					 DBUS_TYPE_INVALID) == false) {
 		mce_log(LL_CRIT, "%s: "
 			"Failed to append reply argument to D-Bus message "
 			"for %s.%s", MODULE_NAME,
@@ -557,7 +559,7 @@ static gboolean display_brightness_dbus_signal(void)
 static gboolean display_brightness_set_dbus_cb(DBusMessage *const msg)
 {
 	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
-	gboolean status = FALSE;
+	bool status = false;
 	DBusError error;
 
 	dbus_error_init(&error);
@@ -567,13 +569,13 @@ static gboolean display_brightness_set_dbus_cb(DBusMessage *const msg)
 	dbus_int32_t brightness;
 	if (dbus_message_get_args(msg, &error,
 				  DBUS_TYPE_INT32, &brightness,
-				  DBUS_TYPE_INVALID) == FALSE) {
+				  DBUS_TYPE_INVALID) == false) {
 		mce_log(LL_CRIT,
 			"Failed to get argument from %s.%s: %s",
 			MCE_REQUEST_IF, MCE_DISPLAY_BRIGTNESS_SET,
 			error.message);
 		dbus_error_free(&error);
-		return FALSE;
+		return false;
 	}
 
 	set_brightness_unfiltered = brightness;
@@ -581,12 +583,12 @@ static gboolean display_brightness_set_dbus_cb(DBusMessage *const msg)
 	mce_rtconf_set_int(MCE_BRIGHTNESS_KEY, set_brightness_unfiltered);
 	display_brightness_dbus_signal();
 
-	if (no_reply == FALSE) {
+	if (no_reply == false) {
 		DBusMessage *reply = dbus_new_method_reply(msg);
 
 		status = dbus_send_message(reply);
 	} else {
-		status = TRUE;
+		status = true;
 	}
 
 	return status;
@@ -595,23 +597,23 @@ static gboolean display_brightness_set_dbus_cb(DBusMessage *const msg)
 static gboolean display_brightness_get_dbus_cb(DBusMessage *const msg)
 {
 	dbus_bool_t no_reply = dbus_message_get_no_reply(msg);
-	gboolean status = FALSE;
+	bool status = false;
 
 	mce_log(LL_DEBUG,
 		"Received display brightness get request");
 
-	if (no_reply == FALSE) {
+	if (no_reply == false) {
 		DBusMessage *reply = dbus_new_method_reply(msg);
 		dbus_int32_t tmp = set_brightness_unfiltered;
 		if (!dbus_message_append_args(reply,
 							 DBUS_TYPE_INT32, &tmp,
 							 DBUS_TYPE_INVALID)) {
 			mce_log(LL_ERR, "%s: Failed to append dbus arguments", MODULE_NAME);
-			return FALSE;
+			return false;
 		}
 		status = dbus_send_message(reply);
 	} else {
-		status = TRUE;
+		status = true;
 	}
 
 	return status;
@@ -680,15 +682,15 @@ EXIT:
  * Datapipe trigger for device inactivity
  *
  * @param data The inactivity stored in a pointer;
- *             TRUE if the device is inactive,
- *             FALSE if the device is active
+ *             true if the device is inactive,
+ *             false if the device is active
  */
 static void device_inactive_trigger(gconstpointer data)
 {
 	system_state_t system_state = datapipe_get_gint(system_state_pipe);
 	display_state_t display_state = datapipe_get_gint(display_state_pipe);
 	alarm_ui_state_t alarm_ui_state = datapipe_get_gint(alarm_ui_state_pipe);
-	gboolean device_inactive = GPOINTER_TO_INT(data);
+	bool device_inactive = GPOINTER_TO_INT(data);
 
 	/* Unblank screen on device activity,
 	 * unless the device is in acting dead and no alarm is visible
@@ -697,12 +699,12 @@ static void device_inactive_trigger(gconstpointer data)
 		((system_state == MCE_STATE_ACTDEAD) &&
 		((alarm_ui_state == MCE_ALARM_UI_VISIBLE_INT32) ||
 		(alarm_ui_state == MCE_ALARM_UI_RINGING_INT32)))) &&
-		(device_inactive == FALSE)) {
+		(device_inactive == false)) {
 		(void)execute_datapipe(&display_state_pipe,
 					GINT_TO_POINTER(MCE_DISPLAY_ON),
 					USE_INDATA, CACHE_INDATA);
 	} else if ((system_state == MCE_STATE_USER || system_state == MCE_STATE_ACTDEAD) &&
-				device_inactive == TRUE && display_state == MCE_DISPLAY_ON) {
+				device_inactive == true && display_state == MCE_DISPLAY_ON) {
 		(void)execute_datapipe(&display_state_pipe,
 					GINT_TO_POINTER(MCE_DISPLAY_DIM),
 					USE_INDATA, CACHE_INDATA);
@@ -712,16 +714,24 @@ static void device_inactive_trigger(gconstpointer data)
 static void tvout_trigger(gconstpointer data)
 {
 	display_state_t display_state = datapipe_get_gint(display_state_pipe);
-	gboolean is_tvout_on = GPOINTER_TO_INT(data);
+	bool is_tvout_on = GPOINTER_TO_INT(data);
 	
 	mce_log(LL_DEBUG, "Recieved tvout state changing: is_tvout_on = %d", is_tvout_on);	
 	
 	if (display_state == MCE_DISPLAY_OFF) {
-		is_tvout_state_changed = TRUE;
+		is_tvout_state_changed = true;
 		send_display_status(NULL);
-		is_tvout_state_changed = FALSE;
+		is_tvout_state_changed = false;
 	}
 	return;
+}
+
+static void system_state_trigger(gconstpointer data)
+{
+	const system_state_t system_state = GPOINTER_TO_INT(data);
+
+	if ((system_state == MCE_STATE_SHUTDOWN || system_state == MCE_STATE_REBOOT) && blank_during_shutdown)
+		execute_datapipe(&display_state_pipe, GINT_TO_POINTER(MCE_DISPLAY_OFF), USE_INDATA, CACHE_INDATA);
 }
 
 /**
@@ -782,6 +792,7 @@ const gchar *g_module_check_init(GModule *module)
 	}
 
 	dim_brightness = mce_conf_get_int("DisplayBrightness", "Dim", DEFAULT_DIM_BRIGHTNESS, NULL);
+	blank_during_shutdown = mce_conf_get_bool("Display", "BlankDuringShutdown", true, NULL);
 
 	/* Append triggers/filters to datapipes */
 	append_output_trigger_to_datapipe(&display_brightness_pipe,
@@ -790,11 +801,15 @@ const gchar *g_module_check_init(GModule *module)
 					  display_state_trigger);
 	append_output_trigger_to_datapipe(&device_inactive_pipe,
 					  device_inactive_trigger);
-	append_output_trigger_to_datapipe(&tvout_pipe, 
+	append_output_trigger_to_datapipe(&display_state_pipe,
 					  tvout_trigger);
+	append_output_trigger_to_datapipe(&tvout_pipe,
+					  tvout_trigger);
+	append_output_trigger_to_datapipe(&system_state_pipe,
+					  system_state_trigger);
 	/* Get maximum brightness */
 	if (mce_read_number_string_from_file(max_brightness_file,
-					     &tmp) == FALSE) {
+					     &tmp) == false) {
 		mce_log(LL_ERR,
 			"%s: Could not read the maximum brightness from %s; "
 			"defaulting to %d", MODULE_NAME,
@@ -816,7 +831,7 @@ const gchar *g_module_check_init(GModule *module)
 	 * and fade from that value
 	 */
 	if (mce_read_number_string_from_file(brightness_file,
-					     &tmp) == FALSE) {
+					     &tmp) == false) {
 		mce_log(LL_ERR,
 			"%s: Could not read the current brightness from %s", MODULE_NAME, brightness_file);
 		cached_brightness = -1;
@@ -830,7 +845,7 @@ const gchar *g_module_check_init(GModule *module)
 
 	if (mce_rtconf_notifier_add(MCE_BRIGHTNESS_KEY,
 				   display_rtconf_cb, NULL,
-				   &disp_brightness_gconf_cb_id) == FALSE)
+				   &disp_brightness_gconf_cb_id) == false)
 		goto EXIT;
 
 	/* Display blank */
@@ -907,6 +922,8 @@ void g_module_unload(GModule *module)
 					    display_state_trigger);
 	remove_output_trigger_from_datapipe(&display_brightness_pipe,
 					    display_brightness_trigger);
+	remove_output_trigger_from_datapipe(&system_state_pipe,
+					  system_state_trigger);
 
 	/* Free strings */
 	g_free(brightness_file);
