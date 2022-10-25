@@ -801,8 +801,6 @@ const gchar *g_module_check_init(GModule *module)
 					  display_state_trigger);
 	append_output_trigger_to_datapipe(&device_inactive_pipe,
 					  device_inactive_trigger);
-	append_output_trigger_to_datapipe(&display_state_pipe,
-					  tvout_trigger);
 	append_output_trigger_to_datapipe(&tvout_pipe,
 					  tvout_trigger);
 	append_output_trigger_to_datapipe(&system_state_pipe,

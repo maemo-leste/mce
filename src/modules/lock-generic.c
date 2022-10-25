@@ -101,6 +101,8 @@ static void display_state_trigger(gconstpointer const data)
 static void tk_lock_trigger(gconstpointer data)
 {
 	lock_state_t lock_state = GPOINTER_TO_INT(data);
+
+	mce_log(LL_DEBUG, "%s: lock request %i", MODULE_NAME, lock_state);
 	
 	switch (lock_state)
 	{
@@ -207,4 +209,7 @@ void g_module_unload(GModule * module)
 	remove_output_trigger_from_datapipe(&display_state_pipe, display_state_trigger);
 	remove_output_trigger_from_datapipe(&tk_lock_pipe, tk_lock_trigger);
 	remove_output_trigger_from_datapipe(&keyboard_slide_pipe, keyboard_slide_trigger);
+	remove_output_trigger_from_datapipe(&keypress_pipe, powerkey_trigger);
+	remove_output_trigger_from_datapipe(&call_state_pipe, call_alarm_state_trigger);
+	remove_output_trigger_from_datapipe(&alarm_ui_state_pipe, call_alarm_state_trigger);
 }

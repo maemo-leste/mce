@@ -22,6 +22,7 @@
 #include <glib.h>
 #include <gmodule.h>
 #include <string.h>
+#include <stdbool.h>
 #include "mce.h"
 #include "callstate.h"
 #include <mce/mode-names.h>
@@ -86,6 +87,8 @@ static GSList *call_state_monitor_list = NULL;
 
 /** Keep track of whether call state is monitored */
 static gboolean call_state_is_monitored = FALSE;
+
+static bool locked_by_prox = false;
 
 /**
  * Send the call state and type
@@ -413,6 +416,42 @@ EXIT:
 	return status;
 }
 
+static void proximity_sensor_trigger(gconstpointer data)
+{
+	cover_state_t state = GPOINTER_TO_INT(data);
+	call_state_t call_state = datapipe_get_gint(call_state_pipe);
+
+	mce_log(LL_DEBUG, "%s: proximity_sensor_trigger prox_state %i call_state %i", MODULE_NAME, state, call_state);
+
+	if (state == COVER_OPEN && locked_by_prox) {
+		locked_by_prox = false;
+		execute_datapipe(&tk_lock_pipe, GINT_TO_POINTER(LOCK_OFF_DELAYED), USE_INDATA, CACHE_INDATA);
+		//TODO: remove once tklock is more sane
+		execute_datapipe(&display_state_pipe, GINT_TO_POINTER(MCE_DISPLAY_ON), USE_INDATA, CACHE_INDATA);
+	}
+	else if (state == COVER_CLOSED && call_state == CALL_STATE_ACTIVE &&
+		!(mce_get_submode_int32() & MCE_TKLOCK_SUBMODE) && datapipe_get_gint(display_state_pipe) == MCE_DISPLAY_ON) {
+		locked_by_prox = true;
+		execute_datapipe(&tk_lock_pipe, GINT_TO_POINTER(LOCK_ON), USE_INDATA, CACHE_INDATA);
+	}
+}
+
+static void call_state_trigger(gconstpointer data)
+{
+	static call_state_t call_state = CALL_STATE_INVALID;
+	call_state_t new_state = GPOINTER_TO_INT(data);
+
+	if (new_state == call_state)
+		return;
+
+	call_state = new_state;
+
+	if (call_state == CALL_STATE_NONE && locked_by_prox) {
+		locked_by_prox = false;
+		execute_datapipe(&tk_lock_pipe, GINT_TO_POINTER(LOCK_OFF_DELAYED), USE_INDATA, CACHE_INDATA);
+	}
+}
+
 /**
  * Init function for the call state module
  *
@@ -442,6 +481,9 @@ const gchar *g_module_check_init(GModule *module)
 				 get_call_state_dbus_cb) == NULL)
 		goto EXIT;
 
+	append_output_trigger_to_datapipe(&proximity_sensor_pipe, proximity_sensor_trigger);
+	append_output_trigger_to_datapipe(&call_state_pipe, call_state_trigger);
+
 EXIT:
 	return NULL;
 }
@@ -457,6 +499,9 @@ G_MODULE_EXPORT void g_module_unload(GModule *module);
 void g_module_unload(GModule *module)
 {
 	(void)module;
+
+	remove_output_trigger_from_datapipe(&proximity_sensor_pipe, proximity_sensor_trigger);
+	remove_output_trigger_from_datapipe(&call_state_pipe, call_state_trigger);
 
 	return;
 }

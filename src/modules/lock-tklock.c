@@ -111,11 +111,6 @@ G_MODULE_EXPORT module_info_struct module_info = {
 /** Default fallback setting for lens cover triggered tklock unlocking */
 #define DEFAULT_LENS_COVER_UNLOCK	TRUE		/* TRUE */
 
-/** Default fallback setting for proximity lock when callstate == ringing */
-#define DEFAULT_PROXIMITY_LOCK_WHEN_RINGING	TRUE		/* TRUE */
-
-#define DEFAULT_PROXIMITY_UNLOCK_DELAY 500 /* 0.5 second */
-
 /**
  * TRUE if the touchscreen/keypad autolock is enabled,
  * FALSE if the touchscreen/keypad autolock is disabled
@@ -139,8 +134,6 @@ static guint tklock_unlock_timeout_cb_id = 0;
 
 static guint tklock_disable_timeout_cb_id = 0;
 
-static guint proximity_unlock_timeout_cb_id = 0;
-
 /** Blank immediately on tklock instead of dim/blank */
 static gboolean blank_immediately = DEFAULT_BLANK_IMMEDIATELY;
 
@@ -158,9 +151,6 @@ static gboolean autolock_with_open_slide = DEFAULT_AUTOLOCK_SLIDE_OPEN;
 
 /** Unlock the TKLock when the lens cover is opened */
 static gboolean lens_cover_unlock = DEFAULT_LENS_COVER_UNLOCK;
-
-/** Proximity based locking when the phone is ringing */
-static gboolean proximity_lock_when_ringing = DEFAULT_PROXIMITY_LOCK_WHEN_RINGING;
 
 /** Submode at the beginning of a call */
 static submode_t saved_submode = MCE_INVALID_SUBMODE;
@@ -193,26 +183,6 @@ static guint unlock_attempts = 0;
 #define AUTORELOCK_KBD_SLIDE	(1 << 0)
 /** Autorelock on lens cover */
 #define AUTORELOCK_LENS_COVER	(1 << 1)
-/** Autorelock on proximity sensor */
-#define AUTORELOCK_ON_PROXIMITY	(1 << 2)
-
-/** Inhibit proximity relock type */
-typedef enum {
-	/** Inhibit proximity relock */
-	MCE_INHIBIT_PROXIMITY_RELOCK = 0,
-	/** Allow proximity relock */
-	MCE_ALLOW_PROXIMITY_RELOCK = 1,
-	/** Temporarily inhibit proximity relock */
-	MCE_TEMP_INHIBIT_PROXIMITY_RELOCK = 2
-} inhibit_proximity_relock_t;
-
-static gboolean ignore_proximity_events = TRUE;
-
-/** Inhibit autorelock using proximity sensor */
-static inhibit_proximity_relock_t inhibit_proximity_relock = MCE_ALLOW_PROXIMITY_RELOCK;
-
-/** TKLock activated due to proximity */
-static gboolean tklock_proximity = FALSE;
 
 /** Autorelock triggers */
 static gint autorelock_triggers = AUTORELOCK_NO_TRIGGERS;
@@ -221,7 +191,6 @@ static void set_tklock_state(lock_state_t lock_state);
 static void touchscreen_trigger(gconstpointer const data);
 static void cancel_tklock_dim_timeout(void);
 static void cancel_tklock_unlock_timeout(void);
-static void process_proximity_state(void);
 static gboolean disable_tklock(gboolean silent);
 static gboolean tklock_disable_timeout_cb(gpointer data);
 /**
@@ -296,26 +265,22 @@ static void enable_autorelock(void)
 	cover_state_t kbd_slide_state = datapipe_get_gint(keyboard_slide_pipe);
 	cover_state_t lens_cover_state = datapipe_get_gint(lens_cover_pipe);
 
-	if (autorelock_triggers != AUTORELOCK_ON_PROXIMITY) {
-		/* Reset autorelock triggers */
-		autorelock_triggers = AUTORELOCK_NO_TRIGGERS;
+	/* Reset autorelock triggers */
+	autorelock_triggers = AUTORELOCK_NO_TRIGGERS;
 
-		/* If the keyboard slide is closed, use it as a trigger */
-		if (kbd_slide_state == COVER_CLOSED)
-			autorelock_triggers |= AUTORELOCK_KBD_SLIDE;
+	/* If the keyboard slide is closed, use it as a trigger */
+	if (kbd_slide_state == COVER_CLOSED)
+		autorelock_triggers |= AUTORELOCK_KBD_SLIDE;
 
-		/* If the lens cover is closed, use it as a trigger */
-		if (lens_cover_state == COVER_CLOSED)
-			autorelock_triggers |= AUTORELOCK_LENS_COVER;
-	}
+	/* If the lens cover is closed, use it as a trigger */
+	if (lens_cover_state == COVER_CLOSED)
+		autorelock_triggers |= AUTORELOCK_LENS_COVER;
 
 	/* Only setup touchscreen monitoring once,
 	 * and only if there are autorelock triggers
-	 * and it's not the proximity sensor
 	 */
 	if ((is_autorelock_enabled() == FALSE) &&
-	    (autorelock_triggers != AUTORELOCK_NO_TRIGGERS) &&
-	    (autorelock_triggers != AUTORELOCK_ON_PROXIMITY)) {
+	    (autorelock_triggers != AUTORELOCK_NO_TRIGGERS)) {
 		append_input_trigger_to_datapipe(&touchscreen_pipe,
 						 touchscreen_trigger);
 	}
@@ -342,11 +307,8 @@ static void disable_autorelock(void)
  */
 static void disable_autorelock_policy(void)
 {
-	/* If the tklock is enabled
-	 * or proximity autorelock is active, don't disable
-	 */
-	if ((is_tklock_enabled() == TRUE) ||
-	    (autorelock_triggers == AUTORELOCK_ON_PROXIMITY))
+	/* If the tklock is enabled don't disable */
+	if ((is_tklock_enabled() == TRUE))
 		goto EXIT;
 
 	disable_autorelock();
@@ -1060,34 +1022,6 @@ static void setup_tklock_unlock_timeout(void)
 			      tklock_unlock_timeout_cb, NULL);
 }
 
-static gboolean proximity_unlock_timeout_cb(gpointer data)
-{
-	(void)data;
-
-	process_proximity_state();
-	proximity_unlock_timeout_cb_id = 0;
-
-	return FALSE;
-}
-
-static void cancel_proximity_unlock_timeout(void)
-{
-	if (proximity_unlock_timeout_cb_id != 0)
-	{
-		g_source_remove(proximity_unlock_timeout_cb_id);
-		proximity_unlock_timeout_cb_id = 0;
-	}
-}
-
-static void setup_proximity_unlock_timeout(void)
-{
-	cancel_proximity_unlock_timeout();
-
-	proximity_unlock_timeout_cb_id =
-		g_timeout_add(DEFAULT_PROXIMITY_UNLOCK_DELAY,
-			      proximity_unlock_timeout_cb, NULL);
-}
-
 /**
  * Enable the touchscreen/keypad autolock
  *
@@ -1467,140 +1401,6 @@ static void tklock_rtconf_cb(const gchar *key, guint cb_id, void *user_data)
 }
 
 /**
- * Process the proximity state
- */
-static void process_proximity_state(void)
-{
-	cover_state_t slide_state = datapipe_get_gint(keyboard_slide_pipe);
-	cover_state_t proximity_sensor_state =
-				datapipe_get_gint(proximity_sensor_pipe);
-	audio_route_t audio_route = datapipe_get_gint(audio_route_pipe);
-	alarm_ui_state_t alarm_ui_state =
-				datapipe_get_gint(alarm_ui_state_pipe);
-	call_state_t call_state = datapipe_get_gint(call_state_pipe);
-
-	if (ignore_proximity_events && ((autorelock_triggers & AUTORELOCK_ON_PROXIMITY) == 0))
-		goto EXIT;
-
-	if(tklock_proximity && 
-	   (autorelock_triggers & AUTORELOCK_ON_PROXIMITY))
-	{
-		if(!proximity_unlock_timeout_cb_id && (COVER_OPEN == proximity_sensor_state))
-		{
-			setup_proximity_unlock_timeout();
-			goto EXIT;
-		}
-		else if (proximity_unlock_timeout_cb_id && (COVER_CLOSED == proximity_sensor_state))
-		{
-			cancel_proximity_unlock_timeout();
-			goto EXIT;
-		}
-	}
-	
-	/* If there's an incoming call or an alarm is visible,
-	 * the proximity sensor reports open, and the tklock
-	 * or event eater is active, unblank and unlock the display
-	 */
-	if ((tklock_proximity &&
-	     (inhibit_proximity_relock != MCE_ALLOW_PROXIMITY_RELOCK)) ||
-	    (((call_state == CALL_STATE_RINGING) ||
-	     ((alarm_ui_state == MCE_ALARM_UI_VISIBLE_INT32) ||
-	      (alarm_ui_state == MCE_ALARM_UI_RINGING_INT32))) &&
-	     (proximity_sensor_state == COVER_OPEN))) {
-		(void)ts_enable_policy();
-
-		if (is_tklock_enabled() || is_eveater_enabled()) {
-			/* Disable tklock/event eater */
-			if (close_tklock_ui(TRUE) == FALSE)
-			{
-				disable_eveater(TRUE);
-				disable_tklock(TRUE);
-				goto EXIT;
-			}
-			mce_log(LL_DEBUG, "%s: process_proximity_state: removing lock submodes", MODULE_NAME);
-			mce_rem_submode_int32(MCE_EVEATER_SUBMODE);
-			mce_rem_submode_int32(MCE_TKLOCK_SUBMODE);
-			/* Disable timeouts, just to be sure */
-			cancel_tklock_visual_forced_blank_timeout();
-			cancel_tklock_visual_blank_timeout();
-			cancel_tklock_unlock_timeout();
-			cancel_tklock_dim_timeout();
-		}
-
-		/* Unblank screen */
-		(void)execute_datapipe(&display_state_pipe,
-				       GINT_TO_POINTER(MCE_DISPLAY_ON),
-				       USE_INDATA, CACHE_INDATA);
-		mce_send_tklock_mode(NULL);
-		if ((alarm_ui_state != MCE_ALARM_UI_VISIBLE_INT32) ||
-		    (alarm_ui_state != MCE_ALARM_UI_RINGING_INT32))
-			autorelock_triggers = AUTORELOCK_ON_PROXIMITY;
-		else
-			autorelock_triggers = ~(~autorelock_triggers |
-				                AUTORELOCK_ON_PROXIMITY);
-
-		tklock_proximity = FALSE;
-		goto EXIT;
-	}
-
-	/* If there's no incoming or active call, or the audio isn't
-	 * routed to the handset or headset, or if the slide is open, exit
-	 */
-	if (((((call_state != CALL_STATE_RINGING) ||
-	       (proximity_lock_when_ringing != TRUE)) &&
-	      (call_state != CALL_STATE_ACTIVE)) ||
-             ((audio_route != AUDIO_ROUTE_HANDSET) &&
-	      (audio_route != AUDIO_ROUTE_HEADSET) &&
-	      ((audio_route != AUDIO_ROUTE_SPEAKER) ||
-	       (call_state != CALL_STATE_RINGING)))) ||
-	    (slide_state == COVER_OPEN)) {
-		goto EXIT;
-	}
-
-	switch (proximity_sensor_state) {
-	case COVER_OPEN:
-		if (autorelock_triggers == AUTORELOCK_ON_PROXIMITY) {
-			if ((is_tklock_enabled() == TRUE) &&
-			    (is_autorelock_enabled() == TRUE))
-				/* Disable tklock */
-				set_tklock_state(LOCK_OFF);
-
-			/* Unblank screen */
-			(void)execute_datapipe(&display_state_pipe,
-					       GINT_TO_POINTER(MCE_DISPLAY_ON),
-					       USE_INDATA, CACHE_INDATA);
-
-			tklock_proximity = FALSE;
-		}
-
-		break;
-
-	case COVER_CLOSED:
-		if ((inhibit_proximity_relock == MCE_ALLOW_PROXIMITY_RELOCK) &&
-		    (((is_tklock_enabled() == FALSE) &&
-		      (is_autorelock_enabled() == FALSE)) ||
-		     ((is_autorelock_enabled() == TRUE) &&
-		      (autorelock_triggers == AUTORELOCK_ON_PROXIMITY)))) {
-			(void)enable_tklock_policy(TRUE);
-
-			if ((alarm_ui_state != MCE_ALARM_UI_VISIBLE_INT32) &&
-			    (alarm_ui_state != MCE_ALARM_UI_RINGING_INT32))
-				autorelock_triggers = AUTORELOCK_ON_PROXIMITY;
-
-			tklock_proximity = TRUE;
-		}
-
-		break;
-
-	default:
-		break;
-	}
-
-EXIT:
-	return;
-}
-
-/**
  * Datapipe trigger for device inactivity
  *
  * @param data The inactivity stored in a pointer;
@@ -1676,8 +1476,6 @@ static void keyboard_slide_trigger(gconstpointer const data)
 		break;
 	}
 
-	process_proximity_state();
-
 EXIT:
 	return;
 }
@@ -1690,19 +1488,9 @@ EXIT:
 static void lockkey_trigger(gconstpointer const data)
 {
 	system_state_t system_state = datapipe_get_gint(system_state_pipe);
-	call_state_t call_state = datapipe_get_gint(call_state_pipe);
 
 	/* Only react on the [lock] flicker key in USER state */
 	if ((GPOINTER_TO_INT(data) == 1) && (system_state == MCE_STATE_USER)) {
-		/* Using the flicker key during a call
-		 * disables proximity based locking/unlocking
-		 */
-		if (call_state == CALL_STATE_ACTIVE) {
-			autorelock_triggers = ~(~autorelock_triggers |
-			                        AUTORELOCK_ON_PROXIMITY);
-			inhibit_proximity_relock = MCE_INHIBIT_PROXIMITY_RELOCK;
-		}
-
 		/* Execute lock action */
 		(void)execute_datapipe(&tk_lock_pipe,
 				       GINT_TO_POINTER(LOCK_TOGGLE),
@@ -1731,7 +1519,6 @@ static void keypress_trigger(gconstpointer const data)
 	disable_autorelock_policy();
 
 	if ((((submode & MCE_BOOTUP_SUBMODE) == 0) &&
-	    (tklock_proximity == FALSE) &&
 	    ((ev != NULL) &&
 	     (ev->code == power_keycode) && (ev->value == 1))) ||
 	     is_eveater_enabled()) {
@@ -1851,15 +1638,11 @@ static void display_state_trigger(gconstpointer data)
 static void alarm_ui_state_trigger(gconstpointer data)
 {
 	system_state_t system_state = datapipe_get_gint(system_state_pipe);
-	cover_state_t proximity_sensor_state =
-				datapipe_get_gint(proximity_sensor_pipe);
 	alarm_ui_state_t alarm_ui_state = GPOINTER_TO_INT(data);
 	call_state_t call_state = datapipe_get_gint(call_state_pipe);
 
 	switch (alarm_ui_state) {
 	case MCE_ALARM_UI_VISIBLE_INT32:
-		tklock_proximity = FALSE;
-
 		if (is_tklock_enabled() == TRUE) {
 			/* Event eater is used when tklock is disabled,
 			 * so make sure to disable it if we enable the tklock
@@ -1886,50 +1669,8 @@ static void alarm_ui_state_trigger(gconstpointer data)
 
 		break;
 
-	case MCE_ALARM_UI_RINGING_INT32:
-		/* If the proximity state is "open",
-		 * disable tklock/event eater UI and proximity sensor
-		 */
-		ignore_proximity_events = 0;
-		get_submode();
-		if (proximity_sensor_state == COVER_OPEN) {
-			(void)ts_enable_policy();
-
-			autorelock_triggers = ~(~autorelock_triggers |
-				                AUTORELOCK_ON_PROXIMITY);
-			tklock_proximity = FALSE;
-
-			/* Disable tklock/event eater */
-			if (close_tklock_ui(TRUE) == FALSE)
-			{
-				disable_eveater(TRUE);
-				disable_tklock(TRUE);
-				goto EXIT;
-			}
-
-			/* Disable timeouts, just to be sure */
-			cancel_tklock_visual_forced_blank_timeout();
-			cancel_tklock_visual_blank_timeout();
-			cancel_tklock_unlock_timeout();
-			cancel_tklock_dim_timeout();
-
-			/* Unblank screen */
-			(void)execute_datapipe(&display_state_pipe,
-					       GINT_TO_POINTER(MCE_DISPLAY_ON),
-					       USE_INDATA, CACHE_INDATA);
-		} else {
-			autorelock_triggers = (autorelock_triggers |
-					       AUTORELOCK_ON_PROXIMITY);
-			tklock_proximity = is_tklock_enabled();
-		}
-
-		break;
-
 	case MCE_ALARM_UI_OFF_INT32:
 		(void)ts_disable_policy();
-		tklock_proximity = FALSE;
-		ignore_proximity_events = (call_state == CALL_STATE_INVALID) || (call_state == CALL_STATE_NONE);
-		mce_log(LL_DEBUG, "MCE_ALARM_UI_OFF_INT32(): ignore_proximity_events = %d",ignore_proximity_events);
 		/* In acting dead the event eater is only
 		 * used when showing the alarm UI
 		 */
@@ -1979,6 +1720,29 @@ static void alarm_ui_state_trigger(gconstpointer data)
 		set_tklock_state(LOCK_OFF);
 		break;
 
+	case MCE_ALARM_UI_RINGING_INT32:
+		ts_enable_policy();
+
+		if (is_tklock_enabled() || is_eveater_enabled()) {
+		/* Disable tklock/event eater */
+			if (close_tklock_ui(TRUE) == FALSE) {
+				disable_eveater(TRUE);
+				disable_tklock(TRUE);
+				goto EXIT;
+			}
+			mce_rem_submode_int32(MCE_EVEATER_SUBMODE);
+			mce_rem_submode_int32(MCE_TKLOCK_SUBMODE);
+			/* Disable timeouts, just to be sure */
+			mce_rem_submode_int32(MCE_EVEATER_SUBMODE);
+			mce_rem_submode_int32(MCE_TKLOCK_SUBMODE);
+			/* Disable timeouts, just to be sure */
+			cancel_tklock_visual_forced_blank_timeout();
+			cancel_tklock_visual_blank_timeout();
+			cancel_tklock_unlock_timeout();
+			cancel_tklock_dim_timeout();
+		}
+		execute_datapipe(&display_state_pipe, GINT_TO_POINTER(MCE_DISPLAY_ON), USE_INDATA, CACHE_INDATA);
+		break;
 	default:
 		break;
 	}
@@ -2021,18 +1785,6 @@ static void lid_cover_trigger(gconstpointer data)
 	default:
 		break;
 	}
-}
-
-/**
- * Handle proximity sensor state change
- *
- * @param data Unused
- */
-static void proximity_sensor_trigger(gconstpointer data)
-{
-	(void)data;
-
-	process_proximity_state();
 }
 
 /**
@@ -2138,10 +1890,6 @@ static void call_state_trigger(gconstpointer data)
 
 	switch (call_state) {
 	case CALL_STATE_RINGING:
-		ignore_proximity_events = FALSE;
-		if (proximity_lock_when_ringing == TRUE)
-			inhibit_proximity_relock = MCE_ALLOW_PROXIMITY_RELOCK;
-
 		/* Incoming call, update the submode,
 		 * unless there's already a call ongoing
 		 */
@@ -2149,13 +1897,31 @@ static void call_state_trigger(gconstpointer data)
 			break;
 		}
 		get_submode();
+
+		(void)ts_enable_policy();
+
+		if (is_tklock_enabled() || is_eveater_enabled()) {
+				/* Disable tklock/event eater */
+				if (close_tklock_ui(TRUE) == FALSE) {
+						disable_eveater(TRUE);
+						disable_tklock(TRUE);
+						return;
+				}
+				mce_log(LL_DEBUG, "%s: %s: removing lock submodes", MODULE_NAME, __func__);
+				mce_rem_submode_int32(MCE_EVEATER_SUBMODE);
+				mce_rem_submode_int32(MCE_TKLOCK_SUBMODE);
+				/* Disable timeouts, just to be sure */
+				cancel_tklock_visual_forced_blank_timeout();
+				cancel_tklock_visual_blank_timeout();
+				cancel_tklock_unlock_timeout();
+				cancel_tklock_dim_timeout();
+		}
+
+		execute_datapipe(&display_state_pipe, GINT_TO_POINTER(MCE_DISPLAY_ON), USE_INDATA, CACHE_INDATA);
+		mce_send_tklock_mode(NULL);
 		break;
 
 	case CALL_STATE_ACTIVE:
-		ignore_proximity_events = FALSE;
-		if (old_call_state != CALL_STATE_ACTIVE)
-			inhibit_proximity_relock = MCE_ALLOW_PROXIMITY_RELOCK;
-
 		/* If we're answering a call, don't alter anything */
 		if (old_call_state == CALL_STATE_RINGING)
 			break;
@@ -2171,65 +1937,17 @@ static void call_state_trigger(gconstpointer data)
 
 	case CALL_STATE_NONE:
 	default:
-		/* Submode not set, update submode */
-		if (saved_submode == MCE_INVALID_SUBMODE)
-			get_submode();
+		if (is_tklock_enabled())
+			set_tklock_state(LOCK_OFF_SILENT);
 
-		ignore_proximity_events = call_state == CALL_STATE_NONE;
-		mce_log(LL_DEBUG, "CALL_STATE_NONE(): ignore_proximity_events = %d",ignore_proximity_events);
-
-		if (autorelock_triggers == AUTORELOCK_ON_PROXIMITY)
-			autorelock_triggers = AUTORELOCK_NO_TRIGGERS;
-
-		tklock_proximity = FALSE;
-
-		if ((saved_submode & MCE_TKLOCK_SUBMODE) != 0) {
-			/* Enable the tklock again, show the banner */
-			enable_tklock_policy(FALSE);
-		} else {
-			if (is_tklock_enabled())
-				set_tklock_state(LOCK_OFF_SILENT);
-
-			/* Unblank screen */
-			(void)execute_datapipe(&display_state_pipe,
-					       GINT_TO_POINTER(MCE_DISPLAY_ON),
-					       USE_INDATA, CACHE_INDATA);
-		}
+		/* Unblank screen */
+		(void)execute_datapipe(&display_state_pipe,
+						GINT_TO_POINTER(MCE_DISPLAY_ON),
+						USE_INDATA, CACHE_INDATA);
 
 		break;
 	}
-
-	process_proximity_state();
 	old_call_state = call_state;
-}
-
-/**
- * Handle audio routing changes
- *
- * @param data The audio route stored in a pointer
- */
-static void audio_route_trigger(gconstpointer data)
-{
-	audio_route_t audio_route = GPOINTER_TO_INT(data);
-
-	switch (audio_route) {
-	case AUDIO_ROUTE_HANDSET:
-	case AUDIO_ROUTE_HEADSET:
-		if (inhibit_proximity_relock ==
-		    MCE_TEMP_INHIBIT_PROXIMITY_RELOCK)
-			inhibit_proximity_relock = MCE_ALLOW_PROXIMITY_RELOCK;
-		break;
-
-	case AUDIO_ROUTE_SPEAKER:
-	case AUDIO_ROUTE_UNDEF:
-	default:
-		if (inhibit_proximity_relock == MCE_ALLOW_PROXIMITY_RELOCK)
-			inhibit_proximity_relock =
-				MCE_TEMP_INHIBIT_PROXIMITY_RELOCK;
-		break;
-	}
-
-	process_proximity_state();
 }
 
 static gboolean tklock_disable_timeout_cb(gpointer data)
@@ -2305,8 +2023,6 @@ const char *g_module_check_init(GModule * module)
 					  alarm_ui_state_trigger);
 	append_output_trigger_to_datapipe(&lid_cover_pipe,
 					  lid_cover_trigger);
-	append_output_trigger_to_datapipe(&proximity_sensor_pipe,
-					  proximity_sensor_trigger);
 	append_output_trigger_to_datapipe(&lens_cover_pipe,
 					  lens_cover_trigger);
 	append_output_trigger_to_datapipe(&tk_lock_pipe,
@@ -2315,8 +2031,6 @@ const char *g_module_check_init(GModule * module)
 					  submode_trigger);
 	append_output_trigger_to_datapipe(&call_state_pipe,
 					  call_state_trigger);
-	append_output_trigger_to_datapipe(&audio_route_pipe,
-					  audio_route_trigger);
 
 	/* Touchscreen/keypad autolock */
 	/* Since we've set a default, error handling is unnecessary */
@@ -2416,8 +2130,6 @@ void g_module_unload(GModule * module)
 {
 	(void)module;
 	/* Remove triggers/filters from datapipes */
-	remove_output_trigger_from_datapipe(&audio_route_pipe,
-					    audio_route_trigger);
 	remove_output_trigger_from_datapipe(&call_state_pipe,
 					    call_state_trigger);
 	remove_output_trigger_from_datapipe(&submode_pipe,
@@ -2426,8 +2138,6 @@ void g_module_unload(GModule * module)
 					    tk_lock_trigger);
 	remove_output_trigger_from_datapipe(&lens_cover_pipe,
 					    lens_cover_trigger);
-	remove_output_trigger_from_datapipe(&proximity_sensor_pipe,
-					    proximity_sensor_trigger);
 	remove_output_trigger_from_datapipe(&lid_cover_pipe,
 					    lid_cover_trigger);
 	remove_output_trigger_from_datapipe(&alarm_ui_state_pipe,
@@ -2454,5 +2164,4 @@ void g_module_unload(GModule * module)
 	cancel_tklock_visual_blank_timeout();
 	cancel_tklock_unlock_timeout();
 	cancel_tklock_dim_timeout();
-
 }
