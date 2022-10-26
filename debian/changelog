@@ -1,3 +1,10 @@
+mce (1.10.3) unstable; urgency=medium
+
+  * Implement proximity locking in call state in the callstate module, removing the non-functional implementation in tklock
+  * display: add the option to not turn off display in reboot or shutdown
+
+ -- Carl Klemm <carl@uvos.org>  Sun, 16 Oct 2022 14:50:00 +0200
+
 mce (1.10.2) unstable; urgency=medium
 
   * rtconf-gconf: fix watches not being set on correct path on /lock keys
