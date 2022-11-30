@@ -44,16 +44,15 @@ static unsigned int count_backlights = 0;
 static struct brightness brightness_map_kbd = { {25, 100000, 300000, 1000000, 30000000}, {80, 128, 0, 0, 0} };
 static struct brightness brightness_map_btn = { {25, 100000, 300000, 1000000, 30000000}, {1, 1, 0, 0, 0} };
 
-static void set_backlight_states(bool by_display_state)
+static void set_backlight_states(bool by_display_state, bool force)
 {
 	for (unsigned int i = 0; i < count_backlights; ++i) {
 		struct button_backlight * const backlight = &button_backlights[i];
-		if (by_display_state || !backlight->locked )
-		{
+		if (by_display_state || !backlight->locked ) {
 			unsigned int brightness;
 			if (als_enabled && als_lux > -1) {
 				int j = 4;
-				while(j > 0 && backlight->brightness_map->lux[j] > als_lux) 
+				while(j > 0 && backlight->brightness_map->lux[j] > als_lux)
 					--j;
 				brightness = backlight->brightness_map->value[j];
 				if(backlight->brightness_map->lux[0] > als_lux) brightness = backlight->brightness_map->value[0];
@@ -70,7 +69,7 @@ static void set_backlight_states(bool by_display_state)
 				brightness = 0;
 			else if (system_state != MCE_STATE_USER)
 				brightness = 0;
-			if(backlight->value != brightness) {
+			if(backlight->value != brightness || force) {
 				mce_log(LL_DEBUG, "%s: setting %s to %i", MODULE_NAME, backlight->file_sysfs,  brightness);
 				mce_write_number_string_to_glob(backlight->file_sysfs, brightness);
 				backlight->value = brightness;
@@ -94,7 +93,7 @@ static void keyboard_slide_trigger(gconstpointer const data)
 		device_silder_open = false;
 	}
 	
-	set_backlight_states(false);
+	set_backlight_states(false, false);
 }
 
 /**
@@ -106,7 +105,7 @@ static void display_state_trigger(gconstpointer data)
 {
 	display_state = GPOINTER_TO_INT(data);
 
-	set_backlight_states(true);
+	set_backlight_states(true, false);
 }
 
 /**
@@ -118,7 +117,7 @@ static void system_state_trigger(gconstpointer data)
 {
 	system_state = GPOINTER_TO_INT(data);
 
-	set_backlight_states(false);
+	set_backlight_states(false, false);
 }
 
 static bool get_keyboard_light_state(void)
@@ -196,7 +195,7 @@ static void als_trigger(gconstpointer data)
 
 	als_lux = new_als_lux;
 	
-	set_backlight_states(false);
+	set_backlight_states(false, false);
 }
 
 
@@ -324,6 +323,10 @@ const gchar *g_module_check_init(GModule *module)
 	append_output_trigger_to_datapipe(&light_sensor_pipe, als_trigger);
 
 	mce_rtconf_get_bool(MCE_ALS_ENABLED_KEY, &als_enabled);
+
+	keyboard_slide_trigger(datapipe_get_gpointer(keyboard_slide_pipe));
+	display_state_trigger(datapipe_get_gpointer(display_state_pipe));
+	set_backlight_states(true, true);
 	
 	if (mce_rtconf_notifier_add(MCE_ALS_ENABLED_KEY,
 				als_rtconf_cb, NULL,

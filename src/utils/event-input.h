@@ -109,6 +109,21 @@ static const int *const pointer_event_keys[]= {
 	pointer_keys,
 };
 
+
+static const int slide_event_types[] = {
+	EV_SW,
+	-1
+};
+
+static const int slide_switches[] = {
+	SW_KEYPAD_SLIDE,
+	-1
+};
+
+static const int *const pointer_event_switches[]= {
+	slide_switches,
+};
+
 /**
  * List of drivers that we should not monitor
  */

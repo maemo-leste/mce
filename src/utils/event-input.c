@@ -28,6 +28,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <linux/input.h>
@@ -57,6 +58,18 @@ GFileMonitor *dev_input_gfmp = NULL;
 
 static void update_inputdevices(const gchar *device, gboolean add);
 static void remove_input_device(GSList **devices, const gchar *device);
+
+static bool get_swich_state(int fd, uint16_t code)
+{
+	unsigned long state[NBITS(SW_MAX)] = {};
+	int ret = ioctl(fd, EVIOCGSW(SW_MAX), state);
+	if(ret < 0) {
+		mce_log(LOG_ERR, "Unable to perform EVIOCGSW ioctl on device: %s", strerror(errno));
+		return 1;
+	}
+
+	return test_bit(code, state);
+}
 
 /**
  * Wrapper function to call mce_suspend_io_monitor() from g_slist_foreach()
@@ -381,6 +394,13 @@ static void match_and_register_io_monitor(const gchar *filename)
 		mce_log(LL_DEBUG, "Registering %s as touchscreen fd: %i", filename, fd);
 		register_io_monitor_chunk(fd, filename, pointer_cb,
 					  &pointer_dev_list);
+	} else if ((fd = mce_match_event_file_by_caps(filename,
+					  slide_event_types, pointer_event_switches)) != -1) {
+		mce_log(LL_DEBUG, "Registering %s keyboard with slide fd: %i", filename, fd);
+		execute_datapipe(&keyboard_slide_pipe, GINT_TO_POINTER(get_swich_state(fd, SW_KEYPAD_SLIDE) ? COVER_OPEN : COVER_CLOSED),
+								 USE_INDATA, CACHE_INDATA);
+		register_io_monitor_chunk(fd, filename, keypress_cb,
+					  &keyboard_dev_list);
 	} else {
 		mce_log(LL_DEBUG, "Registering %s as keyboard fd: %i", filename, fd);
 		register_io_monitor_chunk(fd, filename, keypress_cb,

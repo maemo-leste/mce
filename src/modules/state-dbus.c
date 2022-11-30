@@ -118,6 +118,8 @@ const gchar *g_module_check_init(GModule *module)
 				 DBUS_MESSAGE_TYPE_METHOD_CALL,
 				 keyboard_status_get_dbus_cb);
 
+	keyboard_slide_trigger(datapipe_get_gpointer(keyboard_slide_pipe));
+
 	return NULL;
 }
 
