@@ -1,6 +1,12 @@
+mce (1.10.4) unstable; urgency=medium
+
+  * use EVIOCGSW so that slider state is known on boot
+
+ -- Carl Klemm <carl@uvos.org>  Wed, 30 Nov 2022 19:20:00 +0200
+
 mce (1.10.3) unstable; urgency=medium
 
-  * Implement proximity locking in call state in the callstate module, removing the non-functional implementation in tklock
+  * Implement proximity locking in call state in the callstate module, removing the non-functional fremantle kernel dependant implementation in tklock
   * display: add the option to not turn off display in reboot or shutdown
 
  -- Carl Klemm <carl@uvos.org>  Sun, 16 Oct 2022 14:50:00 +0200
