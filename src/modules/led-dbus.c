@@ -475,7 +475,8 @@ static gpointer led_pattern_activate_filter(gpointer data)
 		static struct led_pattern* pattern = NULL;
 		if ((pattern = find_pattern_name(name))) {
 			mce_log(LL_DEBUG, "%s: found name: %s", MODULE_NAME, name);
-			if(pattern->enabled) return data;
+			if(pattern->enabled)
+				return data;
 		} else {
 			mce_log(LL_DEBUG, "%s: did not find name: %s", MODULE_NAME, name);
 		}
