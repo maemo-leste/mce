@@ -97,7 +97,8 @@ static gboolean mce_gconf_get_bool(const gchar * const key, gboolean * value)
 
 	if (gcv == NULL) {
 		mce_log((error != NULL) ? LL_WARN : LL_INFO,
-			"Could not retrieve %s from GConf; %s", path, (error != NULL) ? error->message : "Key not set");
+			"%s: Could not retrieve %s from GConf; %s",
+			MODULE_NAME, path, (error != NULL) ? error->message : "Key not set");
 		goto EXIT;
 	}
 
@@ -160,7 +161,8 @@ static gboolean mce_gconf_get_int(const gchar * const key, gint * value)
 
 	if (gcv == NULL) {
 		mce_log((error != NULL) ? LL_WARN : LL_INFO,
-			"Could not retrieve %s from GConf; %s", path, (error != NULL) ? error->message : "Key not set");
+			"%s: Could not retrieve %s from GConf; %s",
+			MODULE_NAME, path, (error != NULL) ? error->message : "Key not set");
 		goto EXIT;
 	}
 
@@ -193,7 +195,9 @@ static void mce_gconf_gconf_callback(GConfClient * client, guint cnxn_id, GConfE
 		not = (struct notifier *)l->data;
 		if (not->callback_id == cnxn_id) {
 			mce_log(LL_DEBUG, "%s: got key changed callback for %s (%s)", MODULE_NAME, entry->key, gconf_entry_get_key(entry));
-			not->callback(entry->key, cnxn_id, user_data);
+			char *basename = g_path_get_basename(entry->key);
+			not->callback(basename, cnxn_id, user_data);
+			g_free(basename);
 			handled = true;
 			break;
 		}
