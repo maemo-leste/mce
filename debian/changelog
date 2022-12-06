@@ -1,3 +1,9 @@
+mce (1.10.5) unstable; urgency=medium
+
+  * rtconf-gconf: pass basename to rtconf callback so that passing the key back into rtconf works as expected
+
+ -- Carl Klemm <carl@uvos.org>  Thu, 6 Nov 2022 19:20:00 +0200
+
 mce (1.10.4) unstable; urgency=medium
 
   * use EVIOCGSW so that slider state is known on boot
