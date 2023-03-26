@@ -1,8 +1,8 @@
-mce (1.10.5) unstable; urgency=medium
+mce (1.10.6) unstable; urgency=medium
 
-  * rtconf-gconf: pass basename to rtconf callback so that passing the key back into rtconf works as expected
+  * battery-upower: extend n900 blacklists
 
- -- Carl Klemm <carl@uvos.org>  Thu, 6 Nov 2022 19:20:00 +0200
+ -- Carl Klemm <carl@uvos.org>  Sun, 26 Mar 2023 23:34:53 +0200
 
 mce (1.10.4) unstable; urgency=medium
 
