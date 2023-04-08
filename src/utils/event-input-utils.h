@@ -15,12 +15,12 @@
 #define LONG(x)				((x)/BITS_PER_LONG)
 #define test_bit(bit, array)		((array[LONG(bit)] >> OFF(bit)) & 1)
 
-typedef void (*mce_input_match_callback) (const char* filename);
+typedef void (*mce_input_match_callback) (const char* filename, gpointer user_data);
 
 int mce_match_event_file_by_caps(const gchar *const filename, const int *const ev_types, const int *const ev_keys[]);
 
 int mce_match_event_file(const gchar *const filename, const gchar *const *const drivers);
 
-gboolean mce_scan_inputdevices(mce_input_match_callback match_callback);
+gboolean mce_scan_inputdevices(mce_input_match_callback match_callback, gpointer user_data);
 
 #endif /* _EVENT_INPUT_UTILS_H_ */

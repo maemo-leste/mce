@@ -533,8 +533,10 @@ static void vibrator_pattern_deactivate_trigger(gconstpointer data)
 	ff_device_stop(evdev_fd);
 }
 
-static void scan_device_cb(const char *filename)
+static void scan_device_cb(const char *filename, gpointer user_data)
 {
+	(void)user_data;
+
 	if (evdev_fd < 0) {
 		evdev_fd = ff_device_open(filename);
 		if (evdev_fd == -4) {
@@ -574,7 +576,7 @@ const char *g_module_check_init(GModule * module)
 		return NULL;
 	}
 
-	mce_scan_inputdevices(&scan_device_cb);
+	mce_scan_inputdevices(&scan_device_cb, NULL);
 
 	if (evdev_fd < 0) {
 		mce_log(LL_WARN,

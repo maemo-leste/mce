@@ -137,7 +137,7 @@ EXIT:
  * Scan /dev/input for input event devices
  * @return TRUE on success, FALSE on failure
  */
-gboolean mce_scan_inputdevices(mce_input_match_callback match_callback)
+gboolean mce_scan_inputdevices(mce_input_match_callback match_callback, gpointer user_data)
 {
 	DIR *dir = NULL;
 	struct dirent *direntry = NULL;
@@ -165,7 +165,7 @@ gboolean mce_scan_inputdevices(mce_input_match_callback match_callback)
 
 		filename = g_strconcat(DEV_INPUT_PATH, "/",
 				       direntry->d_name, NULL);
-		match_callback(filename);
+		match_callback(filename, user_data);
 		g_free(filename);
 	}
 

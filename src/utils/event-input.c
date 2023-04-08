@@ -373,8 +373,9 @@ static void register_io_monitor_chunk(const gint fd, const gchar *const file,
 /**
  * Match and register I/O monitor
  */
-static void match_and_register_io_monitor(const gchar *filename)
+static void match_and_register_io_monitor(const gchar *filename, gpointer user_data)
 {
+	(void)user_data;
 	int fd;
 
 	if ((fd = mce_match_event_file(filename, driver_blacklist)) != -1) {
@@ -445,7 +446,7 @@ static void update_inputdevices(const gchar *device, gboolean add)
 	remove_input_device(&keyboard_dev_list, device);
 
 	if (add == TRUE)
-		match_and_register_io_monitor(device);
+		match_and_register_io_monitor(device, NULL);
 }
 
 /**
@@ -519,8 +520,9 @@ static void dir_changed_cb(GFileMonitor *monitor,
 	}
 }
 
-static void match_ts_only(const gchar* filename) {
+static void match_ts_only(const gchar* filename, gpointer user_data) {
 	int fd;
+	(void)user_data;
 
 	if ((fd = mce_match_event_file(filename, driver_blacklist)) != -1) {
 		/* If the driver for the event file is blacklisted, skip it */
@@ -547,7 +549,7 @@ static void match_ts_only(const gchar* filename) {
 
 static void mce_reopen_pointer_devices(void) {
 	if (pointer_dev_list == NULL)
-		mce_scan_inputdevices(match_ts_only);
+		mce_scan_inputdevices(match_ts_only, NULL);
 }
 
 
@@ -592,7 +594,7 @@ gboolean mce_input_init(void)
 	 *      and any workarounds are likely to be cumbersome
 	 */
 	/* Find the initial set of input devices */
-	if ((status = mce_scan_inputdevices(match_and_register_io_monitor)) == FALSE) {
+	if ((status = mce_scan_inputdevices(match_and_register_io_monitor, NULL)) == FALSE) {
 		g_file_monitor_cancel(dev_input_gfmp);
 		dev_input_gfmp = NULL;
 		goto EXIT;
