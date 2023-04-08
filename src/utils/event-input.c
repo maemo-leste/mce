@@ -552,6 +552,25 @@ static void mce_reopen_pointer_devices(void) {
 		mce_scan_inputdevices(match_ts_only, NULL);
 }
 
+/**
+ * @brief Get the list or currently monitored keyboard devices
+ *
+ * @return: #GSList of #iomon_struct pointers(transfer none)
+ */
+GSList *mce_input_get_monitored_keyboard_devices(void)
+{
+	return keyboard_dev_list;
+}
+
+/**
+ * @brief Get the list or currently monitored pointer devices
+ *
+ * @return: #GSList of #iomon_struct pointers(transfer none)
+ */
+GSList *mce_input_get_monitored_pointer_devices(void)
+{
+	return pointer_dev_list;
+}
 
 static void pointer_control_trigger(gconstpointer data) {
 	gboolean enable = !GPOINTER_TO_INT(data);

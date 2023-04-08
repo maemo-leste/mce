@@ -142,4 +142,7 @@ static const gchar *const driver_blacklist[] = {
 gboolean mce_input_init(void);
 void mce_input_exit(void);
 
+GSList *mce_input_get_monitored_keyboard_devices(void);
+GSList *mce_input_get_monitored_pointer_devices(void);
+
 #endif /* _EVENT_INPUT_H_ */
