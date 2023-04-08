@@ -530,21 +530,20 @@ static void match_ts_only(const gchar* filename, gpointer user_data) {
 		return;
 	}
 
-	if ((fd = mce_match_event_file(filename,
-					  pointer_event_drivers)) != -1) {
-		register_io_monitor_chunk(fd, filename, pointer_cb,
-					  &pointer_dev_list);
-		mce_log(LL_DEBUG, "Registering %s as pointer fd: %i", filename, fd);
-		return;
-	} else if ((fd = mce_match_event_file_by_caps(filename,
-					  pointer_event_types, pointer_event_keys)) != -1) {
-		register_io_monitor_chunk(fd, filename, pointer_cb,
-					  &pointer_dev_list);
-		mce_log(LL_DEBUG, "Registering %s as pointer fd: %i", filename, fd);
-		return;
+	/* match by either name or capabilities */
+	fd = mce_match_event_file(filename, pointer_event_drivers);
+	if (fd == -1) {
+		fd = mce_match_event_file_by_caps(filename,
+						  pointer_event_types,
+						  pointer_event_keys);
 	}
 
-	close(fd);
+	if (fd != -1) {
+		mce_log(LL_DEBUG, "Registering %s as pointer fd: %i",
+			filename, fd);
+		register_io_monitor_chunk(fd, filename, pointer_cb,
+					  &pointer_dev_list);
+	}
 }
 
 static void mce_reopen_pointer_devices(void) {
