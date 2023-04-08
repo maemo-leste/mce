@@ -198,3 +198,8 @@ add_library(startup-hildon SHARED startup-hildon.c)
 target_link_libraries(startup-hildon ${COMMON_LIBRARIES})
 target_include_directories(startup-hildon PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
 install(TARGETS startup-hildon DESTINATION ${MCE_MODULE_DIR})
+
+add_library(input-ctrl SHARED input-ctrl.c)
+target_link_libraries(input-ctrl ${COMMON_LIBRARIES})
+target_include_directories(input-ctrl PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
+install(TARGETS input-ctrl DESTINATION ${MCE_MODULE_DIR})
