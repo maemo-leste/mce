@@ -1,3 +1,9 @@
+mce (1.10.7) unstable; urgency=medium
+
+  * Add input-ctrl module
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Tue, 11 Apr 2023 15:36:17 +0300
+
 mce (1.10.6) unstable; urgency=medium
 
   * battery-upower: extend n900 blacklists
