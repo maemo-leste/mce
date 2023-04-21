@@ -1168,7 +1168,6 @@ static void trigger_visual_tklock(void)
 
 	/* If visual tklock is enabled, reset the timeout */
 	if (is_visual_tklock_enabled()) {
-		(void)ts_event_control(TRUE);
 		setup_tklock_visual_blank_timeout();
 		synthesise_activity();
 	}
