@@ -62,25 +62,21 @@ static void inhibit_input_devices(gboolean inhibit)
 
 	mce_scan_inputdevices(scan_input_devices_cb, &devices);
 
-	if (inhibit)
-	{
+	if (inhibit) {
 		GSList *kbd_devs = mce_input_get_monitored_keyboard_devices();
 		GHashTable *table = g_hash_table_new(g_str_hash, g_str_equal);
 		GSList *sl;
 
-		for (sl = kbd_devs; sl; sl = sl->next)
-		{
+		for (sl = kbd_devs; sl; sl = sl->next) {
 			const gchar *data = mce_get_io_monitor_name(sl->data);
 
 			g_hash_table_add(table, (gpointer)data);
 		}
 
-		for (l = devices; l;)
-		{
+		for (l = devices; l;) {
 			GList *next = l->next;
 
-			if (g_hash_table_contains(table, l->data))
-			{
+			if (g_hash_table_contains(table, l->data)) {
 				mce_log(LL_DEBUG,
 					"%s: Ignoring monitored device %s",
 					MODULE_NAME, (gchar *)l->data);
@@ -94,21 +90,17 @@ static void inhibit_input_devices(gboolean inhibit)
 		g_hash_table_destroy(table);
 	}
 
-	for (l = devices; l; l = l->next)
-	{
+	for (l = devices; l; l = l->next) {
 		gchar *path = g_strconcat(SYSFS_PATH, basename(l->data),
 					  "/device/inhibited", NULL);
 
-		if (access(path, F_OK) == 0)
-		{
+		if (access(path, F_OK) == 0) {
 			mce_log(LL_DEBUG, "%s: %s device %s", MODULE_NAME,
 				inhibit ? "inhibit" : "resume",
 				(gchar *)l->data);
 
 			mce_write_string_to_file(path, inhibit ? "1" : "0");
-		}
-		else
-		{
+		} else {
 			mce_log(LL_DEBUG,
 				"%s: device %s does not support inhibit, kernel too old?",
 				MODULE_NAME, (gchar *)l->data);
