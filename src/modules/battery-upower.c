@@ -261,7 +261,7 @@ mcebat_update_cb(gpointer user_data)
 		/* Battery full led pattern */
 		if (mcebat.status == BATTERY_STATUS_FULL) {
 			gchar *pattern = g_strdup(MCE_LED_PATTERN_BATTERY_FULL);
-			execute_datapipe(&led_pattern_activate_pipe, pattern, USE_CACHE, DONT_CACHE_INDATA);
+			execute_datapipe(&led_pattern_activate_pipe, pattern, USE_INDATA, DONT_CACHE_INDATA);
 			g_free(pattern);
 		}
 		else if (prev.status == BATTERY_STATUS_FULL) {
@@ -275,7 +275,7 @@ mcebat_update_cb(gpointer user_data)
 		if (mcebat.status == BATTERY_STATUS_LOW ||
 			mcebat.status == BATTERY_STATUS_EMPTY) {
 			gchar *pattern = g_strdup(MCE_LED_PATTERN_BATTERY_LOW);
-			execute_datapipe(&led_pattern_activate_pipe, pattern, USE_CACHE, DONT_CACHE_INDATA);
+			execute_datapipe(&led_pattern_activate_pipe, pattern, USE_INDATA, DONT_CACHE_INDATA);
 			g_free(pattern);
 		}
 		else {
