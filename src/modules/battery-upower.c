@@ -66,19 +66,11 @@ G_MODULE_EXPORT module_info_struct module_info = {
 
 /** Skip these devices */
 static const char* blacklist[] = {
-	/* This driver should be removed from the kernel completely */
-	"rx51-battery",
-	/* Nokia N900 charger device is exposed as battery by UPower */
-	"bq24150a-0",
-	/* We want isp1704 on N900 */
-	"twl4030_ac",
-	/* We want isp1704 on N900 */
-	"twl4030_usb",
-	/* Another bogus battery (maybe like rx51-battery) */
-	"bq27000-battery"
-	/* Droid4 line power device (driver doesn't send uevents) */
-	"usb",
-	/* End of list */
+	/* List drivers to be blacklisted. The name is obtained from
+	 * `upower -d`, and is the value of the `native-path` key for that
+	 * upower device. Example:
+	 * "rx51-battery",
+	 */
 	NULL
 };
 
