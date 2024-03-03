@@ -1,3 +1,9 @@
+mce (1.10.9) unstable; urgency=medium
+
+  * properly initialize lid_cover_pipe
+
+ -- Carl Klemm <carl@uvos.org>  Sun, 03 Mar 2024 20:26:02 +0100
+
 mce (1.10.8) unstable; urgency=medium
 
   * properly initialize lid_cover_pipe
