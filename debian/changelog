@@ -1,3 +1,9 @@
+mce (1.10.10) unstable; urgency=medium
+
+  * fix activation of full and low battery led patterns
+
+ -- Carl Klemm <carl@uvos.org>  Mon, 01 Apr 2024 18:33:41 +0200
+
 mce (1.10.9) unstable; urgency=medium
 
   * properly initialize lid_cover_pipe
