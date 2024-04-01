@@ -36,10 +36,10 @@ Depends:
  ${misc:Depends}
 Recommends:
  dsme (>= 0.30.11)
-Description: the Mode Control Entity for Nokia Internet Tablets
+Description: the Mode Control Entity for Maemo devices
  This package contains the Mode Control Entity which provides
  mode management features.  This is a daemon that is the backend
- for many features on Nokia's Internet Tablets.
+ for many loosely related features on Maemo.
 
 Package: mce-dev
 Architecture: any
