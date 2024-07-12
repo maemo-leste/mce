@@ -31,7 +31,7 @@ typedef enum {
 	ORIENTATION_UNKNOWN,
 	ORIENTATION_LANDSCAPE,
 	ORIENTATION_PORTRAIT
-} oritation_t;
+} orientation_t;
 
 static display_state_t display_state = { 0 };
 static alarm_ui_state_t alarm_state = { 0 };
@@ -42,7 +42,7 @@ static GDBusProxy *iio_proxy = NULL;
 
 static GSList *accelerometer_listeners = NULL;
 
-static oritation_t oritation = ORIENTATION_UNKNOWN;
+static orientation_t orientation = ORIENTATION_UNKNOWN;
 
 static bool iio_accel_claim_policy(void)
 {
@@ -52,7 +52,7 @@ static bool iio_accel_claim_policy(void)
 	       call_state == CALL_STATE_RINGING);
 }
 
-static const char *iio_oritation_to_str(const oritation_t orit)
+static const char *iio_orientation_to_str(const orientation_t orit)
 {
 	switch (orit) {
 		case ORIENTATION_LANDSCAPE: 
@@ -66,7 +66,7 @@ static const char *iio_oritation_to_str(const oritation_t orit)
 
 static gboolean send_device_orientation(DBusMessage *const method_call)
 {
-	const gchar *srotation = iio_oritation_to_str(oritation);
+	const gchar *srotation = iio_orientation_to_str(orientation);
 	const gchar *sstand = MCE_ORIENTATION_OFF_STAND;
 	const gchar *sface = MCE_ORIENTATION_FACE_UP;
 	dbus_int32_t maxInt = G_MAXINT32;
@@ -109,21 +109,21 @@ static void iio_accel_get_value(GDBusProxy * proxy)
 	bool changed = false;
 
 	if (strcmp(g_variant_get_string(v, NULL), "undefined") == 0) {
-		oritation = ORIENTATION_UNKNOWN;
+		orientation = ORIENTATION_UNKNOWN;
 		changed = true;
 	}
 	else if (strcmp(g_variant_get_string(v, NULL), "normal") == 0) {
-		oritation = ORIENTATION_LANDSCAPE;
+		orientation = ORIENTATION_LANDSCAPE;
 		changed = true;
 	}
 	else if (strcmp(g_variant_get_string(v, NULL), "left-up") == 0) {
-		oritation = ORIENTATION_PORTRAIT;
+		orientation = ORIENTATION_PORTRAIT;
 		changed = true;
 	}
 	g_variant_unref(v);
 	
 	if (changed) {
-		mce_log(LL_DEBUG, "%s: oritation: %s", MODULE_NAME, iio_oritation_to_str(oritation));
+		mce_log(LL_DEBUG, "%s: orientation: %s", MODULE_NAME, iio_orientation_to_str(orientation));
 		send_device_orientation(NULL);
 	}
 }
