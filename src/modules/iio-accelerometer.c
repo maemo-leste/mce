@@ -45,6 +45,7 @@ static GDBusProxy *iio_proxy = NULL;
 static GSList *accelerometer_listeners = NULL;
 
 static orientation_t orientation = ORIENTATION_UNKNOWN;
+static orientation_t horizontal = ORIENTATION_FACE_UP;
 
 static bool iio_accel_claim_policy(void)
 {
@@ -74,7 +75,7 @@ static gboolean send_device_orientation(DBusMessage *const method_call)
 {
 	const gchar *srotation = iio_orientation_to_str(orientation);
 	const gchar *sstand = MCE_ORIENTATION_OFF_STAND;
-	const gchar *sface = (strcmp(iio_orientation_to_str(orientation), MCE_ORIENTATION_FACE_DOWN) == 0) ? MCE_ORIENTATION_FACE_DOWN : MCE_ORIENTATION_FACE_UP;
+	const gchar *sface = iio_orientation_to_str(horizontal);
 	dbus_int32_t maxInt = G_MAXINT32;
 	DBusMessage *msg = NULL;
 	
@@ -127,17 +128,17 @@ static void iio_accel_get_value(GDBusProxy * proxy)
 		changed = true;
 	}
 	else if (strcmp(g_variant_get_string(v, NULL), "face-up") == 0) {
-		orientation = ORIENTATION_FACE_UP;
+		horizontal = ORIENTATION_FACE_UP;
 		changed = true;
 	}
 	else if (strcmp(g_variant_get_string(v, NULL), "face-down") == 0) {
-		orientation = ORIENTATION_FACE_DOWN;
+		horizontal = ORIENTATION_FACE_DOWN;
 		changed = true;
 	}
 	g_variant_unref(v);
 	
 	if (changed) {
-		mce_log(LL_DEBUG, "%s: orientation: %s", MODULE_NAME, iio_orientation_to_str(orientation));
+		mce_log(LL_DEBUG, "%s: orientation: %s, horizontal orientation: %s", MODULE_NAME, iio_orientation_to_str(orientation), iio_orientation_to_str(horizontal));
 		send_device_orientation(NULL);
 	}
 }
