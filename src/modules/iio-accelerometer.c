@@ -30,7 +30,9 @@ G_MODULE_EXPORT module_info_struct module_info = {
 typedef enum {
 	ORIENTATION_UNKNOWN,
 	ORIENTATION_LANDSCAPE,
-	ORIENTATION_PORTRAIT
+	ORIENTATION_PORTRAIT,
+	ORIENTATION_FACE_DOWN,
+	ORIENTATION_FACE_UP
 } orientation_t;
 
 static display_state_t display_state = { 0 };
@@ -59,6 +61,10 @@ static const char *iio_orientation_to_str(const orientation_t orit)
 			return MCE_ORIENTATION_LANDSCAPE;
 		case ORIENTATION_PORTRAIT: 
 			return MCE_ORIENTATION_PORTRAIT;
+		case ORIENTATION_FACE_DOWN:
+			return MCE_ORIENTATION_FACE_DOWN;
+		case ORIENTATION_FACE_UP:
+			return MCE_ORIENTATION_FACE_UP;
 		default:
 			return MCE_ORIENTATION_UNKNOWN;
 	}
@@ -68,7 +74,7 @@ static gboolean send_device_orientation(DBusMessage *const method_call)
 {
 	const gchar *srotation = iio_orientation_to_str(orientation);
 	const gchar *sstand = MCE_ORIENTATION_OFF_STAND;
-	const gchar *sface = MCE_ORIENTATION_FACE_UP;
+	const gchar *sface = (strcmp(iio_orientation_to_str(orientation), MCE_ORIENTATION_FACE_DOWN) == 0) ? MCE_ORIENTATION_FACE_DOWN : MCE_ORIENTATION_FACE_UP;
 	dbus_int32_t maxInt = G_MAXINT32;
 	DBusMessage *msg = NULL;
 	
@@ -118,6 +124,14 @@ static void iio_accel_get_value(GDBusProxy * proxy)
 	}
 	else if (strcmp(g_variant_get_string(v, NULL), "left-up") == 0) {
 		orientation = ORIENTATION_PORTRAIT;
+		changed = true;
+	}
+	else if (strcmp(g_variant_get_string(v, NULL), "face-up") == 0) {
+		orientation = ORIENTATION_FACE_UP;
+		changed = true;
+	}
+	else if (strcmp(g_variant_get_string(v, NULL), "face-down") == 0) {
+		orientation = ORIENTATION_FACE_DOWN;
 		changed = true;
 	}
 	g_variant_unref(v);
