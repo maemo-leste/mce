@@ -61,7 +61,11 @@ G_MODULE_EXPORT module_info_struct module_info = {
 
 #define MCE_CONF_BATTERY_SECTION "Battery"
 #define MCE_CONF_CRIT_VOLTAGE_KEY "CriticalVoltage"
+#define MCE_CONF_LOW_VOLTAGE_KEY "LowVoltage"
 #define MCE_CONF_LOW_PERCENT_KEY "LowPercentage"
+#define MCE_CONF_EMPTY_PERCENT_KEY "EmptyPercentage"
+#define MCE_CONF_USE_CAPACITY_LEVEL "UseCapacityLevel"
+#define MCE_CONF_CAPACITY_LOW_CRITICAL_KEY "CapacityLevelLowCritical"
 
 
 /** Skip these devices */
@@ -82,7 +86,11 @@ static struct {
 	gboolean  fallback;
 	time_t    force_state;
 	gdouble min_voltage;
+	gdouble low_voltage;
 	int low_percentage;
+	int empty_percentage;
+	gboolean  use_capacity_level;
+	gboolean  level_low_critical;
 } private = {0};
 
 /** Battery properties available via UPower */
@@ -91,6 +99,7 @@ struct {
 	gdouble  percentage;
 	gdouble  voltage;
 	gboolean charger_online;
+	gchar    *capacity_level;
 } upowbat = {0};
 
 /** Battery properties in mce statemachine compatible form */
@@ -113,6 +122,7 @@ upowbat_init(void)
 {
 	upowbat.percentage = 50;
 	upowbat.voltage    = 3.8;
+	upowbat.capacity_level = NULL;
 	upowbat.state = UP_DEVICE_STATE_UNKNOWN;
 }
 
@@ -135,6 +145,7 @@ upowbat_update(void)
 	gdouble percentage;
 	gdouble voltage;
 	guint   state;
+	gchar  *capacity_level;
 
 	if (private.battery == NULL)
 		return;
@@ -143,6 +154,7 @@ upowbat_update(void)
 				"percentage", &percentage,
 				"state", &state,
 				"voltage", &voltage,
+				"capacity-level", &capacity_level,
 				NULL);
 
 	if (upowbat.percentage != percentage) {
@@ -162,6 +174,12 @@ upowbat_update(void)
 		} else if (state == UP_DEVICE_STATE_CHARGING || state == UP_DEVICE_STATE_FULLY_CHARGED) {
 			state = UP_DEVICE_STATE_DISCHARGING;
 		}
+	}
+
+	if (g_strcmp0(upowbat.capacity_level, capacity_level) != 0) {
+		mce_log(LL_DEBUG, "%s: Capacity Level: %s -> %s", MODULE_NAME, upowbat.capacity_level, capacity_level);
+		g_free(upowbat.capacity_level);
+		upowbat.capacity_level = capacity_level;
 	}
 
 	if (upowbat.state != state) {
@@ -191,13 +209,30 @@ mcebat_update_from_upowbat(void)
 								upowbat.state == UP_DEVICE_STATE_PENDING_CHARGE;
 	}
 
-	if (upowbat.state == UP_DEVICE_STATE_EMPTY ||
-		upowbat.voltage < private.min_voltage && !mcebat.charger_connected)
+	if (upowbat.state == UP_DEVICE_STATE_FULLY_CHARGED)
+		mcebat.status = BATTERY_STATUS_FULL;
+	/* Do not consider the battery as empty if charger is online */
+	else if (mcebat.charger_connected)
+		return;
+	else if (upowbat.voltage < private.min_voltage)
 		mcebat.status = BATTERY_STATUS_EMPTY;
+	else if (private.use_capacity_level &&
+			g_strcmp0(upowbat.capacity_level, "Critical") == 0)
+		mcebat.status = BATTERY_STATUS_EMPTY;
+	else if (private.use_capacity_level && private.level_low_critical &&
+			g_strcmp0(upowbat.capacity_level, "Low") == 0)
+		mcebat.status = BATTERY_STATUS_EMPTY;
+	else if (upowbat.percentage < private.empty_percentage)
+		mcebat.status = BATTERY_STATUS_EMPTY;
+	else if (upowbat.voltage < private.low_voltage)
+		mcebat.status = BATTERY_STATUS_LOW;
+	else if (private.use_capacity_level &&
+			g_strcmp0(upowbat.capacity_level, "Low") == 0)
+		mcebat.status = BATTERY_STATUS_LOW;
 	else if (upowbat.percentage < private.low_percentage)
 		mcebat.status = BATTERY_STATUS_LOW;
-	else if (upowbat.state == UP_DEVICE_STATE_FULLY_CHARGED)
-		mcebat.status = BATTERY_STATUS_FULL;
+	else if (upowbat.state == UP_DEVICE_STATE_EMPTY)
+		mcebat.status = BATTERY_STATUS_EMPTY;
 }
 
 static inline const char *
@@ -476,6 +511,10 @@ xup_battery_connect_handlers(void)
 	g_signal_connect(private.battery, "notify::voltage",
 					G_CALLBACK(xup_battery_properties_changed_cb),
 					NULL);
+
+	g_signal_connect(private.battery, "notify::capacity-level",
+					G_CALLBACK(xup_battery_properties_changed_cb),
+					NULL);
 }
 
 /**
@@ -526,6 +565,7 @@ xup_battery_remove_dev(void)
 	xup_battery_disconnect_handlers();
 	g_object_unref(private.battery);
 	private.battery = NULL;
+	g_free(upowbat.capacity_level);
 	upowbat_init();
 	mcebat_init();
 }
@@ -638,7 +678,13 @@ const gchar *g_module_check_init(GModule *module)
 	private.min_voltage = mce_conf_get_int(MCE_CONF_BATTERY_SECTION, MCE_CONF_CRIT_VOLTAGE_KEY, 0, NULL)/1000.0;
 	if(private.min_voltage > 0.1)
 		mce_log(LL_INFO, "%s: critical voltage set set to %f", MODULE_NAME, private.min_voltage);
+	private.low_voltage = mce_conf_get_int(MCE_CONF_BATTERY_SECTION, MCE_CONF_LOW_VOLTAGE_KEY, 0, NULL)/1000.0;
+	if(private.low_voltage > 0.1)
+		mce_log(LL_INFO, "%s: low voltage set set to %f", MODULE_NAME, private.low_voltage);
 	private.low_percentage = mce_conf_get_int(MCE_CONF_BATTERY_SECTION, MCE_CONF_LOW_PERCENT_KEY, 5, NULL);
+	private.empty_percentage = mce_conf_get_int(MCE_CONF_BATTERY_SECTION, MCE_CONF_EMPTY_PERCENT_KEY, 2, NULL);
+	private.use_capacity_level = mce_conf_get_bool(MCE_CONF_BATTERY_SECTION, MCE_CONF_USE_CAPACITY_LEVEL, false, NULL);
+	private.level_low_critical = mce_conf_get_bool(MCE_CONF_BATTERY_SECTION, MCE_CONF_CAPACITY_LOW_CRITICAL_KEY, false, NULL);
 
 	/* Find battery/charger devices and add them to private */
 	xup_find_devices();
