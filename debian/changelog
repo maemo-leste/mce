@@ -1,3 +1,9 @@
+mce (1.10.12) unstable; urgency=medium
+
+  * battery-upower: use additional upstream upower properties
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Thu, 24 Apr 2025 17:28:27 +0200
+
 mce (1.10.11) unstable; urgency=medium
 
   * accelerometer: report face up/down states
