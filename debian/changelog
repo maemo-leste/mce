@@ -1,3 +1,9 @@
+mce (1.10.13) unstable; urgency=medium
+
+  * battery-upower: fix possible invalid pointer access
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Fri, 25 Apr 2025 16:53:41 +0300
+
 mce (1.10.12) unstable; urgency=medium
 
   * battery-upower: use additional upstream upower properties
