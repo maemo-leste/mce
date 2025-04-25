@@ -145,7 +145,7 @@ upowbat_update(void)
 	gdouble percentage;
 	gdouble voltage;
 	guint   state;
-	gchar  *capacity_level;
+	gchar  *capacity_level = NULL;
 
 	if (private.battery == NULL)
 		return;
@@ -176,7 +176,7 @@ upowbat_update(void)
 		}
 	}
 
-	if (g_strcmp0(upowbat.capacity_level, capacity_level) != 0) {
+	if (g_strcmp0(upowbat.capacity_level, capacity_level)) {
 		mce_log(LL_DEBUG, "%s: Capacity Level: %s -> %s", MODULE_NAME, upowbat.capacity_level, capacity_level);
 		g_free(upowbat.capacity_level);
 		upowbat.capacity_level = capacity_level;
