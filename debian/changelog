@@ -1,3 +1,9 @@
+mce (1.10.14) unstable; urgency=medium
+
+  * battery-upower: fix battery being prematurely considered empty on mapphones
+
+ -- Carl Klemm <carl@uvos.xyz>  Sun, 04 May 2025 22:12:58 +0200
+
 mce (1.10.13) unstable; urgency=medium
 
   * battery-upower: fix possible invalid pointer access
