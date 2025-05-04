@@ -198,7 +198,7 @@ upowbat_update(void)
 static void
 mcebat_update_from_upowbat(void)
 {
-	mcebat.status = BATTERY_STATUS_OK;
+	mcebat.status = BATTERY_STATUS_UNDEF;
 
 	/* Try to guess charger state using battery state property */
 	if (private.charger) {
@@ -211,10 +211,15 @@ mcebat_update_from_upowbat(void)
 
 	if (upowbat.state == UP_DEVICE_STATE_FULLY_CHARGED)
 		mcebat.status = BATTERY_STATUS_FULL;
-	/* Do not consider the battery as empty if charger is online */
-	else if (mcebat.charger_connected)
-		return;
-	else if (upowbat.voltage < private.min_voltage)
+
+	/*
+	 * Inhibit shutdown if charger is connected or an alternate shutdown
+	 * method (voltage or capacity_level) is configured.
+	 */
+	if (mcebat.charger_connected || private.min_voltage || private.use_capacity_level)
+		mcebat.status = BATTERY_STATUS_OK;
+
+	if (private.min_voltage && upowbat.voltage < private.min_voltage)
 		mcebat.status = BATTERY_STATUS_EMPTY;
 	else if (private.use_capacity_level &&
 			g_strcmp0(upowbat.capacity_level, "Critical") == 0)
@@ -222,17 +227,27 @@ mcebat_update_from_upowbat(void)
 	else if (private.use_capacity_level && private.level_low_critical &&
 			g_strcmp0(upowbat.capacity_level, "Low") == 0)
 		mcebat.status = BATTERY_STATUS_EMPTY;
-	else if (upowbat.percentage < private.empty_percentage)
-		mcebat.status = BATTERY_STATUS_EMPTY;
-	else if (upowbat.voltage < private.low_voltage)
+	/*
+	 * Ensure low_voltage is only considered if min_voltage is set, to avoid
+	 * getting stuck in the battery low status
+	 */
+	else if (private.min_voltage && private.low_voltage &&
+			upowbat.voltage < private.low_voltage)
 		mcebat.status = BATTERY_STATUS_LOW;
 	else if (private.use_capacity_level &&
 			g_strcmp0(upowbat.capacity_level, "Low") == 0)
 		mcebat.status = BATTERY_STATUS_LOW;
+
+	/* Bypass percentage evaluation if status has already been determined */
+	if (mcebat.status != BATTERY_STATUS_UNDEF)
+		return;
+
+	if (upowbat.percentage < private.empty_percentage)
+		mcebat.status = BATTERY_STATUS_EMPTY;
 	else if (upowbat.percentage < private.low_percentage)
 		mcebat.status = BATTERY_STATUS_LOW;
-	else if (upowbat.state == UP_DEVICE_STATE_EMPTY)
-		mcebat.status = BATTERY_STATUS_EMPTY;
+	else
+		mcebat.status = BATTERY_STATUS_OK;
 }
 
 static inline const char *
