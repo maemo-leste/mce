@@ -1,3 +1,9 @@
+mce (1.10.15) unstable; urgency=medium
+
+  * display: manage the brightness fade duration, as devices offer varying ranges of brightness
+
+ -- Sander <sander@sanderf.nl>  Sun, 30 May 2025 03:02:58 +0300
+
 mce (1.10.14) unstable; urgency=medium
 
   * battery-upower: fix battery being prematurely considered empty on mapphones

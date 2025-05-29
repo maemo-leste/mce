@@ -79,6 +79,12 @@ static gint set_brightness_unfiltered = -1;
 /** Fadeout step length */
 static gint brightness_fade_steplength = 2;
 
+/** Fadeout max duration in milliseconds */
+static gint brightness_fade_duration = 500;
+
+/** Fadeout step interval in milliseconds */
+static gint brightness_fade_step_interval = 10;
+
 /** Brightness fade timeout callback ID */
 static gint brightness_fade_timeout_cb_id = 0;
 /** Display blanking timeout callback ID */
@@ -165,7 +171,7 @@ static void setup_brightness_fade_timeout(gint step_time)
  */
 static void update_brightness_fade(gint new_brightness)
 {
-	gint step_time = 10;
+	gint step_time = brightness_fade_step_interval;
 
 	if (hw_display_fading == true) {
 		cancel_brightness_fade_timeout();
@@ -184,7 +190,10 @@ static void update_brightness_fade(gint new_brightness)
 
 	target_brightness = new_brightness;
 
-	brightness_fade_steplength = 2;
+	// set step length, according to max fade duration
+	const gint max_steps = brightness_fade_duration / step_time;
+	const gint brightness_diff = abs(target_brightness - cached_brightness);
+	brightness_fade_steplength = (brightness_diff + max_steps - 1) / max_steps;
 
 	setup_brightness_fade_timeout(step_time);
 
