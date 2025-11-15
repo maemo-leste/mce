@@ -534,7 +534,8 @@ static void powerkey_trigger(gconstpointer const data)
 			if (!(submode & MCE_EVEATER_SUBMODE)) {
 				struct timeval double_delay_timeval = {doublepressdelay/1000, (doublepressdelay % 1000)*1000};
 				struct timeval diff;
-				timersub(&ev->time, &press_time, &diff);
+				struct timeval event_time = {ev->input_event_sec, ev->input_event_usec};
+				timersub(&event_time, &press_time, &diff);
 
 				if ((system_state == MCE_STATE_ACTDEAD) ||
 				    ((submode & MCE_SOFTOFF_SUBMODE) != 0)) {
@@ -552,9 +553,9 @@ static void powerkey_trigger(gconstpointer const data)
 						g_source_remove(longpress_timer_id);
 						longpress_timer_id = 0;
 					}
-					if (!timercmp(&ev->time, &mode_time, <)) {
+					if (!timercmp(&event_time, &mode_time, <)) {
 						struct timeval *ev_time = g_malloc0(sizeof(*ev_time));
-						*ev_time = ev->time;
+						*ev_time = event_time;
 						mce_log(LL_DEBUG, "powerkey: doublepress activated, submode: %d", submode);
 						g_idle_add(doublepress_cb, ev_time);
 					}
@@ -563,9 +564,9 @@ static void powerkey_trigger(gconstpointer const data)
 					}
 					handle_release = false;
 				} else {
-					if (!timercmp(&ev->time, &mode_time, <)) {
+					if (!timercmp(&event_time, &mode_time, <)) {
 						struct timeval *ev_time = g_malloc0(sizeof(*ev_time));
-						*ev_time = ev->time;
+						*ev_time = event_time;
 						longpress_timer_id = g_timeout_add(longpress_delay, longpress_cb, ev_time);
 						handle_release = true;
 					} else {
@@ -573,7 +574,7 @@ static void powerkey_trigger(gconstpointer const data)
 						handle_release = false;
 					}
 				}
-				press_time = ev->time;
+				press_time = event_time;
 			}
 		} else if (ev->value == 0) {
 			mce_log(LL_DEBUG, "powerkey: [power] released");
@@ -584,8 +585,9 @@ static void powerkey_trigger(gconstpointer const data)
 			if (!(power_trigger_submode & MCE_EVEATER_SUBMODE) && handle_release) {
 				struct timeval long_delay_timeval = {longpress_delay/1000, (longpress_delay % 1000)*1000};
 				struct timeval diff;
-				timersub(&ev->time, &press_time, &diff);
-				if (!timercmp(&ev->time, &mode_time, <)) {
+				struct timeval event_time = {ev->input_event_sec, ev->input_event_usec};
+				timersub(&event_time, &press_time, &diff);
+				if (!timercmp(&event_time, &mode_time, <)) {
 					if (timercmp(&diff, &long_delay_timeval, >)) {
 						handle_longpress();
 						mce_log(LL_DEBUG, "powerkey: longpress activated, submode: %d", submode);
