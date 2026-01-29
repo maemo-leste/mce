@@ -209,9 +209,6 @@ mcebat_update_from_upowbat(void)
 								upowbat.state == UP_DEVICE_STATE_PENDING_CHARGE;
 	}
 
-	if (upowbat.state == UP_DEVICE_STATE_FULLY_CHARGED)
-		mcebat.status = BATTERY_STATUS_FULL;
-
 	/*
 	 * Inhibit shutdown if charger is connected or an alternate shutdown
 	 * method (voltage or capacity_level) is configured.
@@ -237,6 +234,8 @@ mcebat_update_from_upowbat(void)
 	else if (private.use_capacity_level &&
 			g_strcmp0(upowbat.capacity_level, "Low") == 0)
 		mcebat.status = BATTERY_STATUS_LOW;
+	else if (upowbat.state == UP_DEVICE_STATE_FULLY_CHARGED)
+		mcebat.status = BATTERY_STATUS_FULL;
 
 	/* Bypass percentage evaluation if status has already been determined */
 	if (mcebat.status != BATTERY_STATUS_UNDEF)
