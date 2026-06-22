@@ -1,3 +1,9 @@
+mce (1.10.17) unstable; urgency=medium
+
+  * Fix green LED on N900 charging status
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Mon, 22 Jun 2026 21:10:10 +0200
+
 mce (1.10.16) unstable; urgency=medium
 
   * Port to 64 bit time API
