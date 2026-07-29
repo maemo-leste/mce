@@ -61,7 +61,7 @@
 #define MCE_LYSTI_DIRECT_B_BRIGHTNESS_PATH	MCE_LYSTI_DIRECT_SYS_PATH ":b/brightness"
 
 
-#define MCE_LYSTI_ENGINE_SYS_PATH		"/sys/class/i2c-adapter/i2c-2/2-0032"
+#define MCE_LYSTI_ENGINE_SYS_PATH		"/sys/bus/i2c/devices/2-0032"
 
 #define MCE_LYSTI_ENGINE1_MODE_PATH		MCE_LYSTI_ENGINE_SYS_PATH "/engine1_mode"
 #define MCE_LYSTI_ENGINE2_MODE_PATH		MCE_LYSTI_ENGINE_SYS_PATH "/engine2_mode"
