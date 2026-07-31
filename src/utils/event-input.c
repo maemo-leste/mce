@@ -281,6 +281,13 @@ static void keypress_cb(gpointer data, gsize bytes_read)
 								 USE_INDATA, CACHE_INDATA);
 				handled = true;
 				break;
+			case SW_FRONT_PROXIMITY:
+				/* Completely ignore proximity switch events, such as on N900. mce
+				 * handles them via iio-proximity module since iio-sensor-proxy now
+				 * supports them
+				 */
+				handled = true;
+				activity = false;
 			default:
 				break;
 		}
