@@ -30,9 +30,15 @@
 #include "mce.h"
 #include "mce-dbus.h"
 #include "mce-log.h"
+#include <assert.h>
 
 /** List of all D-Bus handlers */
 static GSList *dbus_handlers = NULL;
+
+/** List of all D-Bus handlers we shall add after current dispatch*/
+static GSList *dbus_handlers_add = NULL;
+
+static gboolean dispatching = FALSE;
 
 /** D-Bus handler structure */
 typedef struct {
@@ -41,6 +47,7 @@ typedef struct {
 	gchar *rules;			/**< Additional matching rules */
 	gchar *name;			/**< Method call or signal name */
 	guint type;			/**< DBUS_MESSAGE_TYPE */
+	gboolean removed;
 } handler_struct;
 
 /** Pointer to the DBusConnection */
@@ -403,6 +410,14 @@ EXIT:
 	return status;
 }
 
+static void free_handler(handler_struct *h)
+{
+	g_free(h->interface);
+	g_free(h->rules);
+	g_free(h->name);
+	g_free(h);
+}
+
 /**
  * D-Bus message handler
  *
@@ -422,8 +437,14 @@ static DBusHandlerResult msg_handler(DBusConnection *const connection,
 	(void)connection;
 	(void)user_data;
 
+	assert(!dispatching);
+	dispatching = TRUE;
+
 	for (list = dbus_handlers; list != NULL; list = g_slist_next(list)) {
 		handler_struct *handler = list->data;
+
+		if (handler->removed == TRUE)
+			continue;
 
 		switch (handler->type) {
 		case DBUS_MESSAGE_TYPE_METHOD_CALL:
@@ -466,6 +487,25 @@ static DBusHandlerResult msg_handler(DBusConnection *const connection,
 	}
 
 EXIT:
+	list = dbus_handlers;
+
+	while (list != NULL) {
+		GSList *next = list->next;
+		handler_struct *handler = list->data;
+
+		if (handler->removed) {
+			dbus_handlers = g_slist_delete_link(dbus_handlers, list);
+			free_handler(handler);
+		}
+
+		list = next;
+	}
+
+	dbus_handlers = g_slist_concat(dbus_handlers_add, dbus_handlers);
+	dbus_handlers_add = NULL;
+
+	dispatching = FALSE;
+
 	return status;
 }
 
@@ -531,6 +571,7 @@ gconstpointer mce_dbus_handler_add(const gchar *const interface,
 		goto EXIT;
 	}
 
+	h->removed = FALSE;
 	h->interface = NULL;
 
 	if (interface && (h->interface = g_strdup(interface)) == NULL) {
@@ -575,7 +616,10 @@ gconstpointer mce_dbus_handler_add(const gchar *const interface,
 		goto EXIT;
 	}
 
-	dbus_handlers = g_slist_prepend(dbus_handlers, h);
+	if (!dispatching)
+		dbus_handlers = g_slist_prepend(dbus_handlers, h);
+	else
+		dbus_handlers_add = g_slist_prepend(dbus_handlers_add, h);
 
 EXIT:
 	g_free(match);
@@ -637,12 +681,12 @@ void mce_dbus_handler_remove(gconstpointer cookie)
 		mce_log(LL_CRIT, "Failed to allocate memory for match");
 	}
 
-	dbus_handlers = g_slist_remove(dbus_handlers, h);
-
-	g_free(h->interface);
-	g_free(h->rules);
-	g_free(h->name);
-	g_free(h);
+	if (!dispatching) {
+		dbus_handlers = g_slist_remove(dbus_handlers, h);
+		free_handler(h);
+	} else {
+		h->removed = TRUE;
+	}
 
 	g_free(match);
 }
