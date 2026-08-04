@@ -1,3 +1,11 @@
+mce (1.10.18) unstable; urgency=medium
+
+  * mce-dbus: defer dbus handlers list changes during dispatch
+  * event-input: ignore proximity switch events
+  * led-lysti: update sysfs path
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Tue, 04 Aug 2026 17:36:13 +0300
+
 mce (1.10.17) unstable; urgency=medium
 
   * Fix green LED on N900 charging status
