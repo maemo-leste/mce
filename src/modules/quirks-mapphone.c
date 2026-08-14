@@ -30,7 +30,8 @@ G_MODULE_EXPORT module_info_struct module_info = {
 
 static guint kick_timeout_cb_id = 0;
 static display_state_t display_state;
-static bool offline_cpu;
+static bool charger_connected;
+static bool enabled_quirks;
 static GCancellable *cancellable = NULL;
 
 static void modem_close_cb(GObject *source_object, GAsyncResult *res,
@@ -84,15 +85,13 @@ static void modem_append_cb(GObject *source_object, GAsyncResult *res,
 							res, &error);
 
 	if (os) {
-		display_state_t state = GPOINTER_TO_INT(user_data);
-		const char *const msg = state == MCE_DISPLAY_ON ?
-						"U1234AT+SCRN=1\r" :
-						"U1234AT+SCRN=0\r";
+		bool power_saving = GPOINTER_TO_INT(user_data);
+		const char *const msg = power_saving ? "U1234AT+SCRN=0\r" : "U1234AT+SCRN=1\r";
 		const gsize len = strlen(msg);
 
 		mce_log(LL_DEBUG, "%s: Setting modem state to SCRN=%s",
 			MODULE_NAME,
-			state == MCE_DISPLAY_ON ? "1" : "0");
+			power_saving ? "0" : "1");
 
 		g_output_stream_write_async(G_OUTPUT_STREAM(os), msg, len, 0,
 					    cancellable, modem_write_cb,
@@ -108,21 +107,8 @@ static void modem_append_cb(GObject *source_object, GAsyncResult *res,
 	g_clear_error(&error);
 }
 
-static void display_state_trigger(gconstpointer data)
-{
-	display_state_t new_state = GPOINTER_TO_INT(data);
-	display_state_t old_state = display_state;
+static void set_power_saving(bool power_saving) {
 	int fd;
-
-	if (new_state == old_state)
-		return;
-
-	display_state = new_state;
-
-	if ((new_state == MCE_DISPLAY_ON && old_state == MCE_DISPLAY_DIM) ||
-	    new_state == MCE_DISPLAY_DIM) {
-		return;
-	}
 
 	GFile *file = g_file_new_for_path(GSMTTY1_PATH);
 
@@ -134,43 +120,78 @@ static void display_state_trigger(gconstpointer data)
 	cancellable = g_cancellable_new();
 
 	g_file_append_to_async(file, G_FILE_CREATE_NONE, 0, cancellable,
-			       modem_append_cb, GINT_TO_POINTER(display_state));
+			       modem_append_cb, GINT_TO_POINTER(power_saving));
 	g_object_unref(file);
 
-	if (offline_cpu) {
-		fd = open(CPU1_ONLINE_PATH, O_WRONLY);
+	fd = open(CPU1_ONLINE_PATH, O_WRONLY);
 
-		if (fd < 0) {
-			mce_log(LL_WARN, "%s: can not open "
-				CPU1_ONLINE_PATH, MODULE_NAME);
-		} else {
-			if (display_state == MCE_DISPLAY_ON) {
-				const char *const msg = "1";
+	if (fd < 0) {
+		mce_log(LL_WARN, "%s: can not open "
+			CPU1_ONLINE_PATH, MODULE_NAME);
+	} else {
+		if (power_saving) {
+			const char *const msg = "0";
 
-				mce_log(LL_DEBUG, "%s: Turning on cpu1",
+			mce_log(LL_DEBUG, "%s: Turning off cpu1",
+				MODULE_NAME);
+
+			if (write(fd, msg, strlen(msg)) < 0) {
+				mce_log(LL_WARN,
+					"%s: can not turn off cpu1",
 					MODULE_NAME);
-
-				if (write(fd, msg, strlen(msg)) < 0) {
-					mce_log(LL_WARN,
-						"%s: can not turn on cpu1",
-						MODULE_NAME);
-				}
-			} else {
-				const char *const msg = "0";
-
-				mce_log(LL_DEBUG, "%s: Turning off cpu1",
-					MODULE_NAME);
-
-				if (write(fd, msg, strlen(msg)) < 0) {
-					mce_log(LL_WARN,
-						"%s: can not turn off cpu1",
-						MODULE_NAME);
-				}
 			}
+		} else {
+			const char *const msg = "1";
 
-			close(fd);
+			mce_log(LL_DEBUG, "%s: Turning on cpu1",
+				MODULE_NAME);
+
+			if (write(fd, msg, strlen(msg)) < 0) {
+				mce_log(LL_WARN,
+					"%s: can not turn on cpu1",
+					MODULE_NAME);
+			}
 		}
+
+		close(fd);
 	}
+}
+
+static void charger_state_trigger(gconstpointer data)
+{
+	bool charger_state_new = GPOINTER_TO_INT(data);
+
+	if (charger_connected == charger_state_new)
+		return;
+
+	charger_connected = charger_state_new;
+
+	if (!enabled_quirks)
+		return;
+
+	if (charger_connected)
+		set_power_saving(false);
+	else if (display_state == MCE_DISPLAY_OFF)
+		set_power_saving(true);
+}
+
+static void display_state_trigger(gconstpointer data)
+{
+	display_state_t new_state = GPOINTER_TO_INT(data);
+	display_state_t old_state = display_state;
+
+	if (new_state == old_state)
+		return;
+
+	display_state = new_state;
+
+	if (!enabled_quirks)
+		return;
+
+	if (display_state != MCE_DISPLAY_OFF)
+		set_power_saving(false);
+	else if (!charger_connected)
+		set_power_saving(true);
 }
 
 static gboolean inactivity_timeout_cb(gpointer data)
@@ -204,10 +225,13 @@ const char *g_module_check_init(GModule * module)
 	display_state = datapipe_get_gint(display_state_pipe);
 	append_output_trigger_to_datapipe(&display_state_pipe, display_state_trigger);
 
+	charger_connected = datapipe_get_gint(charger_state_pipe);
+	append_output_trigger_to_datapipe(&charger_state_pipe, charger_state_trigger);
+
 	kick_timeout_cb_id = g_timeout_add_seconds(600, inactivity_timeout_cb, NULL);
 	inactivity_timeout_cb(NULL);
 
-	offline_cpu = mce_conf_get_bool("QuirksMapphone", "OfflineCpu", true, NULL);
+	enabled_quirks = mce_conf_get_bool("QuirksMapphone", "Enabled", true, NULL);
 
 	return NULL;
 }
@@ -218,8 +242,10 @@ void g_module_unload(GModule * module)
 	(void)module;
 
 	remove_output_trigger_from_datapipe(&display_state_pipe, display_state_trigger);
+	remove_output_trigger_from_datapipe(&charger_state_pipe, charger_state_trigger);
 
 	display_state_trigger(GINT_TO_POINTER(MCE_DISPLAY_ON));
+	set_power_saving(false);
 
 	g_source_remove(kick_timeout_cb_id);
 }
