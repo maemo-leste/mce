@@ -31,9 +31,18 @@ typedef enum {
 	ORIENTATION_UNKNOWN,
 	ORIENTATION_LANDSCAPE,
 	ORIENTATION_PORTRAIT,
-	ORIENTATION_FACE_DOWN,
-	ORIENTATION_FACE_UP
+	ORIENTATION_LANDSCAPE_INVERTED,
+	ORIENTATION_PORTRAIT_INVERTED,
 } orientation_t;
+
+typedef enum {
+	TILT_UNKNOWN,
+	TILT_VERTICAL,
+	TILT_TILT_UP,
+	TILT_TILT_DOWN,
+	TILT_FACE_UP,
+	TILT_FACE_DOWN,
+} tilt_t;
 
 static display_state_t display_state = { 0 };
 static alarm_ui_state_t alarm_state = { 0 };
@@ -45,7 +54,7 @@ static GDBusProxy *iio_proxy = NULL;
 static GSList *accelerometer_listeners = NULL;
 
 static orientation_t orientation = ORIENTATION_UNKNOWN;
-static orientation_t horizontal = ORIENTATION_FACE_UP;
+static tilt_t tilt = TILT_UNKNOWN;
 
 static bool iio_accel_claim_policy(void)
 {
@@ -55,27 +64,51 @@ static bool iio_accel_claim_policy(void)
 	       call_state == CALL_STATE_RINGING);
 }
 
-static const char *iio_orientation_to_str(const orientation_t orit)
+static const char *iio_orientation_to_str(void)
 {
-	switch (orit) {
-		case ORIENTATION_LANDSCAPE: 
+	switch (orientation) {
+		case ORIENTATION_LANDSCAPE:
 			return MCE_ORIENTATION_LANDSCAPE;
-		case ORIENTATION_PORTRAIT: 
+		case ORIENTATION_PORTRAIT:
 			return MCE_ORIENTATION_PORTRAIT;
-		case ORIENTATION_FACE_DOWN:
-			return MCE_ORIENTATION_FACE_DOWN;
-		case ORIENTATION_FACE_UP:
-			return MCE_ORIENTATION_FACE_UP;
+		case ORIENTATION_LANDSCAPE_INVERTED:
+			return MCE_ORIENTATION_LANDSCAPE_INVERTED;
+		case ORIENTATION_PORTRAIT_INVERTED:
+			return MCE_ORIENTATION_PORTRAIT_INVERTED;
 		default:
 			return MCE_ORIENTATION_UNKNOWN;
 	}
 }
 
+static const char *iio_tilt_to_str(void)
+{
+	switch (tilt) {
+		case TILT_FACE_UP:
+			return MCE_ORIENTATION_FACE_UP;
+		case TILT_FACE_DOWN:
+			return MCE_ORIENTATION_FACE_DOWN;
+		/* mce does not have equivalents for tilted downwards or vertical */
+		default:
+			return MCE_ORIENTATION_UNKNOWN;
+	}
+}
+
+static const char *on_stand(void)
+{
+	/* Device considered to be on a stand when it is in landscape or
+	 * portrait orientation while tilted slightly backward */
+	if (tilt == TILT_TILT_UP &&
+	     (orientation == ORIENTATION_LANDSCAPE || orientation == ORIENTATION_PORTRAIT))
+		return MCE_ORIENTATION_ON_STAND;
+	else
+		return MCE_ORIENTATION_OFF_STAND;
+}
+
 static gboolean send_device_orientation(DBusMessage *const method_call)
 {
-	const gchar *srotation = iio_orientation_to_str(orientation);
-	const gchar *sstand = MCE_ORIENTATION_OFF_STAND;
-	const gchar *sface = iio_orientation_to_str(horizontal);
+	const gchar *srotation = iio_orientation_to_str();
+	const gchar *sstand = on_stand();
+	const gchar *sface = iio_tilt_to_str();
 	dbus_int32_t maxInt = G_MAXINT32;
 	DBusMessage *msg = NULL;
 	
@@ -127,18 +160,56 @@ static void iio_accel_get_value(GDBusProxy * proxy)
 		orientation = ORIENTATION_PORTRAIT;
 		changed = true;
 	}
-	else if (strcmp(g_variant_get_string(v, NULL), "face-up") == 0) {
-		horizontal = ORIENTATION_FACE_UP;
+	else if (strcmp(g_variant_get_string(v, NULL), "right-up") == 0) {
+		orientation = ORIENTATION_PORTRAIT_INVERTED;
 		changed = true;
 	}
-	else if (strcmp(g_variant_get_string(v, NULL), "face-down") == 0) {
-		horizontal = ORIENTATION_FACE_DOWN;
+	else if (strcmp(g_variant_get_string(v, NULL), "bottom-up") == 0) {
+		orientation = ORIENTATION_LANDSCAPE_INVERTED;
 		changed = true;
 	}
 	g_variant_unref(v);
 	
 	if (changed) {
-		mce_log(LL_DEBUG, "%s: orientation: %s, horizontal orientation: %s", MODULE_NAME, iio_orientation_to_str(orientation), iio_orientation_to_str(horizontal));
+		mce_log(LL_DEBUG, "%s: orientation: %s", MODULE_NAME, iio_orientation_to_str());
+		send_device_orientation(NULL);
+	}
+}
+
+static void iio_tilt_get_value(GDBusProxy * proxy)
+{
+	GVariant *v;
+	v = g_dbus_proxy_get_cached_property (proxy, "AccelerometerTilt");
+
+	bool changed = false;
+
+	if (strcmp(g_variant_get_string(v, NULL), "undefined") == 0) {
+		tilt = TILT_UNKNOWN;
+		changed = true;
+	}
+	else if (strcmp(g_variant_get_string(v, NULL), "vertical") == 0) {
+		tilt = TILT_VERTICAL;
+		changed = true;
+	}
+	else if (strcmp(g_variant_get_string(v, NULL), "tilted-up") == 0) {
+		tilt = TILT_TILT_UP;
+		changed = true;
+	}
+	else if (strcmp(g_variant_get_string(v, NULL), "tilted-down") == 0) {
+		tilt = TILT_TILT_DOWN;
+		changed = true;
+	}
+	else if (strcmp(g_variant_get_string(v, NULL), "face-up") == 0) {
+		tilt = TILT_FACE_UP;
+		changed = true;
+	}
+	else if (strcmp(g_variant_get_string(v, NULL), "face-down") == 0) {
+		tilt = TILT_FACE_DOWN;
+		changed = true;
+	}
+
+	if (changed) {
+		mce_log(LL_DEBUG, "%s: tilt: %s", MODULE_NAME, iio_tilt_to_str());
 		send_device_orientation(NULL);
 	}
 }
@@ -197,6 +268,9 @@ static void iio_accel_properties_changed(GDBusProxy * proxy,
 
 	if (g_variant_dict_contains(&dict, "AccelerometerOrientation"))
 		iio_accel_get_value(iio_proxy);
+
+	if (g_variant_dict_contains(&dict, "AccelerometerTilt"))
+		iio_tilt_get_value(iio_proxy);
 
 	g_variant_dict_clear(&dict);
 }
