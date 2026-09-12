@@ -185,6 +185,20 @@ static bool x11_set_dpms_enabled(Display *dpy, const bool enable)
 	return true;
 }
 
+static bool x11_disable_screen_saver(Display *dpy)
+{
+	g_return_val_if_fail(dpy != NULL, false);
+
+	if (XSetScreenSaver(dpy, 0, 0, DontPreferBlanking, DontAllowExposures)) {
+		XSync(dpy, false);
+	} else {
+		mce_log(LL_ERR, "%s: Error seting screen saver timeouts", MODULE_NAME);
+		return false;
+	}
+
+	return true;
+}
+
 static bool x11_set_dpms_display_level(Display *dpy, const bool state)
 {
 	bool ownsDisplay = false;
@@ -227,6 +241,7 @@ static void x11_force_dpms_display_level(const bool on)
 
 	if (!on) {
 		x11_set_all_input_devices_enabled(dpy, false);
+		x11_disable_screen_saver(dpy);
 		x11_set_dpms_display_level(dpy, false);
 	} else {
 		x11_set_dpms_display_level(dpy, true);
