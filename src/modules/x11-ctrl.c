@@ -83,7 +83,6 @@ static bool x11_set_input_device_enabled(Display *dpy, const XIDeviceInfo devinf
 
 static bool x11_set_all_input_devices_enabled(Display *dpy, const bool enable)
 {
-	bool ret = false;
 	XIDeviceInfo *devinfo = NULL;
 	int ndev = 0;
 
@@ -154,28 +153,23 @@ static bool x11_set_all_input_devices_enabled(Display *dpy, const bool enable)
 		disabledDevices = NULL;
 	}
 
-	ret = true;
-
  doneXiFree:
 	XIFreeDeviceInfo(devinfo);
 
  done:
-	if (dpy != NULL && ownsDisplay)
+	XSync(dpy, false);
+
+	if (ownsDisplay)
 		XCloseDisplay(dpy);
 
-	return ret;
+	return true;
 }
 
 static bool x11_set_dpms_enabled(Display *dpy, const bool enable)
 {
 	int dummy;
-	bool ownsDisplay = false;
-	if (dpy == NULL) {
-		dpy = x11_get_display();
-		if (dpy == NULL)
-			return false;
-		ownsDisplay = true;
-	}
+
+	g_return_val_if_fail(dpy != NULL, false);
 
 	if (DPMSQueryExtension(dpy, &dummy, &dummy)) {
 		uint16_t level;
@@ -185,13 +179,9 @@ static bool x11_set_dpms_enabled(Display *dpy, const bool enable)
 			enable ? DPMSEnable(dpy) : DPMSDisable(dpy);
 	} else {
 		mce_log(LL_INFO, "%s: XServer dosent have dpms extension", MODULE_NAME);
-		if (ownsDisplay)
-			XCloseDisplay(dpy);
 		return false;
 	}
 
-	if (ownsDisplay)
-		XCloseDisplay(dpy);
 	return true;
 }
 
@@ -216,7 +206,7 @@ static bool x11_set_dpms_display_level(Display *dpy, const bool state)
 			XSync(dpy, false);
 		}
 	} else {
-		mce_log(LL_WARN, "%s: Display dose not support DPMS", MODULE_NAME);
+		mce_log(LL_WARN, "%s: Display does not support DPMS", MODULE_NAME);
 		if (ownsDisplay)
 			XCloseDisplay(dpy);
 		return false;
@@ -237,11 +227,10 @@ static void x11_force_dpms_display_level(const bool on)
 
 	if (!on) {
 		x11_set_all_input_devices_enabled(dpy, false);
-		XSync(dpy, false);
 		x11_set_dpms_display_level(dpy, false);
 	} else {
-		x11_set_all_input_devices_enabled(dpy, true);
 		x11_set_dpms_display_level(dpy, true);
+		x11_set_all_input_devices_enabled(dpy, true);
 	}
 
 	XCloseDisplay(dpy);
@@ -265,7 +254,7 @@ G_MODULE_EXPORT const gchar *g_module_check_init(GModule *module);
 const gchar *g_module_check_init(GModule *module)
 {
 	(void)module;
-	
+
 	/* Append triggers/filters to datapipes */
 	append_output_trigger_to_datapipe(&display_state_pipe,
 					  display_state_trigger);
