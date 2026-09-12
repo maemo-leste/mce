@@ -1,3 +1,12 @@
+mce (1.10.19) unstable; urgency=medium
+
+  * quirks-mapphone: do not enable pm quirks when charging
+  * iio-accelerometer: re-implement tilt using latest upstream interface
+  * x11-ctrl: disable screen saver before forcing DPMS off
+  * x11-ctrl: make input device control optional
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Sat, 12 Sep 2026 09:16:47 +0300
+
 mce (1.10.18) unstable; urgency=medium
 
   * mce-dbus: defer dbus handlers list changes during dispatch
