@@ -33,6 +33,7 @@ static Atom x11_atom_touchscreen = None;
 static Atom x11_atom_device_enabled = None;
 static Atom x11_atom_device_enabled_type = None;
 static int x11_atom_device_enabled_format = 0;
+static gboolean control_input_devices = FALSE;
 
 static Display *x11_get_display(void)
 {
@@ -90,6 +91,10 @@ static bool x11_set_all_input_devices_enabled(Display *dpy, const bool enable)
 	static unsigned int disabledDevicesCount = 0;
 
 	bool ownsDisplay = false;
+
+	if (!control_input_devices)
+		return true;
+
 	if (dpy == NULL) {
 		dpy = x11_get_display();
 		if (dpy == NULL)
